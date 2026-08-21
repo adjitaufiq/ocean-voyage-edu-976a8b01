@@ -195,11 +195,9 @@ export async function qualifyConversation(
     leadId = data.id;
   }
 
-  // Notify admin straight from the stored CRM record (same data as dashboard).
-  if (isNewLead && leadId) {
-    const { notifyLeadFromCrm } = await import("./lead-notify.server");
-    await notifyLeadFromCrm(leadId);
-  }
+  // Notification is dispatched AFTER core persistence, best-effort only (see bottom).
+
+
 
 
   let requirementVersion: number | null = null;
