@@ -10,7 +10,12 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 import { classifyHttpError, classifyThrownError, shouldRetrySameKey, shouldRotate } from "./errors";
-import { GEMINI_BASE_URL, geminiRequest, toGeminiModel } from "./providers/gemini";
+import {
+  GEMINI_BASE_URL,
+  geminiRequest,
+  sanitizeGeminiToolHistory,
+  toGeminiModel,
+} from "./providers/gemini";
 import {
   lovableApiKey,
   lovableFallbackEnabled,
@@ -86,7 +91,7 @@ export function createRoutingFetch(feature: AiFeature, requestId = crypto.random
 
     for (const { index, key } of order) {
       const target = geminiRequest(url, key, baseHeaders);
-      const body = withModel(init?.body, toGeminiModel(requestedModel));
+      const body = sanitizeGeminiToolHistory(withModel(init?.body, toGeminiModel(requestedModel)));
       let attempt = 0;
 
       // At most 2 attempts on a single key (one short retry for transient errors).

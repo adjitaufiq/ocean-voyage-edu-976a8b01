@@ -258,6 +258,24 @@ export async function qualifyConversation(
     requirementVersion = saved?.version ?? null;
   }
 
+  // Best-effort notification AFTER core persistence. Only for a newly created
+  // lead, so retrying the same WhatsApp number never sends duplicates, and any
+  // failure here is logged without breaking the AI stream / Order Brief.
+  if (isNewLead && leadId) {
+    try {
+      const { notifyLeadFromCrm } = await import("./lead-notify.server");
+      await Promise.race([
+        notifyLeadFromCrm(leadId),
+        new Promise((resolve) => setTimeout(resolve, 8000)),
+      ]);
+    } catch (error) {
+      console.error(
+        "[ai-conversation] lead notification failed",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
   return {
     ok: true as const,
     leadId,

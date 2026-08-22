@@ -175,6 +175,18 @@ async function sendLeadNotificationEmail(f: ReturnType<typeof fieldsOf>) {
  * Best-effort: failures are logged only.
  */
 export async function notifyLeadFromCrm(leadId: string) {
+  try {
+    return await runNotifyLeadFromCrm(leadId);
+  } catch (error) {
+    console.error(
+      "[lead-notify] notification failed",
+      error instanceof Error ? error.message : String(error),
+    );
+    return { email: false, telegram: false };
+  }
+}
+
+async function runNotifyLeadFromCrm(leadId: string) {
   if (!leadId) return { email: false, telegram: false };
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
