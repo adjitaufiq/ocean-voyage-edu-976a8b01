@@ -175,7 +175,6 @@ export async function qualifyConversation(
   };
 
   let leadId = conversation?.lead_id ?? null;
-  const isNewLead = !leadId;
   if (leadId) {
     const { error } = await supabaseAdmin
       .from("consultations")
@@ -258,15 +257,15 @@ export async function qualifyConversation(
     requirementVersion = saved?.version ?? null;
   }
 
-  // Best-effort notification AFTER core persistence. Only for a newly created
-  // lead, so retrying the same WhatsApp number never sends duplicates, and any
-  // failure here is logged without breaking the AI stream / Order Brief.
-  if (isNewLead && leadId) {
+  // Best-effort notification AFTER core persistence. `notifyLeadOnce` waits for
+  // real contact data and records delivery, so an early qualification (no
+  // contact yet) still gets notified later and retries never duplicate.
+  if (leadId) {
     try {
-      const { notifyLeadFromCrm } = await import("./lead-notify.server");
+      const { notifyLeadOnce } = await import("./lead-notify.server");
       await Promise.race([
-        notifyLeadFromCrm(leadId),
-        new Promise((resolve) => setTimeout(resolve, 8000)),
+        notifyLeadOnce(leadId),
+        new Promise((resolve) => setTimeout(resolve, 12000)),
       ]);
     } catch (error) {
       console.error(
