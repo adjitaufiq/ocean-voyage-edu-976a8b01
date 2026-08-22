@@ -50,16 +50,24 @@ const GREETING: UIMessage = {
 
 const SESSION_KEY = "kerjaku_ai_session_id";
 
-function readSessionId() {
+function makeSessionId() {
+  return `sess_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+}
+
+function readStoredSessionId() {
   if (typeof window === "undefined") return "";
   try {
-    const existing = window.localStorage.getItem(SESSION_KEY);
-    if (existing) return existing;
-    const next = `sess_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
-    window.localStorage.setItem(SESSION_KEY, next);
-    return next;
+    return window.localStorage.getItem(SESSION_KEY) ?? "";
   } catch {
-    return `sess_${Date.now().toString(36)}`;
+    return "";
+  }
+}
+
+function storeSessionId(id: string) {
+  try {
+    window.localStorage.setItem(SESSION_KEY, id);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -68,9 +76,26 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
   const [started, setStarted] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [sessionId, setSessionId] = useState("");
+  const [askResume, setAskResume] = useState(false);
 
   useEffect(() => {
-    setSessionId(readSessionId());
+    let cancelled = false;
+    const existing = readStoredSessionId();
+    if (!existing) {
+      const next = makeSessionId();
+      storeSessionId(next);
+      setSessionId(next);
+      return;
+    }
+    setSessionId(existing);
+    void getAiSessionState({ data: { sessionId: existing } })
+      .then((state) => {
+        if (!cancelled && state.resumable) setAskResume(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const { messages, sendMessage, status, error, setMessages } = useChat({
@@ -82,6 +107,7 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
     }),
     onError: (err) => toast.error(err.message || "AI Consultant sedang tidak tersedia."),
   });
+
 
   const busy = status === "submitted" || status === "streaming";
 
