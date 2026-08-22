@@ -40,7 +40,32 @@ export async function createManualOrderBrief(
     const intent = intentOf(score);
     const business = normalizeBusiness(form.businessName || form.name).name;
     const rawProblems = splitList(form.requirement);
-    const features = splitList(form.features);
+    const rawFeatures = splitList(form.features);
+
+    // Shared consultant reasoning — same engine the AI chatbot uses, so a
+    // manual submission produces an Order Brief of equivalent quality.
+    const analysis = await analyzeConsultation({
+      business,
+      projectType: form.projectType,
+      requirement: form.requirement,
+      requestedFeatures: rawFeatures,
+      problems: rawProblems,
+      budget: form.budget,
+      timeline: form.timeline,
+      notes: form.notes,
+      packageHint: tracking?.selectedPackage || null,
+      source: "manual",
+    });
+
+    const problems = analysis.problems.length ? analysis.problems : rawProblems;
+    const features = analysis.coreFeatures.length ? analysis.coreFeatures : rawFeatures;
+    const packageName = tracking?.selectedPackage || analysis.packageName || null;
+    const summary = [
+      analysisToSummary(analysis),
+      form.notes ? `Catatan customer: ${form.notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const { data: existing } = await supabaseAdmin
       .from("ai_conversations")
@@ -62,12 +87,13 @@ export async function createManualOrderBrief(
           problems,
           requirements: features,
           features,
+          package_name: packageName,
           budget: form.budget,
           timeline: form.timeline,
           contact_name: form.name,
           contact_email: form.email,
           contact_whatsapp: form.whatsapp,
-          summary: form.requirement,
+          summary,
           score,
           qualified_at: new Date().toISOString(),
           lead_id: leadId,
@@ -86,7 +112,7 @@ export async function createManualOrderBrief(
       project: form.projectType,
       features,
       problems,
-      packageName: tracking?.selectedPackage || null,
+      packageName,
       timeline: form.timeline,
       budget: form.budget,
       usersScale: null,
@@ -95,9 +121,7 @@ export async function createManualOrderBrief(
       contactName: form.name,
       contactEmail: form.email,
       contactWhatsapp: form.whatsapp,
-      summary: [form.requirement, form.notes ? `Catatan: ${form.notes}` : ""]
-        .filter(Boolean)
-        .join("\n"),
+      summary,
       source: "manual",
     });
 
