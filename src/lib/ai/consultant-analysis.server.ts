@@ -11,7 +11,7 @@
 import { generateText } from "ai";
 
 import { createAiModel, isAiConfigured } from "@/lib/ai-gateway.server";
-import { PACKAGE_LIBRARY } from "@/lib/ai-consultant";
+import { solutionPackages } from "@/lib/ai-consultant";
 
 export type ConsultantAnalysisInput = {
   business: string;
@@ -47,7 +47,7 @@ export type ConsultantAnalysis = {
   aiGenerated: boolean;
 };
 
-const PACKAGE_NAMES = Object.values(PACKAGE_LIBRARY).map((p) => p.name);
+const PACKAGE_NAMES = Object.values(solutionPackages).map((p) => p.name);
 
 function clean(list: unknown, max: number): string[] {
   if (!Array.isArray(list)) return [];
