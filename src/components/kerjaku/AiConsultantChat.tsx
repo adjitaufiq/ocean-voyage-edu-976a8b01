@@ -18,6 +18,7 @@ import {
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import { getAiSessionState } from "@/lib/ai-session.functions";
 import { analytics } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
@@ -50,16 +51,24 @@ const GREETING: UIMessage = {
 
 const SESSION_KEY = "kerjaku_ai_session_id";
 
-function readSessionId() {
+function makeSessionId() {
+  return `sess_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+}
+
+function readStoredSessionId() {
   if (typeof window === "undefined") return "";
   try {
-    const existing = window.localStorage.getItem(SESSION_KEY);
-    if (existing) return existing;
-    const next = `sess_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
-    window.localStorage.setItem(SESSION_KEY, next);
-    return next;
+    return window.localStorage.getItem(SESSION_KEY) ?? "";
   } catch {
-    return `sess_${Date.now().toString(36)}`;
+    return "";
+  }
+}
+
+function storeSessionId(id: string) {
+  try {
+    window.localStorage.setItem(SESSION_KEY, id);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -68,9 +77,26 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
   const [started, setStarted] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [sessionId, setSessionId] = useState("");
+  const [askResume, setAskResume] = useState(false);
 
   useEffect(() => {
-    setSessionId(readSessionId());
+    let cancelled = false;
+    const existing = readStoredSessionId();
+    if (!existing) {
+      const next = makeSessionId();
+      storeSessionId(next);
+      setSessionId(next);
+      return;
+    }
+    setSessionId(existing);
+    void getAiSessionState({ data: { sessionId: existing } })
+      .then((state) => {
+        if (!cancelled && state.resumable) setAskResume(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const { messages, sendMessage, status, error, setMessages } = useChat({
@@ -83,7 +109,9 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
     onError: (err) => toast.error(err.message || "AI Consultant sedang tidak tersedia."),
   });
 
+
   const busy = status === "submitted" || status === "streaming";
+  const locked = busy || askResume;
 
   const trackedRef = useRef(false);
   useEffect(() => {
@@ -125,7 +153,7 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
 
   function send(text: string) {
     const value = text.trim();
-    if (!value || busy) return;
+    if (!value || locked) return;
     if (!started) {
       setStarted(true);
       analytics.aiConsultationStart(source);
@@ -137,11 +165,19 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
     send(message.text ?? "");
   }
 
-  function reset() {
+  function startFreshSession() {
+    const next = makeSessionId();
+    storeSessionId(next);
+    setSessionId(next);
     trackedRef.current = false;
     setStarted(false);
     setMessages([GREETING]);
     setChatKey((value) => value + 1);
+    setAskResume(false);
+  }
+
+  function reset() {
+    startFreshSession();
   }
 
   return (
@@ -181,6 +217,33 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
           )}
         </div>
       </div>
+
+      {askResume ? (
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <p className="text-sm text-foreground">
+            Kami menemukan konsultasi sebelumnya dari perangkat ini.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Mau dilanjutkan, atau mulai konsultasi baru untuk project lain?
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setAskResume(false)}
+              className="rounded-full border border-border bg-card/60 px-4 py-2 text-xs text-foreground transition-colors hover:border-primary/50"
+            >
+              Lanjutkan konsultasi sebelumnya
+            </button>
+            <button
+              type="button"
+              onClick={startFreshSession}
+              className="rounded-full border border-primary/40 bg-primary/15 px-4 py-2 text-xs text-primary transition-colors hover:bg-primary/25"
+            >
+              Buat konsultasi baru
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div
         className={cn(
@@ -244,9 +307,17 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
       )}
 
       <PromptInput onSubmit={submit} className="shrink-0">
-        <PromptInputTextarea ref={inputRef} placeholder="Tulis pesan untuk AI Consultant…" />
+        <PromptInputTextarea
+          ref={inputRef}
+          disabled={askResume}
+          placeholder={
+            askResume
+              ? "Pilih lanjutkan atau buat konsultasi baru…"
+              : "Tulis pesan untuk AI Consultant…"
+          }
+        />
         <PromptInputFooter className="justify-end">
-          <PromptInputSubmit status={status} disabled={busy} />
+          <PromptInputSubmit status={status} disabled={locked} />
         </PromptInputFooter>
       </PromptInput>
     </div>
