@@ -43,8 +43,9 @@ export const submitConsultationLead = createServerFn({ method: "POST" })
       const { createManualOrderBrief } = await import("./manual-brief.server");
       await createManualOrderBrief(row.id, form, tracking);
 
-      const { notifyLeadFromCrm } = await import("./lead-notify.server");
-      notified = await notifyLeadFromCrm(row.id);
+      const { notifyLeadOnce } = await import("./lead-notify.server");
+      const result = await notifyLeadOnce(row.id);
+      notified = { telegram: result.telegram, email: result.email };
     } else {
       // Storage failed: fall back to the direct notification path.
       const { sendTelegramMessage } = await import("./telegram.server");
