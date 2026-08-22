@@ -31,12 +31,15 @@ export async function createManualOrderBrief(
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { saveRequirementVersion } = await import("./requirements.server");
+    const { analyzeConsultation, analysisToSummary } = await import(
+      "./ai/consultant-analysis.server"
+    );
 
     const sessionId = `manual-${leadId}`;
     const score = tracking?.leadScore ?? 0;
     const intent = intentOf(score);
     const business = normalizeBusiness(form.businessName || form.name).name;
-    const problems = splitList(form.requirement);
+    const rawProblems = splitList(form.requirement);
     const features = splitList(form.features);
 
     const { data: existing } = await supabaseAdmin
