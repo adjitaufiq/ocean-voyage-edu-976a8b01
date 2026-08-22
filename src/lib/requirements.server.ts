@@ -140,7 +140,7 @@ export async function saveRequirementVersion(
 
   const { data: last, error: readError } = await supabaseAdmin
     .from("conversation_requirements")
-    .select("version")
+    .select("version, final_prompt, source")
     .eq("conversation_id", conversationId)
     .order("version", { ascending: false })
     .limit(1)
@@ -152,6 +152,16 @@ export async function saveRequirementVersion(
 
   const version = (last?.version ?? 0) + 1;
   const finalPrompt = buildFinalPrompt(payload, version);
+
+  // Retry of the same AI qualification (e.g. customer resends the WhatsApp
+  // number) must not create a duplicate version.
+  const isAutoAiVersion = (payload.source ?? "ai") === "ai" && !createdBy;
+  if (isAutoAiVersion && last && last.source === "ai") {
+    const previous = buildFinalPrompt(payload, last.version);
+    if (previous === last.final_prompt) {
+      return { version: last.version, finalPrompt: last.final_prompt ?? previous };
+    }
+  }
 
   const { error } = await supabaseAdmin.from("conversation_requirements").insert({
     conversation_id: conversationId,
