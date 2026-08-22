@@ -175,7 +175,6 @@ export async function qualifyConversation(
   };
 
   let leadId = conversation?.lead_id ?? null;
-  const isNewLead = !leadId;
   if (leadId) {
     const { error } = await supabaseAdmin
       .from("consultations")
@@ -275,7 +274,6 @@ export async function qualifyConversation(
       );
     }
   }
-  void isNewLead;
 
   return {
     ok: true as const,
