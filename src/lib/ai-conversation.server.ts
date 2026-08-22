@@ -231,11 +231,49 @@ export async function qualifyConversation(
     if (error) console.error("[ai-conversation] qualify failed", error.message);
 
     const { saveRequirementVersion } = await import("@/lib/requirements.server");
+
+    // Gap-filler: when the conversation produced thin structure, run the shared
+    // consultant analysis so the chatbot brief keeps the same reasoning depth.
+    let briefProblems = input.problems;
+    let briefFeatures = input.features;
+    let briefSummary = [
+      input.summary,
+      input.goal ? `Tujuan: ${input.goal}` : "",
+      input.adminNeeds ? `Kebutuhan admin/team: ${input.adminNeeds}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    if (briefProblems.length === 0 || briefFeatures.length === 0) {
+      try {
+        const { analyzeConsultation, analysisToSummary } = await import(
+          "@/lib/ai/consultant-analysis.server"
+        );
+        const analysis = await analyzeConsultation({
+          business: business.name,
+          projectType: input.projectType ?? null,
+          requirement: input.summary,
+          requestedFeatures: input.features,
+          problems: input.problems,
+          budget: input.budget,
+          timeline: input.timeline,
+          usersScale: input.users,
+          packageHint: input.packageName,
+          source: "ai",
+        });
+        if (briefProblems.length === 0) briefProblems = analysis.problems;
+        if (briefFeatures.length === 0) briefFeatures = analysis.coreFeatures;
+        briefSummary = [briefSummary, analysisToSummary(analysis)].filter(Boolean).join("\n\n");
+      } catch (error) {
+        console.error("[ai-conversation] analysis gap-fill failed", (error as Error).message);
+      }
+    }
+
     const saved = await saveRequirementVersion(conversation.id, leadId, {
       business: business.name,
       project: input.projectType?.trim() || projectTypeByPackage[input.packageName] || "Lainnya",
-      features: input.features,
-      problems: input.problems,
+      features: briefFeatures,
+      problems: briefProblems,
       packageName: input.packageName,
       timeline: input.timeline,
       budget: input.budget,
@@ -245,13 +283,7 @@ export async function qualifyConversation(
       contactName: input.contactName ?? null,
       contactEmail: input.contactEmail ?? null,
       contactWhatsapp: input.contactWhatsapp ?? null,
-      summary: [
-        input.summary,
-        input.goal ? `Tujuan: ${input.goal}` : "",
-        input.adminNeeds ? `Kebutuhan admin/team: ${input.adminNeeds}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n"),
+      summary: briefSummary,
       source: "ai",
     });
     requirementVersion = saved?.version ?? null;
