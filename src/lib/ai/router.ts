@@ -110,7 +110,9 @@ export function createRoutingFetch(feature: AiFeature, requestId = crypto.random
             return response;
           }
 
-          const errorClass = classifyHttpError(response.status, await peekError(response));
+          const detail = await peekError(response);
+          const errorClass = classifyHttpError(response.status, detail);
+          console.error("[ai-gateway-debug]", response.status, detail);
           log({
             requestId,
             feature,
