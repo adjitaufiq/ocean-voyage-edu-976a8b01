@@ -173,7 +173,28 @@ export async function saveRequirementVersion(
     final_prompt: finalPrompt,
     source: payload.source ?? "ai",
     created_by: createdBy ?? null,
-  });
+  };
+
+  // A retried AI qualification (customer resends the same WhatsApp number)
+  // refreshes the existing AI version instead of creating a duplicate one.
+  const isAutoAiVersion = (payload.source ?? "ai") === "ai" && !createdBy;
+  if (isAutoAiVersion && last && last.source === "ai") {
+    const keptPrompt = buildFinalPrompt(payload, last.version);
+    const { error: updateError } = await supabaseAdmin
+      .from("conversation_requirements")
+      .update({ ...row, final_prompt: keptPrompt })
+      .eq("conversation_id", conversationId)
+      .eq("version", last.version);
+    if (updateError) {
+      console.error("[requirements] update failed", updateError.message);
+      return null;
+    }
+    return { version: last.version, finalPrompt: keptPrompt };
+  }
+
+  const { error } = await supabaseAdmin
+    .from("conversation_requirements")
+    .insert({ conversation_id: conversationId, version, ...row });
   if (error) {
     console.error("[requirements] insert failed", error.message);
     return null;
