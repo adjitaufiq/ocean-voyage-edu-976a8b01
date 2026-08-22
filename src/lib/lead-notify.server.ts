@@ -209,3 +209,63 @@ async function runNotifyLeadFromCrm(leadId: string) {
   ]);
   return { email, telegram };
 }
+
+const NOTIFY_RULE_KEY = "lead.notified";
+
+/**
+ * Send the lead notification exactly once per lead, only after real contact
+ * data exists. Delivery is recorded in `automation_logs` so retries (e.g. the
+ * customer resending their WhatsApp number) never notify twice.
+ */
+export async function notifyLeadOnce(leadId: string) {
+  if (!leadId) return { email: false, telegram: false, skipped: "no_lead" as const };
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: lead } = await supabaseAdmin
+      .from("consultations")
+      .select("id, name, email, whatsapp")
+      .eq("id", leadId)
+      .maybeSingle();
+
+    const whatsapp = clean(lead?.whatsapp ?? null);
+    const email = clean(lead?.email ?? null);
+    const hasContact = Boolean(whatsapp) || (Boolean(email) && !PLACEHOLDER_EMAIL.test(email));
+    if (!hasContact) {
+      return { email: false, telegram: false, skipped: "no_contact" as const };
+    }
+
+    const { data: already } = await supabaseAdmin
+      .from("automation_logs")
+      .select("id")
+      .eq("rule_key", NOTIFY_RULE_KEY)
+      .eq("entity_id", leadId)
+      .eq("status", "success")
+      .maybeSingle();
+    if (already) return { email: false, telegram: false, skipped: "already_sent" as const };
+
+    const result = await notifyLeadFromCrm(leadId);
+
+    if (result.email || result.telegram) {
+      await supabaseAdmin.from("automation_logs").insert({
+        rule_key: NOTIFY_RULE_KEY,
+        category: "lead",
+        event: "lead.notified",
+        status: "success",
+        title: `Notifikasi lead terkirim · ${clean(lead?.name ?? null) || "Prospek"}`,
+        detail: `email=${result.email} telegram=${result.telegram}`,
+        entity_type: "lead",
+        entity_id: leadId,
+        meta: result,
+      });
+    }
+
+    return { ...result, skipped: null };
+  } catch (error) {
+    console.error(
+      "[lead-notify] notifyLeadOnce failed",
+      error instanceof Error ? error.message : String(error),
+    );
+    return { email: false, telegram: false, skipped: "error" as const };
+  }
+}
