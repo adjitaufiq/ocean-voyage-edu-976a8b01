@@ -493,7 +493,15 @@ KONTEKS WAKTU SISTEM (WIB): ${new Intl.DateTimeFormat("id-ID", {
                 const turns = toTurns(messages);
                 const score = scoreConversation(input);
                 qualified = input;
-                await qualifyConversation(sessionId, input, turns);
+                try {
+                  await qualifyConversation(sessionId, input, turns);
+                } catch (error) {
+                  // Persistence/side-effect failures must never break the AI stream.
+                  console.error(
+                    "[consultant-chat] qualifyConversation failed",
+                    error instanceof Error ? error.message : String(error),
+                  );
+                }
                 return { ...input, score };
               },
             }),
