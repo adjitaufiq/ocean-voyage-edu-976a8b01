@@ -110,7 +110,8 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
   });
 
 
-  const busy = status === "submitted" || status === "streaming" || askResume;
+  const busy = status === "submitted" || status === "streaming";
+  const locked = busy || askResume;
 
   const trackedRef = useRef(false);
   useEffect(() => {
@@ -152,7 +153,7 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
 
   function send(text: string) {
     const value = text.trim();
-    if (!value || busy) return;
+    if (!value || locked) return;
     if (!started) {
       setStarted(true);
       analytics.aiConsultationStart(source);
@@ -316,7 +317,7 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
           }
         />
         <PromptInputFooter className="justify-end">
-          <PromptInputSubmit status={status} disabled={busy} />
+          <PromptInputSubmit status={status} disabled={locked} />
         </PromptInputFooter>
       </PromptInput>
     </div>
