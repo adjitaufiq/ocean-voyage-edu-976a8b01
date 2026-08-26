@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 
-const EXTERNAL_LINKS = [
-  { label: "Google Maps", href: "https://maps.app.goo.gl/H6JTQU6GLQgd28zT9" },
+const SOCIAL_LINKS = [
   { label: "LinkedIn", href: "https://www.linkedin.com/in/adji-taufiq-0713aa42a" },
   { label: "GitHub", href: "https://github.com/kerjaku-space" },
 ] as const;
+
+const linkClass =
+  "transition-colors hover:text-white hover:underline underline-offset-4";
 
 export function SiteFooter() {
   return (
@@ -18,30 +20,39 @@ export function SiteFooter() {
           className="flex flex-wrap items-center justify-center gap-2 text-zinc-400"
           aria-label="Legal"
         >
-          <Link to="/privacy-policy" className="transition-colors hover:text-white">
+          <Link to="/privacy-policy" className={linkClass}>
             Privacy Policy
           </Link>
           <span className="text-zinc-600">•</span>
-          <Link to="/terms" className="transition-colors hover:text-white">
+          <Link to="/terms" className={linkClass}>
             Terms of Service
           </Link>
         </nav>
 
         {/* Baris 3 — Trust links & location */}
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-zinc-400">
-          <span className="inline-flex items-center gap-1">📍 Jakarta, Indonesia</span>
-          <span className="hidden text-zinc-600 sm:inline">|</span>
-          {EXTERNAL_LINKS.map((link, i) => (
+          <a
+            href="https://maps.app.goo.gl/H6JTQU6GLQgd28zT9"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={linkClass}
+          >
+            📍 Jakarta, Indonesia
+          </a>
+          <span className="text-zinc-600">|</span>
+          {SOCIAL_LINKS.map((link, i) => (
             <span key={link.href} className="inline-flex items-center gap-2">
               <a
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="transition-colors hover:text-white"
+                className={linkClass}
               >
                 {link.label}
               </a>
-              {i < EXTERNAL_LINKS.length - 1 && <span className="text-zinc-600">|</span>}
+              {i < SOCIAL_LINKS.length - 1 && (
+                <span className="text-zinc-600">•</span>
+              )}
             </span>
           ))}
         </div>
