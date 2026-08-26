@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { faqSection } from "@/lib/consultation-content";
+
 import { JourneyProvider } from "@/components/kerjaku/JourneyProvider";
 import { JourneyPanels } from "@/components/kerjaku/JourneyPanels";
 import { OceanScene } from "@/components/kerjaku/OceanScene";
