@@ -30,14 +30,15 @@ import { AiConsultantFab } from "@/components/kerjaku/AiConsultantFab";
 import { FinalStage } from "@/components/kerjaku/stages/FinalStage";
 
 
-const title = "KERJAKU — Digital Solution & Business Automation Agency";
+const title = "KERJAKU | Digital Product Studio - Website, Aplikasi & AI Solution";
 const description =
-  "KERJAKU adalah digital solution studio yang membangun website profesional, custom business system, automation, dan AI-powered solutions untuk membantu bisnis modern bekerja lebih efisien.";
+  "KERJAKU membangun website, aplikasi custom, dashboard bisnis, automation, dan solusi AI untuk membantu bisnis bekerja lebih efektif.";
 const keywords =
   "digital solution studio, jasa pembuatan website, custom business system, business automation, AI solutions, web application, dashboard bisnis, workflow automation";
-const ogImage = "https://kerjaku.space/og-image.png";
+const ogImage = "https://kerjaku.space/logo.webp";
 const socialTitle = title;
 const socialDescription = description;
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
