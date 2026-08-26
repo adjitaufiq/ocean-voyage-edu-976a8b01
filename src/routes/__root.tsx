@@ -234,8 +234,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600&family=Outfit:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap",
       },
-      { rel: "icon", type: "image/webp", href: "/logo.webp" },
-      { rel: "apple-touch-icon", href: "/logo.webp" },
+      { rel: "icon", type: "image/x-icon", href: "/favicon.ico?v=kerjaku-20260826" },
+      { rel: "icon", type: "image/png", sizes: "96x96", href: "/favicon-96.png?v=kerjaku-20260826" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=kerjaku-20260826" },
     ],
     scripts: [
       {
