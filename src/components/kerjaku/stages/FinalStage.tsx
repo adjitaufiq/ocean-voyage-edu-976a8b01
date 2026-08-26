@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { analytics } from "@/lib/analytics";
 import { finalCta, brand } from "@/lib/site-content";
 import { ctaLabels } from "@/lib/consultation-content";
