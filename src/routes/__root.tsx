@@ -79,19 +79,148 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const SITE_TITLE = "KERJAKU | Digital Product Studio - Website, Aplikasi & AI Solution";
+const SITE_DESCRIPTION =
+  "KERJAKU membangun website, aplikasi custom, dashboard bisnis, automation, dan solusi AI untuk membantu bisnis bekerja lebih efektif.";
+const SITE_LOGO = "https://kerjaku.space/logo.webp";
+
+const siteGraph = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ProfessionalService",
+      "@id": "https://kerjaku.space/#organization",
+      name: "KERJAKU",
+      url: "https://kerjaku.space",
+      logo: { "@type": "ImageObject", url: SITE_LOGO },
+      description:
+        "KERJAKU adalah digital product studio yang membangun website, aplikasi custom, dashboard bisnis, automation, dan solusi AI untuk menyelesaikan masalah kerja nyata.",
+      email: "admin.kerjaku@gmail.com",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Jakarta",
+        addressCountry: "Indonesia",
+      },
+      founder: { "@id": "https://kerjaku.space/#founder" },
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "5.0",
+        reviewCount: "5",
+        bestRating: "5",
+        worstRating: "1",
+      },
+      sameAs: [
+        "https://maps.app.goo.gl/H6JTQU6GLQgd28zT9",
+        "https://www.instagram.com/kerjaku.space",
+        "https://github.com/kerjaku-space",
+      ],
+    },
+    {
+      "@type": "Person",
+      "@id": "https://kerjaku.space/#founder",
+      name: "Adji Taufiq",
+      jobTitle: "Founder & Digital Product Builder",
+      worksFor: { "@id": "https://kerjaku.space/#organization" },
+      sameAs: [
+        "https://www.linkedin.com/in/adji-taufiq-0713aa42a",
+        "https://github.com/adjitaufiq",
+      ],
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://kerjaku.space/#ro-memory",
+      name: "RO Memory",
+      url: "https://demo-ro-memory.kerjaku.space/auth",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description:
+        "RO Memory adalah Field Activity Intelligence System yang membantu bisnis mengelola aktivitas lapangan, monitoring operasional, database, dan analisis performa.",
+      author: { "@id": "https://kerjaku.space/#organization" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://kerjaku.space/#qresto",
+      name: "QResto",
+      url: "https://qresto.kerjaku.space/",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description:
+        "QResto adalah solusi digital restaurant management yang membantu bisnis kuliner meningkatkan proses pemesanan dan operasional layanan.",
+      author: { "@id": "https://kerjaku.space/#organization" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://kerjaku.space/#dompet-gue",
+      name: "Dompet Gue",
+      url: "https://dompetgue.kerjaku.space/",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Web",
+      description:
+        "Dompet Gue adalah aplikasi digital untuk membantu pengguna melakukan pencatatan, pengelolaan, dan monitoring keuangan secara lebih mudah.",
+      author: { "@id": "https://kerjaku.space/#organization" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://kerjaku.space/#material-estimator",
+      name: "Material Estimator",
+      url: "https://kerjaku.space/",
+      applicationCategory: "UtilitiesApplication",
+      operatingSystem: "Web",
+      description:
+        "Material Estimator adalah sistem digital untuk membantu estimasi kebutuhan material secara cepat, akurat, dan terstruktur.",
+      author: { "@id": "https://kerjaku.space/#organization" },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://kerjaku.space/#faq",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "Berapa biaya pembuatan website di KERJAKU?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Biaya pembuatan website di KERJAKU menyesuaikan kebutuhan dan kompleksitas project. KERJAKU menyediakan solusi mulai dari website sederhana, website bisnis profesional, hingga aplikasi custom dengan fitur yang dapat disesuaikan dengan kebutuhan client.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Apakah KERJAKU menerima pembuatan website custom?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Ya, KERJAKU melayani pengembangan sistem dan aplikasi custom sesuai kebutuhan spesifik klien.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Apakah domain dan hosting sudah termasuk?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Ya, paket pembuatan website/aplikasi dapat disesuaikan termasuk opsi domain, hosting, dan pengurusan teknis.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Berapa lama proses pembuatan website?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Waktu pengerjaan bervariasi tergantung skala project, umumnya berkisar dari beberapa hari hingga beberapa minggu.",
+          },
+        },
+      ],
+    },
+  ],
+};
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "KERJAKU — Digital Solution & Business Automation Agency" },
-      {
-        name: "description",
-        content:
-          "KERJAKU adalah digital solution studio yang membangun website profesional, custom business system, automation, dan AI-powered solutions untuk bisnis modern.",
-      },
+      { title: SITE_TITLE },
+      { name: "description", content: SITE_DESCRIPTION },
       { name: "author", content: "KERJAKU" },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "KERJAKU" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -105,7 +234,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600&family=Outfit:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(siteGraph),
+      },
     ],
   }),
 
@@ -114,6 +249,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
+
 
 function RootShell({ children }: { children: ReactNode }) {
   return (

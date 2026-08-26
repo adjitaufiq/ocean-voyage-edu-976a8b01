@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as JasaPembuatanWebsiteAplikasiLandingPageRouteImport } from './routes/jasa-pembuatan-website-aplikasi-landing-page'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -49,9 +51,19 @@ import { Route as AuthenticatedAdminInvoicesIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminClientsIdRouteImport } from './routes/_authenticated/admin.clients.$id'
 import { Route as AuthenticatedAdminAssistantThreadIdRouteImport } from './routes/_authenticated/admin.assistant.$threadId'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JasaPembuatanWebsiteAplikasiLandingPageRoute =
@@ -272,7 +284,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/d/$slug': typeof DSlugRoute
@@ -312,7 +326,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/d/$slug': typeof DSlugRoute
   '/i/$slug': typeof ISlugRoute
@@ -352,7 +368,9 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/d/$slug': typeof DSlugRoute
@@ -394,7 +412,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/privacy-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/admin'
     | '/api/assistant-chat'
     | '/d/$slug'
@@ -434,7 +454,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/privacy-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/api/assistant-chat'
     | '/d/$slug'
     | '/i/$slug'
@@ -473,7 +495,9 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/privacy-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/_authenticated/admin'
     | '/api/assistant-chat'
     | '/d/$slug'
@@ -515,7 +539,9 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   JasaPembuatanWebsiteAplikasiLandingPageRoute: typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsRoute: typeof TermsRoute
   ApiAssistantChatRoute: typeof ApiAssistantChatRoute
   DSlugRoute: typeof DSlugRoute
   ISlugRoute: typeof ISlugRoute
@@ -531,11 +557,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jasa-pembuatan-website-aplikasi-landing-page': {
@@ -892,7 +932,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   JasaPembuatanWebsiteAplikasiLandingPageRoute:
     JasaPembuatanWebsiteAplikasiLandingPageRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsRoute: TermsRoute,
   ApiAssistantChatRoute: ApiAssistantChatRoute,
   DSlugRoute: DSlugRoute,
   ISlugRoute: ISlugRoute,

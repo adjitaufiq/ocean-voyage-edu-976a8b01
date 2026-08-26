@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { faqSection } from "@/lib/consultation-content";
+
 import { JourneyProvider } from "@/components/kerjaku/JourneyProvider";
 import { JourneyPanels } from "@/components/kerjaku/JourneyPanels";
 import { OceanScene } from "@/components/kerjaku/OceanScene";
@@ -30,14 +30,15 @@ import { AiConsultantFab } from "@/components/kerjaku/AiConsultantFab";
 import { FinalStage } from "@/components/kerjaku/stages/FinalStage";
 
 
-const title = "KERJAKU — Digital Solution & Business Automation Agency";
+const title = "KERJAKU | Digital Product Studio - Website, Aplikasi & AI Solution";
 const description =
-  "KERJAKU adalah digital solution studio yang membangun website profesional, custom business system, automation, dan AI-powered solutions untuk membantu bisnis modern bekerja lebih efisien.";
+  "KERJAKU membangun website, aplikasi custom, dashboard bisnis, automation, dan solusi AI untuk membantu bisnis bekerja lebih efektif.";
 const keywords =
   "digital solution studio, jasa pembuatan website, custom business system, business automation, AI solutions, web application, dashboard bisnis, workflow automation";
-const ogImage = "https://kerjaku.space/og-image.png";
+const ogImage = "https://kerjaku.space/logo.webp";
 const socialTitle = title;
 const socialDescription = description;
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -56,9 +57,7 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: "https://kerjaku.space/" },
       { property: "og:image", content: ogImage },
       { property: "og:image:secure_url", content: ogImage },
-      { property: "og:image:type", content: "image/png" },
-      { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
+      { property: "og:image:type", content: "image/webp" },
       {
         property: "og:image:alt",
         content: "KERJAKU — Custom digital solutions, AI automation & business system development",
@@ -78,51 +77,17 @@ export const Route = createFileRoute("/")({
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
-          "@graph": [
-            {
-              "@type": "WebSite",
-              "@id": "https://kerjaku.space/#website",
-              name: "KERJAKU",
-              url: "https://kerjaku.space/",
-              description,
-              inLanguage: "id-ID",
-              publisher: { "@id": "https://kerjaku.space/#organization" },
-            },
-            {
-              "@type": "Organization",
-              "@id": "https://kerjaku.space/#organization",
-              name: "KERJAKU",
-              alternateName: "KERJAKU Digital Solution Studio",
-              url: "https://kerjaku.space/",
-              email: "cs@kerjaku.space",
-              slogan: "Work, made your way.",
-              description,
-              logo: "https://kerjaku.space/og-image.png",
-              areaServed: "ID",
-              knowsLanguage: "id-ID",
-              makesOffer: [
-                "Jasa pembuatan website profesional",
-                "Custom business system",
-                "Web application & dashboard custom",
-                "AI & automation solutions",
-              ].map((name) => ({
-                "@type": "Offer",
-                itemOffered: { "@type": "Service", name, serviceType: name },
-              })),
-            },
-            {
-              "@type": "FAQPage",
-              "@id": "https://kerjaku.space/#faq",
-              mainEntity: faqSection.items.map((item) => ({
-                "@type": "Question",
-                name: item.q,
-                acceptedAnswer: { "@type": "Answer", text: item.a },
-              })),
-            },
-          ],
+          "@type": "WebSite",
+          "@id": "https://kerjaku.space/#website",
+          name: "KERJAKU",
+          url: "https://kerjaku.space/",
+          description,
+          inLanguage: "id-ID",
+          publisher: { "@id": "https://kerjaku.space/#organization" },
         }),
       },
     ],
+
   }),
   component: Index,
 });
