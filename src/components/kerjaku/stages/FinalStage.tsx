@@ -52,9 +52,7 @@ export function FinalStage() {
       </div>
 
       <footer className="mt-20 flex w-full max-w-3xl flex-col items-center gap-4 border-t border-border pt-8 text-xs text-muted-foreground sm:flex-row sm:justify-between">
-        <p>
-          {brand.name} — {brand.motto}
-        </p>
+        <p>© KERJAKU — Digital Product Studio</p>
         <div className="flex flex-wrap items-center justify-center gap-4">
           <button
             type="button"
@@ -73,11 +71,16 @@ export function FinalStage() {
           >
             Konsultasikan Project Anda
           </button>
-          <button type="button" className="hover:text-foreground" onClick={() => scrollTo("hero")}>
-            Kembali ke permukaan ↑
-          </button>
+          <Link to="/privacy-policy" className="hover:text-foreground">
+            Privacy Policy
+          </Link>
+          <Link to="/terms" className="hover:text-foreground">
+            Terms of Service
+          </Link>
         </div>
+        <p>Jakarta, Indonesia</p>
       </footer>
+
     </section>
   );
 }
