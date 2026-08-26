@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as JasaPembuatanWebsiteAplikasiLandingPageRouteImport } from './routes/jasa-pembuatan-website-aplikasi-landing-page'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -52,6 +53,11 @@ import { Route as AuthenticatedAdminAssistantThreadIdRouteImport } from './route
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JasaPembuatanWebsiteAplikasiLandingPageRoute =
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/api/assistant-chat': typeof ApiAssistantChatRoute
@@ -312,6 +319,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/d/$slug': typeof DSlugRoute
@@ -352,6 +360,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/api/assistant-chat': typeof ApiAssistantChatRoute
@@ -394,6 +403,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/privacy-policy'
     | '/sitemap.xml'
     | '/admin'
     | '/api/assistant-chat'
@@ -434,6 +444,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/privacy-policy'
     | '/sitemap.xml'
     | '/api/assistant-chat'
     | '/d/$slug'
@@ -473,6 +484,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/privacy-policy'
     | '/sitemap.xml'
     | '/_authenticated/admin'
     | '/api/assistant-chat'
@@ -515,6 +527,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   JasaPembuatanWebsiteAplikasiLandingPageRoute: typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiAssistantChatRoute: typeof ApiAssistantChatRoute
   DSlugRoute: typeof DSlugRoute
@@ -536,6 +549,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jasa-pembuatan-website-aplikasi-landing-page': {
@@ -892,6 +912,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   JasaPembuatanWebsiteAplikasiLandingPageRoute:
     JasaPembuatanWebsiteAplikasiLandingPageRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiAssistantChatRoute: ApiAssistantChatRoute,
   DSlugRoute: DSlugRoute,
