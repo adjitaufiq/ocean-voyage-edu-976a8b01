@@ -1,0 +1,27 @@
+# KERJAKU
+
+> KERJAKU adalah digital product studio asal Jakarta, Indonesia yang membangun website, web app, sistem operasional custom, dashboard bisnis, workflow automation, dan integrasi AI. Konsultasi kebutuhan dilakukan lewat AI Consultant di halaman utama.
+
+## Layanan
+- [Jasa pembuatan aplikasi custom](https://kerjaku.space/jasa-pembuatan-aplikasi-custom): aplikasi internal, sistem operasional, digitalisasi alur kerja manual.
+- [Jasa AI automation bisnis](https://kerjaku.space/jasa-ai-automation-bisnis): AI assistant terhubung data bisnis, otomasi alur kerja, bukan sekadar chatbot.
+- [Jasa dashboard bisnis](https://kerjaku.space/jasa-dashboard-bisnis): dashboard operasional, penjualan, dan aktivitas lapangan.
+- [Jasa pembuatan website, aplikasi & landing page](https://kerjaku.space/jasa-pembuatan-website-aplikasi-landing-page): company profile dan landing page konversi.
+
+## Produk
+- [Daftar produk](https://kerjaku.space/products)
+- [RO MEMORY](https://kerjaku.space/products/ro-memory)
+- [QResto](https://kerjaku.space/products/qresto)
+- [DOMPET GUE](https://kerjaku.space/products/dompet-gue)
+- [MATERIAL ESTIMATOR](https://kerjaku.space/products/material-estimator)
+
+## Insight
+- [Insight KERJAKU](https://kerjaku.space/insight)
+- [Bagaimana KERJAKU menggunakan AI dalam operasional bisnis](https://kerjaku.space/cara-kerjaku-menggunakan-ai)
+
+## Legal
+- [Privacy Policy](https://kerjaku.space/privacy-policy)
+- [Terms of Service](https://kerjaku.space/terms)
+
+## Catatan
+Area admin, CRM, autentikasi, dokumen klien, dan endpoint API bersifat privat dan tidak untuk diindeks.
