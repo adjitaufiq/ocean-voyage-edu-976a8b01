@@ -157,7 +157,7 @@ export function DocPage({ doc, children }: { doc: DocPageContent; children?: Rea
               {doc.related.map((link) => (
                 <Link
                   key={String(link.to)}
-                  to={link.to}
+                  to={link.to as never}
                   className="rounded-2xl glass-panel p-5 transition-colors hover:border-primary/50"
                 >
                   <span className="font-display text-base leading-tight text-foreground">

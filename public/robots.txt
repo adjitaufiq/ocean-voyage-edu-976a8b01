@@ -1,17 +1,45 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /api/
+Disallow: /portal/
+Disallow: /d/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /api/
+Disallow: /portal/
+Disallow: /d/
 
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /api/
+Disallow: /portal/
+Disallow: /d/
+
+User-agent: GPTBot
+Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /api/
+Disallow: /portal/
+Disallow: /d/
 
 User-agent: ChatGPT-User
 Allow: /
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /api/
+Disallow: /portal/
+Disallow: /d/
 
 User-agent: Twitterbot
 Allow: /
@@ -23,5 +51,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /auth
+Disallow: /api/
+Disallow: /portal/
+Disallow: /d/
 
 Sitemap: https://kerjaku.space/sitemap.xml

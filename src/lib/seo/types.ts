@@ -3,9 +3,7 @@
  * Content is data-driven so every page renders with the same semantic
  * structure (h1 → h2 sections → FAQ → CTA) and consistent schema.
  */
-import type { LinkProps } from "@tanstack/react-router";
-
-export type InternalPath = LinkProps["to"];
+export type InternalPath = string;
 
 export type Block =
   | { kind: "p"; text: string }

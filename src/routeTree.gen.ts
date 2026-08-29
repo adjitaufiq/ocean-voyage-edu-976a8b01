@@ -13,11 +13,19 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as JasaPembuatanWebsiteAplikasiLandingPageRouteImport } from './routes/jasa-pembuatan-website-aplikasi-landing-page'
+import { Route as JasaPembuatanAplikasiCustomRouteImport } from './routes/jasa-pembuatan-aplikasi-custom'
+import { Route as JasaDashboardBisnisRouteImport } from './routes/jasa-dashboard-bisnis'
+import { Route as JasaAiAutomationBisnisRouteImport } from './routes/jasa-ai-automation-bisnis'
+import { Route as CaraKerjakuMenggunakanAiRouteImport } from './routes/cara-kerjaku-menggunakan-ai'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProductsIndexRouteImport } from './routes/products.index'
+import { Route as InsightIndexRouteImport } from './routes/insight.index'
+import { Route as ProductsSlugRouteImport } from './routes/products.$slug'
 import { Route as PortfolioSlugRouteImport } from './routes/portfolio.$slug'
 import { Route as PortalTokenRouteImport } from './routes/portal.$token'
+import { Route as InsightSlugRouteImport } from './routes/insight.$slug'
 import { Route as ISlugRouteImport } from './routes/i.$slug'
 import { Route as DSlugRouteImport } from './routes/d.$slug'
 import { Route as ApiAssistantChatRouteImport } from './routes/api/assistant-chat'
@@ -72,6 +80,28 @@ const JasaPembuatanWebsiteAplikasiLandingPageRoute =
     path: '/jasa-pembuatan-website-aplikasi-landing-page',
     getParentRoute: () => rootRouteImport,
   } as any)
+const JasaPembuatanAplikasiCustomRoute =
+  JasaPembuatanAplikasiCustomRouteImport.update({
+    id: '/jasa-pembuatan-aplikasi-custom',
+    path: '/jasa-pembuatan-aplikasi-custom',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const JasaDashboardBisnisRoute = JasaDashboardBisnisRouteImport.update({
+  id: '/jasa-dashboard-bisnis',
+  path: '/jasa-dashboard-bisnis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JasaAiAutomationBisnisRoute = JasaAiAutomationBisnisRouteImport.update({
+  id: '/jasa-ai-automation-bisnis',
+  path: '/jasa-ai-automation-bisnis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CaraKerjakuMenggunakanAiRoute =
+  CaraKerjakuMenggunakanAiRouteImport.update({
+    id: '/cara-kerjaku-menggunakan-ai',
+    path: '/cara-kerjaku-menggunakan-ai',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -86,6 +116,21 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductsIndexRoute = ProductsIndexRouteImport.update({
+  id: '/products/',
+  path: '/products/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InsightIndexRoute = InsightIndexRouteImport.update({
+  id: '/insight/',
+  path: '/insight/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsSlugRoute = ProductsSlugRouteImport.update({
+  id: '/products/$slug',
+  path: '/products/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PortfolioSlugRoute = PortfolioSlugRouteImport.update({
   id: '/portfolio/$slug',
   path: '/portfolio/$slug',
@@ -94,6 +139,11 @@ const PortfolioSlugRoute = PortfolioSlugRouteImport.update({
 const PortalTokenRoute = PortalTokenRouteImport.update({
   id: '/portal/$token',
   path: '/portal/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InsightSlugRoute = InsightSlugRouteImport.update({
+  id: '/insight/$slug',
+  path: '/insight/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ISlugRoute = ISlugRouteImport.update({
@@ -283,6 +333,10 @@ const AuthenticatedAdminAssistantThreadIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/cara-kerjaku-menggunakan-ai': typeof CaraKerjakuMenggunakanAiRoute
+  '/jasa-ai-automation-bisnis': typeof JasaAiAutomationBisnisRoute
+  '/jasa-dashboard-bisnis': typeof JasaDashboardBisnisRoute
+  '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -291,8 +345,12 @@ export interface FileRoutesByFullPath {
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/d/$slug': typeof DSlugRoute
   '/i/$slug': typeof ISlugRoute
+  '/insight/$slug': typeof InsightSlugRoute
   '/portal/$token': typeof PortalTokenRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
+  '/products/$slug': typeof ProductsSlugRoute
+  '/insight/': typeof InsightIndexRoute
+  '/products/': typeof ProductsIndexRoute
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/admin/assistant': typeof AuthenticatedAdminAssistantRouteWithChildren
   '/admin/automation': typeof AuthenticatedAdminAutomationRoute
@@ -325,6 +383,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/cara-kerjaku-menggunakan-ai': typeof CaraKerjakuMenggunakanAiRoute
+  '/jasa-ai-automation-bisnis': typeof JasaAiAutomationBisnisRoute
+  '/jasa-dashboard-bisnis': typeof JasaDashboardBisnisRoute
+  '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -332,8 +394,12 @@ export interface FileRoutesByTo {
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/d/$slug': typeof DSlugRoute
   '/i/$slug': typeof ISlugRoute
+  '/insight/$slug': typeof InsightSlugRoute
   '/portal/$token': typeof PortalTokenRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
+  '/products/$slug': typeof ProductsSlugRoute
+  '/insight': typeof InsightIndexRoute
+  '/products': typeof ProductsIndexRoute
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/admin/automation': typeof AuthenticatedAdminAutomationRoute
   '/admin/conversations': typeof AuthenticatedAdminConversationsRoute
@@ -367,6 +433,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/cara-kerjaku-menggunakan-ai': typeof CaraKerjakuMenggunakanAiRoute
+  '/jasa-ai-automation-bisnis': typeof JasaAiAutomationBisnisRoute
+  '/jasa-dashboard-bisnis': typeof JasaDashboardBisnisRoute
+  '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -375,8 +445,12 @@ export interface FileRoutesById {
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/d/$slug': typeof DSlugRoute
   '/i/$slug': typeof ISlugRoute
+  '/insight/$slug': typeof InsightSlugRoute
   '/portal/$token': typeof PortalTokenRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
+  '/products/$slug': typeof ProductsSlugRoute
+  '/insight/': typeof InsightIndexRoute
+  '/products/': typeof ProductsIndexRoute
   '/_authenticated/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/_authenticated/admin/assistant': typeof AuthenticatedAdminAssistantRouteWithChildren
   '/_authenticated/admin/automation': typeof AuthenticatedAdminAutomationRoute
@@ -411,6 +485,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/cara-kerjaku-menggunakan-ai'
+    | '/jasa-ai-automation-bisnis'
+    | '/jasa-dashboard-bisnis'
+    | '/jasa-pembuatan-aplikasi-custom'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
     | '/privacy-policy'
     | '/sitemap.xml'
@@ -419,8 +497,12 @@ export interface FileRouteTypes {
     | '/api/assistant-chat'
     | '/d/$slug'
     | '/i/$slug'
+    | '/insight/$slug'
     | '/portal/$token'
     | '/portfolio/$slug'
+    | '/products/$slug'
+    | '/insight/'
+    | '/products/'
     | '/admin/analytics'
     | '/admin/assistant'
     | '/admin/automation'
@@ -453,6 +535,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/cara-kerjaku-menggunakan-ai'
+    | '/jasa-ai-automation-bisnis'
+    | '/jasa-dashboard-bisnis'
+    | '/jasa-pembuatan-aplikasi-custom'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
     | '/privacy-policy'
     | '/sitemap.xml'
@@ -460,8 +546,12 @@ export interface FileRouteTypes {
     | '/api/assistant-chat'
     | '/d/$slug'
     | '/i/$slug'
+    | '/insight/$slug'
     | '/portal/$token'
     | '/portfolio/$slug'
+    | '/products/$slug'
+    | '/insight'
+    | '/products'
     | '/admin/analytics'
     | '/admin/automation'
     | '/admin/conversations'
@@ -494,6 +584,10 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/cara-kerjaku-menggunakan-ai'
+    | '/jasa-ai-automation-bisnis'
+    | '/jasa-dashboard-bisnis'
+    | '/jasa-pembuatan-aplikasi-custom'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
     | '/privacy-policy'
     | '/sitemap.xml'
@@ -502,8 +596,12 @@ export interface FileRouteTypes {
     | '/api/assistant-chat'
     | '/d/$slug'
     | '/i/$slug'
+    | '/insight/$slug'
     | '/portal/$token'
     | '/portfolio/$slug'
+    | '/products/$slug'
+    | '/insight/'
+    | '/products/'
     | '/_authenticated/admin/analytics'
     | '/_authenticated/admin/assistant'
     | '/_authenticated/admin/automation'
@@ -538,6 +636,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CaraKerjakuMenggunakanAiRoute: typeof CaraKerjakuMenggunakanAiRoute
+  JasaAiAutomationBisnisRoute: typeof JasaAiAutomationBisnisRoute
+  JasaDashboardBisnisRoute: typeof JasaDashboardBisnisRoute
+  JasaPembuatanAplikasiCustomRoute: typeof JasaPembuatanAplikasiCustomRoute
   JasaPembuatanWebsiteAplikasiLandingPageRoute: typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -545,8 +647,12 @@ export interface RootRouteChildren {
   ApiAssistantChatRoute: typeof ApiAssistantChatRoute
   DSlugRoute: typeof DSlugRoute
   ISlugRoute: typeof ISlugRoute
+  InsightSlugRoute: typeof InsightSlugRoute
   PortalTokenRoute: typeof PortalTokenRoute
   PortfolioSlugRoute: typeof PortfolioSlugRoute
+  ProductsSlugRoute: typeof ProductsSlugRoute
+  InsightIndexRoute: typeof InsightIndexRoute
+  ProductsIndexRoute: typeof ProductsIndexRoute
   ApiPublicConsultantChatRoute: typeof ApiPublicConsultantChatRoute
   ApiPublicHooksAutomationScanRoute: typeof ApiPublicHooksAutomationScanRoute
   ApiPublicHooksTelegramDailyBriefRoute: typeof ApiPublicHooksTelegramDailyBriefRoute
@@ -585,6 +691,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JasaPembuatanWebsiteAplikasiLandingPageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/jasa-pembuatan-aplikasi-custom': {
+      id: '/jasa-pembuatan-aplikasi-custom'
+      path: '/jasa-pembuatan-aplikasi-custom'
+      fullPath: '/jasa-pembuatan-aplikasi-custom'
+      preLoaderRoute: typeof JasaPembuatanAplikasiCustomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jasa-dashboard-bisnis': {
+      id: '/jasa-dashboard-bisnis'
+      path: '/jasa-dashboard-bisnis'
+      fullPath: '/jasa-dashboard-bisnis'
+      preLoaderRoute: typeof JasaDashboardBisnisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jasa-ai-automation-bisnis': {
+      id: '/jasa-ai-automation-bisnis'
+      path: '/jasa-ai-automation-bisnis'
+      fullPath: '/jasa-ai-automation-bisnis'
+      preLoaderRoute: typeof JasaAiAutomationBisnisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cara-kerjaku-menggunakan-ai': {
+      id: '/cara-kerjaku-menggunakan-ai'
+      path: '/cara-kerjaku-menggunakan-ai'
+      fullPath: '/cara-kerjaku-menggunakan-ai'
+      preLoaderRoute: typeof CaraKerjakuMenggunakanAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -606,6 +740,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/products/': {
+      id: '/products/'
+      path: '/products'
+      fullPath: '/products/'
+      preLoaderRoute: typeof ProductsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/insight/': {
+      id: '/insight/'
+      path: '/insight'
+      fullPath: '/insight/'
+      preLoaderRoute: typeof InsightIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products/$slug': {
+      id: '/products/$slug'
+      path: '/products/$slug'
+      fullPath: '/products/$slug'
+      preLoaderRoute: typeof ProductsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portfolio/$slug': {
       id: '/portfolio/$slug'
       path: '/portfolio/$slug'
@@ -618,6 +773,13 @@ declare module '@tanstack/react-router' {
       path: '/portal/$token'
       fullPath: '/portal/$token'
       preLoaderRoute: typeof PortalTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/insight/$slug': {
+      id: '/insight/$slug'
+      path: '/insight/$slug'
+      fullPath: '/insight/$slug'
+      preLoaderRoute: typeof InsightSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/i/$slug': {
@@ -930,6 +1092,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CaraKerjakuMenggunakanAiRoute: CaraKerjakuMenggunakanAiRoute,
+  JasaAiAutomationBisnisRoute: JasaAiAutomationBisnisRoute,
+  JasaDashboardBisnisRoute: JasaDashboardBisnisRoute,
+  JasaPembuatanAplikasiCustomRoute: JasaPembuatanAplikasiCustomRoute,
   JasaPembuatanWebsiteAplikasiLandingPageRoute:
     JasaPembuatanWebsiteAplikasiLandingPageRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
@@ -938,8 +1104,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAssistantChatRoute: ApiAssistantChatRoute,
   DSlugRoute: DSlugRoute,
   ISlugRoute: ISlugRoute,
+  InsightSlugRoute: InsightSlugRoute,
   PortalTokenRoute: PortalTokenRoute,
   PortfolioSlugRoute: PortfolioSlugRoute,
+  ProductsSlugRoute: ProductsSlugRoute,
+  InsightIndexRoute: InsightIndexRoute,
+  ProductsIndexRoute: ProductsIndexRoute,
   ApiPublicConsultantChatRoute: ApiPublicConsultantChatRoute,
   ApiPublicHooksAutomationScanRoute: ApiPublicHooksAutomationScanRoute,
   ApiPublicHooksTelegramDailyBriefRoute: ApiPublicHooksTelegramDailyBriefRoute,
