@@ -22,6 +22,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductsIndexRouteImport } from './routes/products.index'
 import { Route as InsightIndexRouteImport } from './routes/insight.index'
+import { Route as BuildIndexRouteImport } from './routes/build.index'
 import { Route as ProductsSlugRouteImport } from './routes/products.$slug'
 import { Route as PortfolioSlugRouteImport } from './routes/portfolio.$slug'
 import { Route as PortalTokenRouteImport } from './routes/portal.$token'
@@ -124,6 +125,11 @@ const ProductsIndexRoute = ProductsIndexRouteImport.update({
 const InsightIndexRoute = InsightIndexRouteImport.update({
   id: '/insight/',
   path: '/insight/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuildIndexRoute = BuildIndexRouteImport.update({
+  id: '/build/',
+  path: '/build/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsSlugRoute = ProductsSlugRouteImport.update({
@@ -349,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/portal/$token': typeof PortalTokenRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
   '/products/$slug': typeof ProductsSlugRoute
+  '/build/': typeof BuildIndexRoute
   '/insight/': typeof InsightIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
@@ -398,6 +405,7 @@ export interface FileRoutesByTo {
   '/portal/$token': typeof PortalTokenRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
   '/products/$slug': typeof ProductsSlugRoute
+  '/build': typeof BuildIndexRoute
   '/insight': typeof InsightIndexRoute
   '/products': typeof ProductsIndexRoute
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
@@ -449,6 +457,7 @@ export interface FileRoutesById {
   '/portal/$token': typeof PortalTokenRoute
   '/portfolio/$slug': typeof PortfolioSlugRoute
   '/products/$slug': typeof ProductsSlugRoute
+  '/build/': typeof BuildIndexRoute
   '/insight/': typeof InsightIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/_authenticated/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
@@ -501,6 +510,7 @@ export interface FileRouteTypes {
     | '/portal/$token'
     | '/portfolio/$slug'
     | '/products/$slug'
+    | '/build/'
     | '/insight/'
     | '/products/'
     | '/admin/analytics'
@@ -550,6 +560,7 @@ export interface FileRouteTypes {
     | '/portal/$token'
     | '/portfolio/$slug'
     | '/products/$slug'
+    | '/build'
     | '/insight'
     | '/products'
     | '/admin/analytics'
@@ -600,6 +611,7 @@ export interface FileRouteTypes {
     | '/portal/$token'
     | '/portfolio/$slug'
     | '/products/$slug'
+    | '/build/'
     | '/insight/'
     | '/products/'
     | '/_authenticated/admin/analytics'
@@ -651,6 +663,7 @@ export interface RootRouteChildren {
   PortalTokenRoute: typeof PortalTokenRoute
   PortfolioSlugRoute: typeof PortfolioSlugRoute
   ProductsSlugRoute: typeof ProductsSlugRoute
+  BuildIndexRoute: typeof BuildIndexRoute
   InsightIndexRoute: typeof InsightIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   ApiPublicConsultantChatRoute: typeof ApiPublicConsultantChatRoute
@@ -752,6 +765,13 @@ declare module '@tanstack/react-router' {
       path: '/insight'
       fullPath: '/insight/'
       preLoaderRoute: typeof InsightIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/build/': {
+      id: '/build/'
+      path: '/build'
+      fullPath: '/build/'
+      preLoaderRoute: typeof BuildIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products/$slug': {
@@ -1108,6 +1128,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortalTokenRoute: PortalTokenRoute,
   PortfolioSlugRoute: PortfolioSlugRoute,
   ProductsSlugRoute: ProductsSlugRoute,
+  BuildIndexRoute: BuildIndexRoute,
   InsightIndexRoute: InsightIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   ApiPublicConsultantChatRoute: ApiPublicConsultantChatRoute,
