@@ -29,6 +29,7 @@ import { Route as PortalTokenRouteImport } from './routes/portal.$token'
 import { Route as InsightSlugRouteImport } from './routes/insight.$slug'
 import { Route as ISlugRouteImport } from './routes/i.$slug'
 import { Route as DSlugRouteImport } from './routes/d.$slug'
+import { Route as BuildSlugRouteImport } from './routes/build.$slug'
 import { Route as ApiAssistantChatRouteImport } from './routes/api/assistant-chat'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
@@ -160,6 +161,11 @@ const ISlugRoute = ISlugRouteImport.update({
 const DSlugRoute = DSlugRouteImport.update({
   id: '/d/$slug',
   path: '/d/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuildSlugRoute = BuildSlugRouteImport.update({
+  id: '/build/$slug',
+  path: '/build/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAssistantChatRoute = ApiAssistantChatRouteImport.update({
@@ -349,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/api/assistant-chat': typeof ApiAssistantChatRoute
+  '/build/$slug': typeof BuildSlugRoute
   '/d/$slug': typeof DSlugRoute
   '/i/$slug': typeof ISlugRoute
   '/insight/$slug': typeof InsightSlugRoute
@@ -399,6 +406,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/api/assistant-chat': typeof ApiAssistantChatRoute
+  '/build/$slug': typeof BuildSlugRoute
   '/d/$slug': typeof DSlugRoute
   '/i/$slug': typeof ISlugRoute
   '/insight/$slug': typeof InsightSlugRoute
@@ -451,6 +459,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/api/assistant-chat': typeof ApiAssistantChatRoute
+  '/build/$slug': typeof BuildSlugRoute
   '/d/$slug': typeof DSlugRoute
   '/i/$slug': typeof ISlugRoute
   '/insight/$slug': typeof InsightSlugRoute
@@ -504,6 +513,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/admin'
     | '/api/assistant-chat'
+    | '/build/$slug'
     | '/d/$slug'
     | '/i/$slug'
     | '/insight/$slug'
@@ -554,6 +564,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/api/assistant-chat'
+    | '/build/$slug'
     | '/d/$slug'
     | '/i/$slug'
     | '/insight/$slug'
@@ -605,6 +616,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_authenticated/admin'
     | '/api/assistant-chat'
+    | '/build/$slug'
     | '/d/$slug'
     | '/i/$slug'
     | '/insight/$slug'
@@ -657,6 +669,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiAssistantChatRoute: typeof ApiAssistantChatRoute
+  BuildSlugRoute: typeof BuildSlugRoute
   DSlugRoute: typeof DSlugRoute
   ISlugRoute: typeof ISlugRoute
   InsightSlugRoute: typeof InsightSlugRoute
@@ -814,6 +827,13 @@ declare module '@tanstack/react-router' {
       path: '/d/$slug'
       fullPath: '/d/$slug'
       preLoaderRoute: typeof DSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/build/$slug': {
+      id: '/build/$slug'
+      path: '/build/$slug'
+      fullPath: '/build/$slug'
+      preLoaderRoute: typeof BuildSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/assistant-chat': {
@@ -1122,6 +1142,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiAssistantChatRoute: ApiAssistantChatRoute,
+  BuildSlugRoute: BuildSlugRoute,
   DSlugRoute: DSlugRoute,
   ISlugRoute: ISlugRoute,
   InsightSlugRoute: InsightSlugRoute,

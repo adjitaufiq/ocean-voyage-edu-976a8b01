@@ -15,6 +15,13 @@
 - [DOMPET GUE](https://kerjaku.space/products/dompet-gue)
 - [MATERIAL ESTIMATOR](https://kerjaku.space/products/material-estimator)
 
+## Build Log
+- [Build Log KERJAKU](https://kerjaku.space/build): catatan pembangunan sistem yang sudah berjalan.
+- [Build Log: AI Consultant KERJAKU](https://kerjaku.space/build/ai-consultant-kerjaku)
+- [Build Log: AI Business Assistant](https://kerjaku.space/build/ai-business-assistant)
+- [Build Log: Alur Order Brief sampai Invoice](https://kerjaku.space/build/order-brief-proposal-invoice)
+- [Build Log: RO MEMORY](https://kerjaku.space/build/ro-memory)
+
 ## Insight
 - [Insight KERJAKU](https://kerjaku.space/insight)
 - [Bagaimana KERJAKU menggunakan AI dalam operasional bisnis](https://kerjaku.space/cara-kerjaku-menggunakan-ai)
