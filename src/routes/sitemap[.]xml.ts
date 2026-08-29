@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
+import { buildLogs } from "@/lib/seo/build-log";
 import { articles } from "@/lib/seo/insights";
 import { productDocs } from "@/lib/seo/products";
 
@@ -31,6 +32,13 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/products", changefreq: "monthly", priority: "0.7" },
           ...productDocs.map((product) => ({
             path: product.path,
+            changefreq: "monthly" as const,
+            priority: "0.7",
+          })),
+          { path: "/build", changefreq: "weekly", priority: "0.8" },
+          ...buildLogs.map((log) => ({
+            path: log.path,
+            lastmod: log.dateModified,
             changefreq: "monthly" as const,
             priority: "0.7",
           })),

@@ -102,6 +102,11 @@ export const aiProofDoc: DocPageContent = {
   ],
   related: [
     {
+      to: "/build",
+      label: "Build Log KERJAKU",
+      note: "Catatan pembangunan sistem AI yang dipakai sehari-hari.",
+    },
+    {
       to: "/jasa-ai-automation-bisnis",
       label: "Jasa AI Automation Bisnis",
       note: "Menerapkan pola kerja serupa pada operasional bisnis Anda.",
