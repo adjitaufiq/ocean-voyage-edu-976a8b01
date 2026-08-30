@@ -1,4 +1,8 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
+import { useEffect } from "react";
+
+import { analytics } from "@/lib/analytics";
+
 
 import { DemoVideo } from "@/components/kerjaku/marketing/DemoVideo";
 import { DocPage } from "@/components/kerjaku/marketing/DocPage";
