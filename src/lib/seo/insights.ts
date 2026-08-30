@@ -2,6 +2,7 @@
 import type { ArticleContent } from "./types";
 
 const PUBLISHED = "2026-08-29";
+const PUBLISHED_V2 = "2026-08-30";
 
 const cta = {
   title: "Punya kondisi serupa di bisnis Anda?",
