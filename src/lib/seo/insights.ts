@@ -9,18 +9,24 @@ const cta = {
   button: "Mulai konsultasi",
 };
 
-const base = (a: Omit<ArticleContent, "datePublished" | "dateModified" | "cta" | "breadcrumb">) =>
+const base = (
+  a: Omit<ArticleContent, "datePublished" | "dateModified" | "cta" | "breadcrumb"> & {
+    cta?: ArticleContent["cta"];
+    datePublished?: string;
+  },
+) =>
   ({
     ...a,
-    datePublished: PUBLISHED,
-    dateModified: PUBLISHED,
-    cta,
+    datePublished: a.datePublished ?? PUBLISHED,
+    dateModified: a.datePublished ?? PUBLISHED,
+    cta: a.cta ?? cta,
     breadcrumb: [
       { name: "Beranda", path: "/" },
       { name: "Insight", path: "/insight" },
       { name: a.h1, path: a.path },
     ],
   }) satisfies ArticleContent;
+
 
 export const articles: ArticleContent[] = [
   base({
