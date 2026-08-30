@@ -1042,6 +1042,9 @@ const coreArticles: ArticleContent[] = [
   }),
 ];
 
+export const articles: ArticleContent[] = [...coreArticles, ...moreArticles];
+
+
 export function getArticle(slug: string) {
   return articles.find((a) => a.slug === slug);
 }
