@@ -23,9 +23,10 @@ function Accordion({ label, children }: { label: string; children: ReactNode }) 
 }
 
 function ProjectCard({ p, index }: { p: Project; index: number }) {
-  const open = () => {
+const open = () => {
     if (!p.url) return;
     analytics.portfolioProjectClick(p.name, p.url);
+    analytics.liveDemoClick(p.name, p.url);
     window.open(p.url, "_blank", "noopener,noreferrer");
   };
 
@@ -122,7 +123,10 @@ function ProjectCard({ p, index }: { p: Project; index: number }) {
           href={p.url}
           target="_blank"
           rel="noreferrer"
-          onClick={() => analytics.portfolioProjectClick(p.name, p.url)}
+onClick={() => {
+            analytics.portfolioProjectClick(p.name, p.url);
+            analytics.liveDemoClick(p.name, p.url);
+          }}
           className="mt-6 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 px-4 py-2 text-xs text-primary transition-colors hover:bg-primary/10"
         >
           Kunjungi Produk
