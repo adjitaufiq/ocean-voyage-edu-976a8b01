@@ -1,35 +1,10 @@
 /** KERJAKU Insight — practitioner-grade articles. Answer first, no filler. */
 import type { ArticleContent } from "./types";
+import { base, PUBLISHED_V2 } from "./article-base";
+import { moreArticles } from "./insights-more";
 
-const PUBLISHED = "2026-08-29";
-const PUBLISHED_V2 = "2026-08-30";
+const coreArticles: ArticleContent[] = [
 
-const cta = {
-  title: "Punya kondisi serupa di bisnis Anda?",
-  body: "Ceritakan alur kerja yang sedang berjalan ke AI Consultant KERJAKU. Kebutuhannya akan digali langkah demi langkah dan dirangkum menjadi order brief yang bisa ditinjau bersama.",
-  button: "Mulai konsultasi",
-};
-
-const base = (
-  a: Omit<ArticleContent, "datePublished" | "dateModified" | "cta" | "breadcrumb"> & {
-    cta?: ArticleContent["cta"];
-    datePublished?: string;
-  },
-) =>
-  ({
-    ...a,
-    datePublished: a.datePublished ?? PUBLISHED,
-    dateModified: a.datePublished ?? PUBLISHED,
-    cta: a.cta ?? cta,
-    breadcrumb: [
-      { name: "Beranda", path: "/" },
-      { name: "Insight", path: "/insight" },
-      { name: a.h1, path: a.path },
-    ],
-  }) satisfies ArticleContent;
-
-
-export const articles: ArticleContent[] = [
   base({
     slug: "aplikasi-custom-vs-software-siap-pakai",
     path: "/insight/aplikasi-custom-vs-software-siap-pakai",
@@ -1066,6 +1041,9 @@ export const articles: ArticleContent[] = [
     },
   }),
 ];
+
+export const articles: ArticleContent[] = [...coreArticles, ...moreArticles];
+
 
 export function getArticle(slug: string) {
   return articles.find((a) => a.slug === slug);
