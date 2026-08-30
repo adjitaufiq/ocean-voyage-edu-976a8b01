@@ -95,6 +95,7 @@ function BuildLogDetail() {
         {log.demoUrl ? (
           <a
             href={log.demoUrl}
+            onClick={() => analytics.liveDemoClick(log.project, log.demoUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-primary/50 px-6 text-sm text-primary transition-colors hover:bg-primary/10"
