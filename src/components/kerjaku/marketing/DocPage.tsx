@@ -5,6 +5,8 @@
  */
 import { Link } from "@tanstack/react-router";
 
+import { analytics } from "@/lib/analytics";
+
 import { SiteFooter } from "@/components/kerjaku/SiteFooter";
 import type { Block, DocPageContent } from "@/lib/seo/types";
 
@@ -109,6 +111,10 @@ export function DocPage({ doc, children }: { doc: DocPageContent; children?: Rea
             <Link
               to="/"
               hash="konsultasi"
+              onClick={() => {
+                analytics.insightToServiceClick(doc.path, "konsultasi");
+                analytics.serviceCtaClick(doc.eyebrow, "Konsultasi dengan AI Consultant");
+              }}
               className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
             >
               Konsultasi dengan AI Consultant
@@ -184,6 +190,10 @@ export function DocPage({ doc, children }: { doc: DocPageContent; children?: Rea
           <Link
             to="/"
             hash="konsultasi"
+            onClick={() => {
+              analytics.insightToServiceClick(doc.path, "konsultasi");
+              analytics.serviceCtaClick(doc.eyebrow, doc.cta.button);
+            }}
             className="mt-7 inline-flex h-12 items-center justify-center rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
           >
             {doc.cta.button}

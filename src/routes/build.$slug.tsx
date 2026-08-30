@@ -1,4 +1,8 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
+import { useEffect } from "react";
+
+import { analytics } from "@/lib/analytics";
+
 
 import { DemoVideo } from "@/components/kerjaku/marketing/DemoVideo";
 import { DocPage } from "@/components/kerjaku/marketing/DocPage";
@@ -59,6 +63,11 @@ function BuildLogNotFound() {
 function BuildLogDetail() {
   const { slug } = Route.useParams();
   const log = getBuildLog(slug);
+
+  useEffect(() => {
+    if (log) analytics.buildLogView(log.slug);
+  }, [log]);
+
   if (!log) return <BuildLogNotFound />;
 
   return (
@@ -86,6 +95,7 @@ function BuildLogDetail() {
         {log.demoUrl ? (
           <a
             href={log.demoUrl}
+            onClick={() => analytics.liveDemoClick(log.project, log.demoUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-primary/50 px-6 text-sm text-primary transition-colors hover:bg-primary/10"
