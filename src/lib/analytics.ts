@@ -67,9 +67,13 @@ export function initAnalytics() {
   document.head.appendChild(script);
 
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function gtag(...args: unknown[]) {
-    window.dataLayer!.push(args);
-  };
+  // gtag.js only processes commands pushed as the native `arguments` object;
+  // pushing a plain array is silently ignored and nothing is ever sent.
+  function gtag(..._args: unknown[]) {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer!.push(arguments);
+  }
+  window.gtag = gtag;
   window.gtag("js", new Date());
   // Manual page views only: the SPA router owns every page_view so nothing is
   // counted twice on the first render or on client-side navigation.
