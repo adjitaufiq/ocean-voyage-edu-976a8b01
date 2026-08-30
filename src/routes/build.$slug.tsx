@@ -59,6 +59,11 @@ function BuildLogNotFound() {
 function BuildLogDetail() {
   const { slug } = Route.useParams();
   const log = getBuildLog(slug);
+
+  useEffect(() => {
+    if (log) analytics.buildLogView(log.slug);
+  }, [log]);
+
   if (!log) return <BuildLogNotFound />;
 
   return (
