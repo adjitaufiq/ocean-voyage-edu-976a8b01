@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      acquisition_events: {
+        Row: {
+          campaign: string | null
+          channel: string | null
+          created_at: string
+          device_type: string | null
+          event: string
+          id: string
+          label: string | null
+          landing_page: string | null
+          path: string | null
+          session_id: string | null
+          source: string | null
+          visitor_id: string
+        }
+        Insert: {
+          campaign?: string | null
+          channel?: string | null
+          created_at?: string
+          device_type?: string | null
+          event: string
+          id?: string
+          label?: string | null
+          landing_page?: string | null
+          path?: string | null
+          session_id?: string | null
+          source?: string | null
+          visitor_id: string
+        }
+        Update: {
+          campaign?: string | null
+          channel?: string | null
+          created_at?: string
+          device_type?: string | null
+          event?: string
+          id?: string
+          label?: string | null
+          landing_page?: string | null
+          path?: string | null
+          session_id?: string | null
+          source?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           budget: string | null
@@ -717,13 +762,24 @@ export type Database = {
           business_name: string | null
           clicked_ctas: Json
           company: string | null
+          conversion_surface: string | null
           created_at: string
           device_type: string | null
           email: string
           features: string | null
+          first_content_path: string | null
+          first_content_title: string | null
+          first_touch_at: string | null
+          first_touch_channel: string | null
+          first_touch_landing_page: string | null
+          first_touch_referrer: string | null
+          first_touch_source: string | null
           id: string
           journey: Json
           landing_page: string | null
+          last_touch_channel: string | null
+          last_touch_page: string | null
+          last_touch_source: string | null
           lead_score: number
           lead_source: string
           lead_temperature: string
@@ -737,11 +793,14 @@ export type Database = {
           status_updated_at: string
           timeline: string
           utm_campaign: string | null
+          utm_content: string | null
           utm_medium: string | null
           utm_source: string | null
+          utm_term: string | null
           viewed_products: Json
           visit_duration_seconds: number
           visited_pages: Json
+          visitor_id: string | null
           visitor_source: string | null
           whatsapp: string
         }
@@ -761,13 +820,24 @@ export type Database = {
           business_name?: string | null
           clicked_ctas?: Json
           company?: string | null
+          conversion_surface?: string | null
           created_at?: string
           device_type?: string | null
           email: string
           features?: string | null
+          first_content_path?: string | null
+          first_content_title?: string | null
+          first_touch_at?: string | null
+          first_touch_channel?: string | null
+          first_touch_landing_page?: string | null
+          first_touch_referrer?: string | null
+          first_touch_source?: string | null
           id?: string
           journey?: Json
           landing_page?: string | null
+          last_touch_channel?: string | null
+          last_touch_page?: string | null
+          last_touch_source?: string | null
           lead_score?: number
           lead_source?: string
           lead_temperature?: string
@@ -781,11 +851,14 @@ export type Database = {
           status_updated_at?: string
           timeline: string
           utm_campaign?: string | null
+          utm_content?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          utm_term?: string | null
           viewed_products?: Json
           visit_duration_seconds?: number
           visited_pages?: Json
+          visitor_id?: string | null
           visitor_source?: string | null
           whatsapp: string
         }
@@ -805,13 +878,24 @@ export type Database = {
           business_name?: string | null
           clicked_ctas?: Json
           company?: string | null
+          conversion_surface?: string | null
           created_at?: string
           device_type?: string | null
           email?: string
           features?: string | null
+          first_content_path?: string | null
+          first_content_title?: string | null
+          first_touch_at?: string | null
+          first_touch_channel?: string | null
+          first_touch_landing_page?: string | null
+          first_touch_referrer?: string | null
+          first_touch_source?: string | null
           id?: string
           journey?: Json
           landing_page?: string | null
+          last_touch_channel?: string | null
+          last_touch_page?: string | null
+          last_touch_source?: string | null
           lead_score?: number
           lead_source?: string
           lead_temperature?: string
@@ -825,11 +909,14 @@ export type Database = {
           status_updated_at?: string
           timeline?: string
           utm_campaign?: string | null
+          utm_content?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          utm_term?: string | null
           viewed_products?: Json
           visit_duration_seconds?: number
           visited_pages?: Json
+          visitor_id?: string | null
           visitor_source?: string | null
           whatsapp?: string
         }
