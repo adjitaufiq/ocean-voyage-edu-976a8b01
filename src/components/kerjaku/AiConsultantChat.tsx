@@ -4,6 +4,8 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { Bot, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { getAttribution } from "@/lib/attribution";
+
 import {
   Conversation,
   ConversationContent,
@@ -104,7 +106,7 @@ export function AiConsultantChat({ source, onClose, fill = false, compact = fals
     messages: [GREETING],
     transport: new DefaultChatTransport({
       api: "/api/public/consultant-chat",
-      body: () => ({ sessionId }),
+      body: () => ({ sessionId, attribution: getAttribution() }),
     }),
     onError: (err) => toast.error(err.message || "AI Consultant sedang tidak tersedia."),
   });
