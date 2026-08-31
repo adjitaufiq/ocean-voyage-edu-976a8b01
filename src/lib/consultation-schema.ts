@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { attributionSchema } from "./acquisition-schema";
+
 /** Shared (client-safe) validation schema for the consultation form. */
 export const consultationFormSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
@@ -72,6 +74,8 @@ export const consultationSubmissionSchema = z.object({
   tracking: leadTrackingSchema.optional(),
   ai: aiConsultationSchema.optional(),
   leadSource: z.enum(["ai_consultant", "manual_form"]).default("manual_form"),
+  /** Acquisition attribution (first/last touch). Additive and optional. */
+  attribution: attributionSchema.optional(),
   /** Hidden honeypot — must stay empty for real visitors. */
   honeypot: z.string().max(200).optional().default(""),
   /** Milliseconds between form render and submit (bot heuristic). */

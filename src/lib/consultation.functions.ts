@@ -33,8 +33,8 @@ export const submitConsultationLead = createServerFn({ method: "POST" })
     const { storeConsultation, sendLeadEmail, formatLeadTelegram } =
       await import("./consultation.server");
 
-    const { form, tracking, ai, leadSource } = data;
-    const row = await storeConsultation(form, tracking, ai, leadSource);
+    const { form, tracking, ai, leadSource, attribution } = data;
+    const row = await storeConsultation(form, tracking, ai, leadSource, attribution);
     const createdAt = new Date(row?.created_at ?? Date.now()).toISOString();
 
     // Same engine output as the AI Consultant: Lead -> Order Brief -> Notification.
