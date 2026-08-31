@@ -15,6 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { AcquisitionPanel } from "@/components/admin/AcquisitionPanel";
 import { BarRows, Chip, Funnel, GlassCard, MetricTile, SectionCard } from "@/components/admin/ui";
 import { formatMoney } from "@/lib/admin/payments";
 import { getExecutiveIntelligence } from "@/lib/bi.functions";
@@ -149,6 +150,8 @@ function AnalyticsPage() {
           icon={Gauge}
         />
       </div>
+
+      <AcquisitionPanel />
 
       {/* 2. Sales Analytics */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
