@@ -50,6 +50,24 @@ export function ServiceEntryStage() {
             </Link>
           </div>
         </Reveal>
+
+        <Reveal delay={0.1}>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+            {pillars.map((pillar) => (
+              <li key={pillar.to}>
+                <Link
+                  to={pillar.to}
+                  className="block h-full rounded-2xl glass-panel p-5 transition-colors hover:border-primary/40"
+                >
+                  <span className="text-sm text-foreground">{pillar.label}</span>
+                  <span className="mt-2 block text-xs leading-relaxed text-muted-foreground">
+                    {pillar.note}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
       </div>
     </section>
   );
