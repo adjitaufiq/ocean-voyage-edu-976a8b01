@@ -297,3 +297,40 @@ export async function fetchAcquisitionIntelligence(
     },
   };
 }
+
+/**
+ * Plain-text acquisition summary for the AI assistant / daily brief.
+ * Returns null when the sample is too small to say anything meaningful,
+ * so the assistant reports "data belum cukup" instead of inventing trends.
+ */
+export async function buildAcquisitionSummary(
+  supabase: Client,
+  days = 7,
+): Promise<string | null> {
+  const data = await fetchAcquisitionIntelligence(supabase, days);
+  if (data.dataQuality.eventsTracked < 25 && data.funnel.leads === 0) return null;
+
+  const channels = data.channels
+    .filter((c) => c.leads > 0 || c.visitors > 0)
+    .slice(0, 5)
+    .map(
+      (c) =>
+        `- ${c.label}: ${c.visitors} visitor, ${c.leads} lead, ${c.qualifiedLeads} qualified, ${c.deals} deal`,
+    );
+
+  const content = data.content
+    .filter((c) => c.leads > 0)
+    .slice(0, 5)
+    .map((c) => `- ${c.title || c.path} (${c.path}): ${c.leads} lead, ${c.qualifiedLeads} qualified`);
+
+  return [
+    `AKUISISI ${days} HARI TERAKHIR (data first-party, anonim):`,
+    `Visitor ${data.funnel.visitors} | Consultant open ${data.funnel.consultantOpens} | Konsultasi selesai ${data.funnel.consultationsCompleted} | Lead ${data.funnel.leads} | Qualified ${data.funnel.qualifiedLeads} | Hot ${data.funnel.hotLeads} | Proposal ${data.funnel.proposals} | Deal ${data.funnel.deals}`,
+    `Rasio: visitor→open ${data.ratios.visitorToConsultantOpen}% | selesai→lead ${data.ratios.completeToLead}% | lead→qualified ${data.ratios.leadToQualified}% | proposal→deal ${data.ratios.proposalToDeal}%`,
+    channels.length ? "Channel:" : "Channel: (belum ada data channel)",
+    ...channels,
+    content.length ? "Konten penghasil lead:" : "Konten penghasil lead: (belum ada)",
+    ...content,
+    `Kualitas data: ${data.dataQuality.leadsWithAttribution}/${data.dataQuality.totalLeads} lead punya atribusi.`,
+  ].join("\n");
+}
