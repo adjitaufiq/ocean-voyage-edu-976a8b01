@@ -50,12 +50,32 @@ export function buildAssistantTools(options: {
   const mayWrite = canWorkLeads(role);
 
   return {
+    acquisition_report: tool({
+      description:
+        "Data akuisisi organik nyata (first-party): dari channel/konten mana visitor, lead, qualified lead, dan deal berasal. Pakai untuk pertanyaan 'lead datang dari mana', 'artikel mana yang menghasilkan lead', 'traffic ChatGPT sudah menghasilkan lead belum'. Read-only.",
+      inputSchema: z.object({
+        days: z.number().min(1).max(180).optional().describe("Rentang hari, default 30"),
+      }),
+      execute: async ({ days }) => {
+        const { buildAcquisitionSummary } = await import("@/lib/acquisition.server");
+        const summary = await buildAcquisitionSummary(supabase, days ?? 30);
+        if (!summary)
+          return {
+            status: "insufficient_data" as const,
+            message:
+              "Data akuisisi belum cukup untuk disimpulkan. Katakan apa adanya ke user, jangan mengarang angka atau tren.",
+          };
+        return { status: "ok" as const, summary };
+      },
+    }),
+
     find_lead: tool({
       description:
         "Cari lead/prospek berdasarkan nama, perusahaan, atau email untuk mendapatkan lead_id sebelum aksi lain.",
       inputSchema: z.object({ query: z.string().describe("Nama, perusahaan, atau email lead") }),
       execute: async ({ query }) => ({ matches: await findLeadRow(supabase, query) }),
     }),
+
 
     create_followup_task: tool({
       description:
