@@ -50,6 +50,25 @@ export function buildAssistantTools(options: {
   const mayWrite = canWorkLeads(role);
 
   return {
+    acquisition_report: tool({
+      description:
+        "Data akuisisi organik nyata (first-party): dari channel/konten mana visitor, lead, qualified lead, dan deal berasal. Pakai untuk pertanyaan 'lead datang dari mana', 'artikel mana yang menghasilkan lead', 'traffic ChatGPT sudah menghasilkan lead belum'. Read-only.",
+      inputSchema: z.object({
+        days: z.number().min(1).max(180).optional().describe("Rentang hari, default 30"),
+      }),
+      execute: async ({ days }) => {
+        const { buildAcquisitionSummary } = await import("@/lib/acquisition.server");
+        const summary = await buildAcquisitionSummary(supabase, days ?? 30);
+        if (!summary)
+          return {
+            status: "insufficient_data" as const,
+            message:
+              "Data akuisisi belum cukup untuk disimpulkan. Katakan apa adanya ke user, jangan mengarang angka atau tren.",
+          };
+        return { status: "ok" as const, summary };
+      },
+    }),
+
     find_lead: tool({
       description:
         "Cari lead/prospek berdasarkan nama, perusahaan, atau email untuk mendapatkan lead_id sebelum aksi lain.",
@@ -67,7 +86,9 @@ export function buildAssistantTools(options: {
         priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
         assignee: z.string().optional(),
         leadId: z.string().optional(),
-        kind: z.enum(["follow_up", "reminder", "payment_reminder", "proposal_follow_up"]).optional(),
+        kind: z
+          .enum(["follow_up", "reminder", "payment_reminder", "proposal_follow_up"])
+          .optional(),
         confirmed: z.boolean().describe("true hanya setelah user menyetujui aksi ini"),
       }),
       execute: async (input) => {
@@ -124,7 +145,9 @@ export function buildAssistantTools(options: {
         "Ubah status lead di CRM (misal ke contacted, qualified, nurturing, closed). Selalu konfirmasi dulu.",
       inputSchema: z.object({
         leadId: z.string(),
-        status: z.string().describe("Status baru, mis. new, contacted, qualified, nurturing, closed"),
+        status: z
+          .string()
+          .describe("Status baru, mis. new, contacted, qualified, nurturing, closed"),
         note: z.string().optional(),
         confirmed: z.boolean(),
       }),

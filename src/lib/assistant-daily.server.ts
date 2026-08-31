@@ -124,10 +124,12 @@ export async function completeOwnerTask(
 /* --------------------------------- context --------------------------------- */
 
 async function buildContext(supabase: AdminClient) {
-  const [snapshot, memory, tasks] = await Promise.all([
+  const { buildAcquisitionSummary } = await import("@/lib/acquisition.server");
+  const [snapshot, memory, tasks, acquisition] = await Promise.all([
     buildBusinessSnapshot(supabase),
     buildMemoryContext(supabase, "daily-brief"),
     listOwnerTasks(supabase, "open"),
+    buildAcquisitionSummary(supabase, 7).catch(() => null),
   ]);
 
   const taskBlock =
@@ -143,6 +145,10 @@ async function buildContext(supabase: AdminClient) {
     "",
     "=== DATA BUSINESS OS (real-time) ===",
     snapshot,
+    "",
+    "=== AKUISISI ORGANIK ===",
+    acquisition ??
+      "(Data akuisisi belum cukup. JANGAN membuat bagian akuisisi atau menyebut tren traffic apa pun.)",
     "",
     "=== PERSONAL TASK OWNER (dari Telegram /add) ===",
     taskBlock,
