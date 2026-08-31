@@ -293,6 +293,29 @@ export const dashboardService: DocPageContent = {
       ],
     },
     {
+      id: "sistem-perusahaan",
+      heading: "Dashboard bisnis vs sistem perusahaan",
+      blocks: [
+        {
+          kind: "p",
+          text: "Dashboard menampilkan kondisi, sistem perusahaan yang menghasilkan datanya. Banyak kebutuhan yang disebut \u201cdashboard\u201d sebenarnya butuh dua-duanya: pencatatan kerja yang rapi di sisi operasional, lalu ringkasan untuk pimpinan di atasnya.",
+        },
+        {
+          kind: "list",
+          items: [
+            "Sistem operasional perusahaan: pencatatan pekerjaan, status, penugasan, dan riwayat aktivitas tiap tim.",
+            "Hak akses per peran, sehingga staf lapangan, supervisor, dan pimpinan melihat cakupan data yang berbeda.",
+            "Dashboard di atas sistem tersebut, membaca data yang sama tanpa rekap ulang.",
+            "Bila pencatatan operasional belum ada, pekerjaan dimulai dari sistemnya dulu, lalu dashboard menyusul.",
+          ],
+        },
+        {
+          kind: "p",
+          text: "Pola ini dipakai pada RO MEMORY: aktivitas lapangan dicatat lewat sistem, dan dashboard beserta laporannya dihasilkan dari catatan itu.",
+        },
+      ],
+    },
+    {
       id: "hasil",
       heading: "Yang berubah setelah dashboard berjalan",
       blocks: [

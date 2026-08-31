@@ -23,7 +23,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           {
             path: "/jasa-pembuatan-website-aplikasi-landing-page",
             changefreq: "monthly",
-            priority: "0.9",
+            priority: "0.7",
           },
           { path: "/jasa-pembuatan-website", changefreq: "monthly", priority: "0.9" },
           { path: "/jasa-pembuatan-aplikasi-custom", changefreq: "monthly", priority: "0.9" },
