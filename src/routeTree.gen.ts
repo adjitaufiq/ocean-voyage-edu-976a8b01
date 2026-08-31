@@ -13,6 +13,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as JasaPembuatanWebsiteAplikasiLandingPageRouteImport } from './routes/jasa-pembuatan-website-aplikasi-landing-page'
+import { Route as JasaPembuatanWebsiteRouteImport } from './routes/jasa-pembuatan-website'
 import { Route as JasaPembuatanAplikasiCustomRouteImport } from './routes/jasa-pembuatan-aplikasi-custom'
 import { Route as JasaDashboardBisnisRouteImport } from './routes/jasa-dashboard-bisnis'
 import { Route as JasaAiAutomationBisnisRouteImport } from './routes/jasa-ai-automation-bisnis'
@@ -82,6 +83,11 @@ const JasaPembuatanWebsiteAplikasiLandingPageRoute =
     path: '/jasa-pembuatan-website-aplikasi-landing-page',
     getParentRoute: () => rootRouteImport,
   } as any)
+const JasaPembuatanWebsiteRoute = JasaPembuatanWebsiteRouteImport.update({
+  id: '/jasa-pembuatan-website',
+  path: '/jasa-pembuatan-website',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JasaPembuatanAplikasiCustomRoute =
   JasaPembuatanAplikasiCustomRouteImport.update({
     id: '/jasa-pembuatan-aplikasi-custom',
@@ -349,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/jasa-ai-automation-bisnis': typeof JasaAiAutomationBisnisRoute
   '/jasa-dashboard-bisnis': typeof JasaDashboardBisnisRoute
   '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
+  '/jasa-pembuatan-website': typeof JasaPembuatanWebsiteRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -401,6 +408,7 @@ export interface FileRoutesByTo {
   '/jasa-ai-automation-bisnis': typeof JasaAiAutomationBisnisRoute
   '/jasa-dashboard-bisnis': typeof JasaDashboardBisnisRoute
   '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
+  '/jasa-pembuatan-website': typeof JasaPembuatanWebsiteRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/jasa-ai-automation-bisnis': typeof JasaAiAutomationBisnisRoute
   '/jasa-dashboard-bisnis': typeof JasaDashboardBisnisRoute
   '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
+  '/jasa-pembuatan-website': typeof JasaPembuatanWebsiteRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -507,6 +516,7 @@ export interface FileRouteTypes {
     | '/jasa-ai-automation-bisnis'
     | '/jasa-dashboard-bisnis'
     | '/jasa-pembuatan-aplikasi-custom'
+    | '/jasa-pembuatan-website'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
     | '/privacy-policy'
     | '/sitemap.xml'
@@ -559,6 +569,7 @@ export interface FileRouteTypes {
     | '/jasa-ai-automation-bisnis'
     | '/jasa-dashboard-bisnis'
     | '/jasa-pembuatan-aplikasi-custom'
+    | '/jasa-pembuatan-website'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
     | '/privacy-policy'
     | '/sitemap.xml'
@@ -610,6 +621,7 @@ export interface FileRouteTypes {
     | '/jasa-ai-automation-bisnis'
     | '/jasa-dashboard-bisnis'
     | '/jasa-pembuatan-aplikasi-custom'
+    | '/jasa-pembuatan-website'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
     | '/privacy-policy'
     | '/sitemap.xml'
@@ -664,6 +676,7 @@ export interface RootRouteChildren {
   JasaAiAutomationBisnisRoute: typeof JasaAiAutomationBisnisRoute
   JasaDashboardBisnisRoute: typeof JasaDashboardBisnisRoute
   JasaPembuatanAplikasiCustomRoute: typeof JasaPembuatanAplikasiCustomRoute
+  JasaPembuatanWebsiteRoute: typeof JasaPembuatanWebsiteRoute
   JasaPembuatanWebsiteAplikasiLandingPageRoute: typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -715,6 +728,13 @@ declare module '@tanstack/react-router' {
       path: '/jasa-pembuatan-website-aplikasi-landing-page'
       fullPath: '/jasa-pembuatan-website-aplikasi-landing-page'
       preLoaderRoute: typeof JasaPembuatanWebsiteAplikasiLandingPageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jasa-pembuatan-website': {
+      id: '/jasa-pembuatan-website'
+      path: '/jasa-pembuatan-website'
+      fullPath: '/jasa-pembuatan-website'
+      preLoaderRoute: typeof JasaPembuatanWebsiteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jasa-pembuatan-aplikasi-custom': {
@@ -1136,6 +1156,7 @@ const rootRouteChildren: RootRouteChildren = {
   JasaAiAutomationBisnisRoute: JasaAiAutomationBisnisRoute,
   JasaDashboardBisnisRoute: JasaDashboardBisnisRoute,
   JasaPembuatanAplikasiCustomRoute: JasaPembuatanAplikasiCustomRoute,
+  JasaPembuatanWebsiteRoute: JasaPembuatanWebsiteRoute,
   JasaPembuatanWebsiteAplikasiLandingPageRoute:
     JasaPembuatanWebsiteAplikasiLandingPageRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
