@@ -102,13 +102,6 @@ const siteGraph = {
         addressCountry: "Indonesia",
       },
       founder: { "@id": "https://kerjaku.space/#founder" },
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: "5.0",
-        reviewCount: "5",
-        bestRating: "5",
-        worstRating: "1",
-      },
       sameAs: [
         "https://maps.app.goo.gl/H6JTQU6GLQgd28zT9",
         "https://www.instagram.com/kerjaku.space",
@@ -163,7 +156,7 @@ const siteGraph = {
       "@type": "SoftwareApplication",
       "@id": "https://kerjaku.space/#material-estimator",
       name: "Material Estimator",
-      url: "https://kerjaku.space/",
+      url: "https://kerjaku.space/products/material-estimator",
       applicationCategory: "UtilitiesApplication",
       operatingSystem: "Web",
       description:

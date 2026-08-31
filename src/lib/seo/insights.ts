@@ -908,8 +908,8 @@ const coreArticles: ArticleContent[] = [
     ],
     related: [
       {
-        to: "/jasa-pembuatan-website-aplikasi-landing-page",
-        label: "Jasa Pembuatan Website & Landing Page",
+        to: "/jasa-pembuatan-website",
+        label: "Jasa Pembuatan Website",
       },
       {
         to: "/jasa-pembuatan-aplikasi-custom",

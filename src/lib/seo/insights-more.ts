@@ -662,8 +662,8 @@ export const moreArticles: ArticleContent[] = [
     ],
     related: [
       {
-        to: "/jasa-pembuatan-website-aplikasi-landing-page",
-        label: "Jasa Pembuatan Website & Landing Page",
+        to: "/jasa-pembuatan-website",
+        label: "Jasa Pembuatan Website",
       },
       {
         to: "/insight/website-company-profile-vs-web-app",
@@ -759,8 +759,8 @@ export const moreArticles: ArticleContent[] = [
     ],
     related: [
       {
-        to: "/jasa-pembuatan-website-aplikasi-landing-page",
-        label: "Jasa Pembuatan Website & Landing Page",
+        to: "/jasa-pembuatan-website",
+        label: "Jasa Pembuatan Website",
       },
       {
         to: "/insight/biaya-pembuatan-website-profesional",
@@ -844,8 +844,8 @@ export const moreArticles: ArticleContent[] = [
     ],
     related: [
       {
-        to: "/jasa-pembuatan-website-aplikasi-landing-page",
-        label: "Jasa Pembuatan Website & Landing Page",
+        to: "/jasa-pembuatan-website",
+        label: "Jasa Pembuatan Website",
       },
       {
         to: "/insight/ciri-website-bisnis-profesional",
