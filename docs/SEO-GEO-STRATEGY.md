@@ -12,7 +12,7 @@ Produk: RO MEMORY, QResto, DOMPET GUE, MATERIAL ESTIMATOR.
 | Aplikasi custom & sistem internal | `/jasa-pembuatan-aplikasi-custom` |
 | AI assistant & workflow automation | `/jasa-ai-automation-bisnis` |
 | Dashboard & visibilitas data | `/jasa-dashboard-bisnis` |
-| Website, company profile, landing page | `/jasa-pembuatan-website-aplikasi-landing-page` (URL lama dipertahankan) |
+| Website, company profile, landing page | `/jasa-pembuatan-website` (pillar utama; URL lama `/jasa-pembuatan-website-aplikasi-landing-page` dipertahankan sebagai ringkasan layanan) |
 | AI proof / E-E-A-T | `/cara-kerjaku-menggunakan-ai` |
 | Produk | `/products`, `/products/$slug` |
 | Konten | `/insight`, `/insight/$slug` |

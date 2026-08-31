@@ -38,10 +38,10 @@ sehingga artikel berstatus PLANNED tidak muncul sampai benar-benar diterbitkan.
 
 | URL | Primary Intent | Keyword Theme | Funnel | Service | Build Log | CTA | Status | Published |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| /insight/biaya-pembuatan-website-profesional | Komersial | biaya website profesional | BOFU | /jasa-pembuatan-website-aplikasi-landing-page | — | Ceritakan kebutuhan | PUBLISHED | 2026-08-30 |
-| /insight/website-company-profile-vs-web-app | Komparasi keputusan | company profile vs web app | MOFU | /jasa-pembuatan-website-aplikasi-landing-page | — | Mulai konsultasi | PUBLISHED | 2026-08-30 |
-| /insight/ciri-website-bisnis-profesional | Kualitas & standar | ciri website profesional | TOFU | /jasa-pembuatan-website-aplikasi-landing-page | — | Mulai konsultasi | PUBLISHED | 2026-08-30 |
-| /insight/website-untuk-interior-design | Niche vertikal | website interior design | MOFU | /jasa-pembuatan-website-aplikasi-landing-page | — | Mulai konsultasi | PUBLISHED (tanpa contoh klien; contoh nyata menunggu izin publikasi) | 2026-08-30 |
+| /insight/biaya-pembuatan-website-profesional | Komersial | biaya website profesional | BOFU | /jasa-pembuatan-website | — | Ceritakan kebutuhan | PUBLISHED | 2026-08-30 |
+| /insight/website-company-profile-vs-web-app | Komparasi keputusan | company profile vs web app | MOFU | /jasa-pembuatan-website | — | Mulai konsultasi | PUBLISHED | 2026-08-30 |
+| /insight/ciri-website-bisnis-profesional | Kualitas & standar | ciri website profesional | TOFU | /jasa-pembuatan-website | — | Mulai konsultasi | PUBLISHED | 2026-08-30 |
+| /insight/website-untuk-interior-design | Niche vertikal | website interior design | MOFU | /jasa-pembuatan-website | — | Mulai konsultasi | PUBLISHED (tanpa contoh klien; contoh nyata menunggu izin publikasi) | 2026-08-30 |
 
 ## Catatan
 
