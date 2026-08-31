@@ -134,6 +134,8 @@ export async function createInvoiceFromProposal(
     .select(INVOICE_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
+  const { recordBusinessMilestone } = await import("./acquisition.server");
+  await recordBusinessMilestone("invoice_created", proposal.lead_id as string, payload.title);
   return data;
 }
 
