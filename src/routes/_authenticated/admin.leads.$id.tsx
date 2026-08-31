@@ -377,10 +377,24 @@ function LeadDetailPage() {
             <p className="mt-3 text-sm text-muted-foreground">Catatan klien: {lead.notes}</p>
           ) : null}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field label="Traffic Source" value={lead.visitor_source} />
+            <Field
+              label="Source"
+              value={lead.first_touch_channel || lead.visitor_source}
+            />
+            <Field
+              label="Landing Page"
+              value={lead.first_touch_landing_page || lead.landing_page}
+            />
+            <Field
+              label="First Content"
+              value={lead.first_content_title || lead.first_content_path}
+            />
+            <Field label="Conversion" value={lead.conversion_surface} />
             <Field label="Campaign" value={lead.utm_campaign} />
-            <Field label="UTM Source" value={lead.utm_source} />
-            <Field label="Landing Page" value={lead.landing_page} />
+            <Field
+              label="Last Touch"
+              value={lead.last_touch_channel || lead.utm_source}
+            />
           </div>
         </GlassCard>
 
