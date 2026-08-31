@@ -1,4 +1,5 @@
 // Server-only consultation handling: persistence + notification formatting.
+import type { AttributionInput } from "./acquisition-schema";
 import type {
   AiConsultationPayload,
   ConsultationForm,
@@ -191,6 +192,8 @@ export async function storeConsultation(
       ai_complexity: ai?.complexity || null,
       ai_conversation: ai?.conversation ?? [],
       lead_source: leadSource,
+      conversion_surface: leadSource === "ai_consultant" ? "AI Consultant" : "Consultation Form",
+      ...attributionColumns(attribution),
     })
     .select("id, created_at")
     .single();
