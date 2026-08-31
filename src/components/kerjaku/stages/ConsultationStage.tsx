@@ -10,6 +10,7 @@ import {
 import { consultationFormSchema, type ConsultationForm } from "@/lib/consultation-schema";
 import { submitConsultationLead } from "@/lib/consultation.functions";
 import { analytics } from "@/lib/analytics";
+import { getAttribution } from "@/lib/attribution";
 import {
   getAiConsultation,
   getLeadTracking,
@@ -88,6 +89,7 @@ export function ConsultationStage() {
           form: parsed.data,
           tracking,
           ...(ai ? { ai } : {}),
+          attribution: getAttribution(),
           leadSource: ai ? "ai_consultant" : "manual_form",
           honeypot,
           elapsedMs: Date.now() - mountedAt,

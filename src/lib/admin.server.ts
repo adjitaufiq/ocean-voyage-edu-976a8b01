@@ -480,6 +480,8 @@ export async function createProposalForLead(supabase: Client, leadId: string, us
     .select("id")
     .single();
   if (error) throw new Error(error.message);
+  const { recordBusinessMilestone } = await import("./acquisition.server");
+  await recordBusinessMilestone("proposal_created", leadId, packageName);
   return { id: data.id as string };
 }
 
@@ -651,6 +653,14 @@ export async function setProposalStatus(supabase: Client, id: string, status: Pr
     .select("id, lead_id, title, client_name")
     .eq("id", id)
     .maybeSingle();
+  if (status === "Sent" || status === "Approved") {
+    const { recordBusinessMilestone } = await import("./acquisition.server");
+    await recordBusinessMilestone(
+      status === "Sent" ? "proposal_sent" : "deal_won",
+      proposal?.lead_id ?? null,
+      proposal?.title ?? "",
+    );
+  }
   const { runAutomation } = await import("@/lib/automation.server");
   await runAutomation({
     type: "proposal.status_changed",

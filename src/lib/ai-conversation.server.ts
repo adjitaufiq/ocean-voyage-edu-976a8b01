@@ -1,3 +1,4 @@
+import type { AttributionInput } from "./acquisition-schema";
 // Server-only persistence for public AI Consultant conversations.
 // Every conversation is stored as a draft first; it only becomes a lead once
 // the AI detects a real project intent (one lead per session, never duplicated).
@@ -115,6 +116,7 @@ export async function qualifyConversation(
   sessionId: string,
   input: QualificationInput,
   turns: ConversationTurn[],
+  attribution?: AttributionInput | null,
 ) {
   if (!validateSessionId(sessionId)) {
     console.warn("[ai-conversation] invalid sessionId");
@@ -122,6 +124,7 @@ export async function qualifyConversation(
   }
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { attributionColumns, lastTouchColumns } = await import("./acquisition.server");
   const score = scoreConversation(input);
   const business = normalizeBusiness(input.businessCategory);
   const qualification = qualificationOf(score);
@@ -178,13 +181,17 @@ export async function qualifyConversation(
   if (leadId) {
     const { error } = await supabaseAdmin
       .from("consultations")
-      .update(leadPayload)
+      .update({ ...leadPayload, ...lastTouchColumns(attribution) })
       .eq("id", leadId);
     if (error) console.error("[ai-conversation] lead update failed", error.message);
   } else {
     const { data, error } = await supabaseAdmin
       .from("consultations")
-      .insert(leadPayload)
+      .insert({
+        ...leadPayload,
+        conversion_surface: "AI Consultant",
+        ...attributionColumns(attribution),
+      })
       .select("id")
       .single();
     if (error) {

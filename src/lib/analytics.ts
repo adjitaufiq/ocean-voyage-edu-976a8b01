@@ -11,6 +11,9 @@
  * server-side and is unrelated to this file.
  */
 
+import { trackAcquisitionEvent } from "./acquisition.functions";
+import type { AcquisitionEventName } from "./acquisition-schema";
+import { getAttribution, initAttribution, trackAttributionPage } from "./attribution";
 import {
   scoreAction,
   trackCtaClick,
@@ -82,8 +85,34 @@ export function initAnalytics() {
     ...environmentParams(),
   });
 
+  initAttribution(window.location.pathname);
   trackPageView(window.location.pathname);
   installOutboundClickTracking();
+}
+
+/** Mirrors a funnel milestone into first-party acquisition storage. */
+export function trackFunnel(event: AcquisitionEventName, label = "") {
+  if (typeof window === "undefined") return;
+  void trackAcquisitionEvent({
+    data: {
+      event,
+      path: window.location.pathname,
+      label,
+      sessionId: window.sessionStorage?.getItem("kerjaku_ai_session_id") ?? "",
+      deviceType: deviceType(),
+      attribution: getAttribution(),
+    },
+  }).catch(() => {
+    /* attribution is best-effort and must never break the UI */
+  });
+}
+
+function deviceType(): "mobile" | "tablet" | "desktop" | "unknown" {
+  if (typeof window === "undefined") return "unknown";
+  const width = window.innerWidth;
+  if (width < 640) return "mobile";
+  if (width < 1024) return "tablet";
+  return "desktop";
 }
 
 export function trackEvent(name: string, params: Record<string, unknown> = {}) {
@@ -100,6 +129,13 @@ export function trackPageView(path: string) {
     page_title: typeof document !== "undefined" ? document.title : undefined,
   });
   trackJourneyPage(path);
+  trackAttributionPage(path);
+  trackFunnel(isContentPath(path) ? "project_view" : "landing_view");
+}
+
+const CONTENT_PATHS = ["/insight", "/build", "/products", "/portfolio", "/jasa", "/cara-"];
+function isContentPath(path: string) {
+  return CONTENT_PATHS.some((prefix) => path.startsWith(prefix));
 }
 
 let outboundInstalled = false;
@@ -158,6 +194,7 @@ export const analytics = {
   },
   liveDemoClick: (product: string, url?: string) => {
     trackEvent("live_demo_click", { product_name: product, demo_url: url ?? "" });
+    trackFunnel("live_demo_click", product);
   },
   leadCreated: (params: { source: string; lead_score?: number; lead_temperature?: string }) => {
     if (!once(`lead_created:${params.source}:${params.lead_score ?? ""}`)) return;
@@ -174,6 +211,7 @@ export const analytics = {
   },
   consultationFormOpen: () => {
     trackEvent("consultation_form_open", {});
+    trackFunnel("ai_consultant_open", "consultation_form");
     scoreAction("open_consultation_form");
     trackJourneyStep("form:open");
   },
@@ -181,6 +219,7 @@ export const analytics = {
   aiConsultationStart: (source: string) => {
     if (!once(`ai_start:${source}`)) return;
     trackEvent("ai_conversation_start", { source });
+    trackFunnel("ai_consultant_started", source);
     trackEvent("ai_consultant_start", { source });
     trackJourneyStep(`ai:start:${source}`);
   },
@@ -197,6 +236,7 @@ export const analytics = {
   }) => {
     if (!once(`ai_complete:${params.recommended_package}:${params.ai_score}`)) return;
     trackEvent("ai_conversation_complete", params);
+    trackFunnel("ai_consultant_completed", params.recommended_package);
     trackEvent("ai_consultant_complete", params);
     trackJourneyStep(`ai:complete:${params.recommended_package}`);
   },
@@ -206,6 +246,7 @@ export const analytics = {
   },
   aiContactSubmit: (params: { recommended_package: string; ai_score: number }) => {
     trackEvent("ai_contact_submit", params);
+    trackFunnel("lead_contact_submitted", params.recommended_package);
     trackJourneyStep("ai:contact_submit");
   },
   aiConsultationConversion: (params: {
@@ -214,6 +255,7 @@ export const analytics = {
     qualification: string;
   }) => {
     trackEvent("ai_consultation_conversion", params);
+    trackFunnel("qualified_lead_created", params.recommended_package);
     trackEvent("lead_created", { source: "ai_consultant", lead_score: params.ai_score });
     scoreAction("submit_consultation_form");
     trackJourneyStep("ai:conversion");
@@ -230,6 +272,7 @@ export const analytics = {
     lead_temperature?: string;
   }) => {
     trackEvent("consultation_form_submit", params);
+    trackFunnel("lead_contact_submitted", params.project_type);
     trackEvent("lead_created", {
       source: "consultation_form",
       lead_score: params.lead_score,

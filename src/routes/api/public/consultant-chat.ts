@@ -11,6 +11,7 @@ import {
 
 import { z } from "zod";
 
+import { attributionSchema } from "@/lib/acquisition-schema";
 import { createAiModel, isAiConfigured } from "@/lib/ai-gateway.server";
 import {
   qualifyConversation,
@@ -19,7 +20,7 @@ import {
   type ConversationTurn,
 } from "@/lib/ai-conversation.server";
 
-type Body = { messages?: unknown; sessionId?: unknown };
+type Body = { messages?: unknown; sessionId?: unknown; attribution?: unknown };
 
 const SYSTEM = `Kamu adalah "Team KERJAKU Consultant" — konsultan digital yang ramah, tajam, dan berpengalaman.
 KERJAKU adalah digital solution & business automation agency (Indonesia): website profesional,
@@ -465,6 +466,8 @@ export const Route = createFileRoute("/api/public/consultant-chat")({
         const body = (await request.json()) as Body;
         const messages = Array.isArray(body.messages) ? (body.messages as UIMessage[]) : null;
         const sessionId = typeof body.sessionId === "string" ? body.sessionId.slice(0, 64) : "";
+        // Attribution is optional and untrusted: validate, never fail the chat on it.
+        const attribution = attributionSchema.safeParse(body.attribution);
         if (!messages) return new Response("Bad request", { status: 400 });
         if (messages.length > 60) return new Response("Conversation too long", { status: 400 });
 
@@ -494,7 +497,12 @@ KONTEKS WAKTU SISTEM (WIB): ${new Intl.DateTimeFormat("id-ID", {
                 const score = scoreConversation(input);
                 qualified = input;
                 try {
-                  await qualifyConversation(sessionId, input, turns);
+                  await qualifyConversation(
+                    sessionId,
+                    input,
+                    turns,
+                    attribution.success ? attribution.data : null,
+                  );
                 } catch (error) {
                   // Persistence/side-effect failures must never break the AI stream.
                   console.error(
