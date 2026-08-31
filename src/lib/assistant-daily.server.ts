@@ -155,7 +155,6 @@ async function buildContext(supabase: AdminClient) {
   ].join("\n");
 }
 
-
 function model() {
   if (!isAiConfigured()) return null;
   return createAiModel("DAILY_BRIEF");

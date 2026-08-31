@@ -78,9 +78,10 @@ function pct(numerator: number, denominator: number): number {
 export async function recordAcquisitionEvent(input: AcquisitionEventInput) {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const touch = input.attribution.lastTouch.channel === "Unknown"
-      ? input.attribution.firstTouch
-      : input.attribution.lastTouch;
+    const touch =
+      input.attribution.lastTouch.channel === "Unknown"
+        ? input.attribution.firstTouch
+        : input.attribution.lastTouch;
     const { error } = await supabaseAdmin.from("acquisition_events").insert({
       visitor_id: input.attribution.visitorId || "anonymous",
       session_id: input.sessionId || null,
@@ -249,7 +250,9 @@ export async function fetchAcquisitionIntelligence(
       qualifiedLeads: value.qualifiedLeads,
       deals: value.deals,
     }))
-    .sort((a, b) => b.qualifiedLeads - a.qualifiedLeads || b.leads - a.leads || b.visitors - a.visitors);
+    .sort(
+      (a, b) => b.qualifiedLeads - a.qualifiedLeads || b.leads - a.leads || b.visitors - a.visitors,
+    );
 
   // Content performance keyed on path.
   const contentMap = new Map<
@@ -303,10 +306,7 @@ export async function fetchAcquisitionIntelligence(
  * Returns null when the sample is too small to say anything meaningful,
  * so the assistant reports "data belum cukup" instead of inventing trends.
  */
-export async function buildAcquisitionSummary(
-  supabase: Client,
-  days = 7,
-): Promise<string | null> {
+export async function buildAcquisitionSummary(supabase: Client, days = 7): Promise<string | null> {
   const data = await fetchAcquisitionIntelligence(supabase, days);
   if (data.dataQuality.eventsTracked < 25 && data.funnel.leads === 0) return null;
 
@@ -321,7 +321,9 @@ export async function buildAcquisitionSummary(
   const content = data.content
     .filter((c) => c.leads > 0)
     .slice(0, 5)
-    .map((c) => `- ${c.title || c.path} (${c.path}): ${c.leads} lead, ${c.qualifiedLeads} qualified`);
+    .map(
+      (c) => `- ${c.title || c.path} (${c.path}): ${c.leads} lead, ${c.qualifiedLeads} qualified`,
+    );
 
   return [
     `AKUISISI ${days} HARI TERAKHIR (data first-party, anonim):`,

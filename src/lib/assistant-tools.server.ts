@@ -76,7 +76,6 @@ export function buildAssistantTools(options: {
       execute: async ({ query }) => ({ matches: await findLeadRow(supabase, query) }),
     }),
 
-
     create_followup_task: tool({
       description:
         "Buat task follow-up / reminder internal di Business OS (muncul di automation tasks). Gunakan untuk 'buatkan task follow up' atau 'ingatkan saya'.",
@@ -87,7 +86,9 @@ export function buildAssistantTools(options: {
         priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
         assignee: z.string().optional(),
         leadId: z.string().optional(),
-        kind: z.enum(["follow_up", "reminder", "payment_reminder", "proposal_follow_up"]).optional(),
+        kind: z
+          .enum(["follow_up", "reminder", "payment_reminder", "proposal_follow_up"])
+          .optional(),
         confirmed: z.boolean().describe("true hanya setelah user menyetujui aksi ini"),
       }),
       execute: async (input) => {
@@ -144,7 +145,9 @@ export function buildAssistantTools(options: {
         "Ubah status lead di CRM (misal ke contacted, qualified, nurturing, closed). Selalu konfirmasi dulu.",
       inputSchema: z.object({
         leadId: z.string(),
-        status: z.string().describe("Status baru, mis. new, contacted, qualified, nurturing, closed"),
+        status: z
+          .string()
+          .describe("Status baru, mis. new, contacted, qualified, nurturing, closed"),
         note: z.string().optional(),
         confirmed: z.boolean(),
       }),
