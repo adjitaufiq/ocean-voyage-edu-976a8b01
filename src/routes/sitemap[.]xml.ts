@@ -25,6 +25,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             changefreq: "monthly",
             priority: "0.9",
           },
+          { path: "/jasa-pembuatan-website", changefreq: "monthly", priority: "0.9" },
           { path: "/jasa-pembuatan-aplikasi-custom", changefreq: "monthly", priority: "0.9" },
           { path: "/jasa-ai-automation-bisnis", changefreq: "monthly", priority: "0.9" },
           { path: "/jasa-dashboard-bisnis", changefreq: "monthly", priority: "0.9" },
