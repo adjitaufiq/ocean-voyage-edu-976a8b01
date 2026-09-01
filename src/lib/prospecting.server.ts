@@ -24,7 +24,7 @@ import {
 type Client = SupabaseClient<Database>;
 
 export const PROSPECT_LIST_COLUMNS =
-  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name";
+  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, opportunity_reason, recommended_solution, sales_approach, last_contact_at, verified";
 
 export type ProspectListRow = {
   id: string;
@@ -39,6 +39,8 @@ export type ProspectListRow = {
   contact_title: string | null;
   contact_email: string | null;
   contact_whatsapp: string | null;
+  contact_phone: string | null;
+  social_media: string | null;
   source: string;
   source_detail: string | null;
   status: string;
@@ -54,6 +56,15 @@ export type ProspectListRow = {
   lead_id: string | null;
   converted_at: string | null;
   owner_name: string | null;
+  campaign_id: string | null;
+  business_summary: string | null;
+  opportunity_reason: string | null;
+  recommended_solution: string | null;
+  sales_approach: string | null;
+  last_contact_at: string | null;
+  verified: boolean;
+};
+
 };
 
 /* --------------------------------- ICP ------------------------------------ */
@@ -123,7 +134,14 @@ export async function logProspectActivity(
 
 export async function fetchProspects(
   supabase: Client,
-  filters?: { status?: string; search?: string; tier?: string; limit?: number },
+  filters?: {
+    status?: string;
+    search?: string;
+    tier?: string;
+    limit?: number;
+    campaignId?: string;
+    actionableOnly?: boolean;
+  },
 ): Promise<ProspectListRow[]> {
   let query = supabase
     .from("prospects")
@@ -134,6 +152,13 @@ export async function fetchProspects(
 
   if (filters?.status && filters.status !== "all") query = query.eq("status", filters.status);
   if (filters?.tier && filters.tier !== "all") query = query.eq("fit_tier", filters.tier);
+  if (filters?.campaignId && filters.campaignId !== "all")
+    query = query.eq("campaign_id", filters.campaignId);
+  if (filters?.actionableOnly)
+    query = query.or(
+      "contact_email.not.is.null,contact_whatsapp.not.is.null,contact_phone.not.is.null,website.not.is.null",
+    );
+
   if (filters?.search) {
     const term = filters.search.replace(/[%,()]/g, " ").trim();
     if (term)
@@ -181,7 +206,15 @@ export type ProspectInput = {
   painSignals?: string[];
   notes?: string | null;
   ownerName?: string | null;
-};
+  contactPhone?: string | null;
+  socialMedia?: string | null;
+  campaignId?: string | null;
+  businessSummary?: string | null;
+  opportunityReason?: string | null;
+  recommendedSolution?: string | null;
+  salesApproach?: string | null;
+  verified?: boolean;
+
 
 /** Returns the existing prospect id when the identity already exists. */
 export async function findDuplicate(
