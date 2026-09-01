@@ -134,7 +134,14 @@ export async function logProspectActivity(
 
 export async function fetchProspects(
   supabase: Client,
-  filters?: { status?: string; search?: string; tier?: string; limit?: number },
+  filters?: {
+    status?: string;
+    search?: string;
+    tier?: string;
+    limit?: number;
+    campaignId?: string;
+    actionableOnly?: boolean;
+  },
 ): Promise<ProspectListRow[]> {
   let query = supabase
     .from("prospects")
@@ -145,6 +152,13 @@ export async function fetchProspects(
 
   if (filters?.status && filters.status !== "all") query = query.eq("status", filters.status);
   if (filters?.tier && filters.tier !== "all") query = query.eq("fit_tier", filters.tier);
+  if (filters?.campaignId && filters.campaignId !== "all")
+    query = query.eq("campaign_id", filters.campaignId);
+  if (filters?.actionableOnly)
+    query = query.or(
+      "contact_email.not.is.null,contact_whatsapp.not.is.null,contact_phone.not.is.null,website.not.is.null",
+    );
+
   if (filters?.search) {
     const term = filters.search.replace(/[%,()]/g, " ").trim();
     if (term)
