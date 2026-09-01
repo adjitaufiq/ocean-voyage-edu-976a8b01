@@ -1,6 +1,6 @@
 /** Client-safe automation model shared by the engine and the admin UI. */
 
-export const AUTOMATION_CATEGORIES = ["lead", "sales", "project", "client"] as const;
+export const AUTOMATION_CATEGORIES = ["lead", "sales", "project", "client", "outbound"] as const;
 export type AutomationCategory = (typeof AUTOMATION_CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<AutomationCategory, string> = {
@@ -8,6 +8,7 @@ export const CATEGORY_LABELS: Record<AutomationCategory, string> = {
   sales: "Sales Automation",
   project: "Project Automation",
   client: "Client Automation",
+  outbound: "Outbound Automation",
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<AutomationCategory, string> = {
@@ -15,6 +16,7 @@ export const CATEGORY_DESCRIPTIONS: Record<AutomationCategory, string> = {
   sales: "Follow-up proposal, negosiasi, dan notifikasi deal.",
   project: "Workflow delivery otomatis setelah pembayaran.",
   client: "Update, approval, dan notifikasi milestone ke klien.",
+  outbound: "Reminder follow-up prospek outbound yang sudah disetujui manusia.",
 };
 
 export const AUTOMATION_RULE_KEYS = [
@@ -33,6 +35,8 @@ export const AUTOMATION_RULE_KEYS = [
   "client.milestone_complete",
   "client.approval_request",
   "client.project_update",
+  "outbound.follow_up_reminder",
+  "outbound.stale_ready_alert",
 ] as const;
 export type AutomationRuleKey = (typeof AUTOMATION_RULE_KEYS)[number];
 

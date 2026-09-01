@@ -297,7 +297,7 @@ export async function updateProspect(
     update.status_updated_at = new Date().toISOString();
   }
 
-  const { error } = await supabase.from("prospects").update(update).eq("id", id);
+  const { error } = await supabase.from("prospects").update(update as never).eq("id", id);
   if (error) throw new Error(error.message);
 
   await logProspectActivity(supabase, {
@@ -429,7 +429,7 @@ export async function recordOutreach(
     update.replied_at = now;
   }
 
-  const { error } = await supabase.from("prospects").update(update).eq("id", input.id);
+  const { error } = await supabase.from("prospects").update(update as never).eq("id", input.id);
   if (error) throw new Error(error.message);
 
   await logProspectActivity(supabase, {
@@ -613,4 +613,97 @@ export async function buildProspectingSummary(
     dueFollowUps,
     readyForApproval: byStatus.ready ?? 0,
   };
+}
+
+/* --------------------------- Outbound follow-up scan ---------------------- */
+
+export type ProspectScanResult = { followUps: number; staleReady: number; scanned: number };
+
+/**
+ * Periodic pass for outbound: reminds on due follow-ups and on prospects that
+ * stay "ready" without human approval. Never sends outreach — it only creates
+ * internal tasks, so a human always stays in the loop. Deduped by prospect.
+ */
+export async function scanProspectFollowUps(): Promise<ProspectScanResult> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db = supabaseAdmin;
+  const now = new Date();
+  const result: ProspectScanResult = { followUps: 0, staleReady: 0, scanned: 0 };
+
+  async function ensureTask(entry: {
+    ruleKey: string;
+    kind: string;
+    prospectId: string;
+    title: string;
+    detail: string;
+    priority: "urgent" | "high" | "normal";
+  }): Promise<boolean> {
+    const { data: existing } = await db
+      .from("automation_tasks")
+      .select("id, meta")
+      .eq("rule_key", entry.ruleKey)
+      .eq("kind", entry.kind)
+      .eq("status", "pending")
+      .contains("meta", { prospect_id: entry.prospectId } as never)
+      .limit(1)
+      .maybeSingle();
+    if (existing) return false;
+    const { error } = await db.from("automation_tasks").insert({
+      rule_key: entry.ruleKey,
+      kind: entry.kind,
+      title: entry.title.slice(0, 200),
+      detail: entry.detail.slice(0, 2000),
+      status: "pending",
+      priority: entry.priority,
+      due_at: now.toISOString(),
+      meta: { prospect_id: entry.prospectId, source: "outbound_scan" } as never,
+    });
+    return !error;
+  }
+
+  const { data: due } = await db
+    .from("prospects")
+    .select("id, business_name, next_follow_up_at, follow_up_count, status")
+    .eq("do_not_contact", false)
+    .not("next_follow_up_at", "is", null)
+    .lte("next_follow_up_at", now.toISOString())
+    .in("status", ["contacted", "approved", "replied"])
+    .limit(200);
+
+  for (const row of due ?? []) {
+    result.scanned += 1;
+    const ok = await ensureTask({
+      ruleKey: "outbound.follow_up_reminder",
+      kind: "outbound_follow_up",
+      prospectId: row.id,
+      title: `Follow-up outbound: ${row.business_name}`,
+      detail: `Jadwal follow-up ${row.next_follow_up_at}. Follow-up ke-${(row.follow_up_count ?? 0) + 1}. Kirim manual setelah dicek.`,
+      priority: "high",
+    });
+    if (ok) result.followUps += 1;
+  }
+
+  const staleSince = new Date(now.getTime() - 3 * 86_400_000).toISOString();
+  const { data: stale } = await db
+    .from("prospects")
+    .select("id, business_name, status_updated_at, fit_tier")
+    .eq("status", "ready")
+    .eq("do_not_contact", false)
+    .lte("status_updated_at", staleSince)
+    .limit(200);
+
+  for (const row of stale ?? []) {
+    result.scanned += 1;
+    const ok = await ensureTask({
+      ruleKey: "outbound.stale_ready_alert",
+      kind: "outbound_approval",
+      prospectId: row.id,
+      title: `Menunggu approval outreach: ${row.business_name}`,
+      detail: `Prospek berstatus "ready" (fit ${row.fit_tier}) sejak ${row.status_updated_at}. Setujui atau tolak.`,
+      priority: "normal",
+    });
+    if (ok) result.staleReady += 1;
+  }
+
+  return result;
 }

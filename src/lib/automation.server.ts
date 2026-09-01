@@ -644,6 +644,7 @@ export async function scanAutomationDue(): Promise<{
   created: number;
   overdue: number;
   scanned: number;
+  outbound: { followUps: number; staleReady: number; scanned: number };
 }> {
   const rule = await loadRule("project.deadline_reminder");
   const db = await admin();
@@ -708,6 +709,26 @@ export async function scanAutomationDue(): Promise<{
     .lt("due_at", new Date().toISOString());
   const overdue = overdueTasks?.length ?? 0;
 
+  // Outbound prospecting reminders (never sends outreach, only internal tasks).
+  let outbound = { followUps: 0, staleReady: 0, scanned: 0 };
+  const outboundRule = await loadRule("outbound.follow_up_reminder");
+  if (outboundRule.enabled) {
+    try {
+      const { scanProspectFollowUps } = await import("@/lib/prospecting.server");
+      outbound = await scanProspectFollowUps();
+      scanned += outbound.scanned;
+      created += outbound.followUps + outbound.staleReady;
+    } catch (error) {
+      await logAutomation({
+        ruleKey: "outbound.follow_up_reminder",
+        event: "outbound.scan",
+        status: "failed",
+        title: "Scan outbound gagal",
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   await logAutomation({
     ruleKey: "project.deadline_reminder",
     event: "automation.scan",
@@ -716,5 +737,5 @@ export async function scanAutomationDue(): Promise<{
     detail: `${created} reminder baru · ${overdue} tugas jatuh tempo · ${scanned} record diperiksa.`,
   });
 
-  return { created, overdue, scanned };
+  return { created, overdue, scanned, outbound };
 }

@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  Target,
   Users,
   FileText,
   KanbanSquare,
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 const NAV = [
   { to: "/admin", label: "Dashboard", exact: true, icon: LayoutDashboard },
   { to: "/admin/leads", label: "AI Lead CRM", exact: false, icon: Users },
+  { to: "/admin/prospects", label: "Prospects", exact: false, icon: Target },
   { to: "/admin/pipeline", label: "Pipeline", exact: false, icon: KanbanSquare },
   { to: "/admin/proposals", label: "Proposals", exact: false, icon: FileText },
   { to: "/admin/invoices", label: "Payments", exact: false, icon: Receipt },
