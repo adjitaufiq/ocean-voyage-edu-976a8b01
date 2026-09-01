@@ -297,7 +297,7 @@ export async function updateProspect(
     update.status_updated_at = new Date().toISOString();
   }
 
-  const { error } = await supabase.from("prospects").update(update).eq("id", id);
+  const { error } = await supabase.from("prospects").update(update as never).eq("id", id);
   if (error) throw new Error(error.message);
 
   await logProspectActivity(supabase, {
@@ -429,7 +429,7 @@ export async function recordOutreach(
     update.replied_at = now;
   }
 
-  const { error } = await supabase.from("prospects").update(update).eq("id", input.id);
+  const { error } = await supabase.from("prospects").update(update as never).eq("id", input.id);
   if (error) throw new Error(error.message);
 
   await logProspectActivity(supabase, {
