@@ -37,6 +37,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as ApiPublicConsultantChatRouteImport } from './routes/api/public/consultant-chat'
 import { Route as AuthenticatedAdminTeamRouteImport } from './routes/_authenticated/admin.team'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
+import { Route as AuthenticatedAdminProspectsRouteImport } from './routes/_authenticated/admin.prospects'
 import { Route as AuthenticatedAdminPortfolioRouteImport } from './routes/_authenticated/admin.portfolio'
 import { Route as AuthenticatedAdminPipelineRouteImport } from './routes/_authenticated/admin.pipeline'
 import { Route as AuthenticatedAdminMemoryRouteImport } from './routes/_authenticated/admin.memory'
@@ -203,6 +204,12 @@ const AuthenticatedAdminSettingsRoute =
   AuthenticatedAdminSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminProspectsRoute =
+  AuthenticatedAdminProspectsRouteImport.update({
+    id: '/prospects',
+    path: '/prospects',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminPortfolioRoute =
@@ -379,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/admin/memory': typeof AuthenticatedAdminMemoryRoute
   '/admin/pipeline': typeof AuthenticatedAdminPipelineRoute
   '/admin/portfolio': typeof AuthenticatedAdminPortfolioRoute
+  '/admin/prospects': typeof AuthenticatedAdminProspectsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/team': typeof AuthenticatedAdminTeamRoute
   '/api/public/consultant-chat': typeof ApiPublicConsultantChatRoute
@@ -430,6 +438,7 @@ export interface FileRoutesByTo {
   '/admin/memory': typeof AuthenticatedAdminMemoryRoute
   '/admin/pipeline': typeof AuthenticatedAdminPipelineRoute
   '/admin/portfolio': typeof AuthenticatedAdminPortfolioRoute
+  '/admin/prospects': typeof AuthenticatedAdminProspectsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/team': typeof AuthenticatedAdminTeamRoute
   '/api/public/consultant-chat': typeof ApiPublicConsultantChatRoute
@@ -485,6 +494,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/memory': typeof AuthenticatedAdminMemoryRoute
   '/_authenticated/admin/pipeline': typeof AuthenticatedAdminPipelineRoute
   '/_authenticated/admin/portfolio': typeof AuthenticatedAdminPortfolioRoute
+  '/_authenticated/admin/prospects': typeof AuthenticatedAdminProspectsRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/team': typeof AuthenticatedAdminTeamRoute
   '/api/public/consultant-chat': typeof ApiPublicConsultantChatRoute
@@ -540,6 +550,7 @@ export interface FileRouteTypes {
     | '/admin/memory'
     | '/admin/pipeline'
     | '/admin/portfolio'
+    | '/admin/prospects'
     | '/admin/settings'
     | '/admin/team'
     | '/api/public/consultant-chat'
@@ -591,6 +602,7 @@ export interface FileRouteTypes {
     | '/admin/memory'
     | '/admin/pipeline'
     | '/admin/portfolio'
+    | '/admin/prospects'
     | '/admin/settings'
     | '/admin/team'
     | '/api/public/consultant-chat'
@@ -645,6 +657,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/memory'
     | '/_authenticated/admin/pipeline'
     | '/_authenticated/admin/portfolio'
+    | '/_authenticated/admin/prospects'
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/team'
     | '/api/public/consultant-chat'
@@ -898,6 +911,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/prospects': {
+      id: '/_authenticated/admin/prospects'
+      path: '/prospects'
+      fullPath: '/admin/prospects'
+      preLoaderRoute: typeof AuthenticatedAdminProspectsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/portfolio': {
       id: '/_authenticated/admin/portfolio'
       path: '/portfolio'
@@ -1095,6 +1115,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminMemoryRoute: typeof AuthenticatedAdminMemoryRoute
   AuthenticatedAdminPipelineRoute: typeof AuthenticatedAdminPipelineRoute
   AuthenticatedAdminPortfolioRoute: typeof AuthenticatedAdminPortfolioRoute
+  AuthenticatedAdminProspectsRoute: typeof AuthenticatedAdminProspectsRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminTeamRoute: typeof AuthenticatedAdminTeamRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -1119,6 +1140,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminMemoryRoute: AuthenticatedAdminMemoryRoute,
   AuthenticatedAdminPipelineRoute: AuthenticatedAdminPipelineRoute,
   AuthenticatedAdminPortfolioRoute: AuthenticatedAdminPortfolioRoute,
+  AuthenticatedAdminProspectsRoute: AuthenticatedAdminProspectsRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
   AuthenticatedAdminTeamRoute: AuthenticatedAdminTeamRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
