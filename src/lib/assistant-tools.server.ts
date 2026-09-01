@@ -69,6 +69,38 @@ export function buildAssistantTools(options: {
       },
     }),
 
+    outbound_report: tool({
+      description:
+        "Ringkasan outbound prospecting (pipeline prospek di luar CRM inbound): jumlah prospek, tier ICP, status, reply rate, konversi jadi lead, follow-up jatuh tempo, dan prospek yang menunggu approval. Read-only.",
+      inputSchema: z.object({
+        days: z.number().min(1).max(180).optional().describe("Rentang hari, default 30"),
+      }),
+      execute: async ({ days }) => {
+        const { buildProspectingSummary } = await import("@/lib/prospecting.server");
+        const summary = await buildProspectingSummary(supabase, days ?? 30).catch(() => null);
+        if (!summary)
+          return {
+            status: "insufficient_data" as const,
+            message:
+              "Belum ada data prospek outbound pada rentang ini. Sampaikan apa adanya, jangan mengarang angka.",
+          };
+        return { status: "ok" as const, summary };
+      },
+    }),
+
+    find_prospect: tool({
+      description:
+        "Cari prospek outbound berdasarkan nama bisnis, kota, atau industri. Read-only, untuk mendapatkan konteks sebelum menyarankan aksi outreach.",
+      inputSchema: z.object({
+        query: z.string().describe("Nama bisnis, kota, atau industri"),
+      }),
+      execute: async ({ query }) => {
+        const { fetchProspects } = await import("@/lib/prospecting.server");
+        const matches = await fetchProspects(supabase, { search: query, limit: 5 }).catch(() => []);
+        return { matches };
+      },
+    }),
+
     find_lead: tool({
       description:
         "Cari lead/prospek berdasarkan nama, perusahaan, atau email untuk mendapatkan lead_id sebelum aksi lain.",
