@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  Target,
   Users,
   FileText,
   KanbanSquare,
