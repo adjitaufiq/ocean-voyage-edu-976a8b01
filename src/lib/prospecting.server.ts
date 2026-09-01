@@ -206,7 +206,15 @@ export type ProspectInput = {
   painSignals?: string[];
   notes?: string | null;
   ownerName?: string | null;
-};
+  contactPhone?: string | null;
+  socialMedia?: string | null;
+  campaignId?: string | null;
+  businessSummary?: string | null;
+  opportunityReason?: string | null;
+  recommendedSolution?: string | null;
+  salesApproach?: string | null;
+  verified?: boolean;
+
 
 /** Returns the existing prospect id when the identity already exists. */
 export async function findDuplicate(
