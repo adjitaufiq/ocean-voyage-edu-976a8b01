@@ -1571,6 +1571,307 @@ export type Database = {
           },
         ]
       }
+      prospect_activities: {
+        Row: {
+          action: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          id: string
+          label: string | null
+          meta: Json
+          prospect_id: string
+        }
+        Insert: {
+          action: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          id?: string
+          label?: string | null
+          meta?: Json
+          prospect_id: string
+        }
+        Update: {
+          action?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          id?: string
+          label?: string | null
+          meta?: Json
+          prospect_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_activities_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_icp_config: {
+        Row: {
+          config: Json
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      prospect_job_state: {
+        Row: {
+          detail: string | null
+          key: string
+          last_run_at: string | null
+          last_status: string | null
+          locked_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          detail?: string | null
+          key: string
+          last_run_at?: string | null
+          last_status?: string | null
+          locked_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          detail?: string | null
+          key?: string
+          last_run_at?: string | null
+          last_status?: string | null
+          locked_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prospect_runs: {
+        Row: {
+          ai_calls: number
+          created_at: string
+          created_by: string | null
+          error: string | null
+          finished_at: string | null
+          found_count: number
+          id: string
+          kind: string
+          meta: Json
+          query: string | null
+          saved_count: number
+          skipped_count: number
+          started_at: string
+          status: string
+          trigger_source: string
+        }
+        Insert: {
+          ai_calls?: number
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          finished_at?: string | null
+          found_count?: number
+          id?: string
+          kind?: string
+          meta?: Json
+          query?: string | null
+          saved_count?: number
+          skipped_count?: number
+          started_at?: string
+          status?: string
+          trigger_source?: string
+        }
+        Update: {
+          ai_calls?: number
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          finished_at?: string | null
+          found_count?: number
+          id?: string
+          kind?: string
+          meta?: Json
+          query?: string | null
+          saved_count?: number
+          skipped_count?: number
+          started_at?: string
+          status?: string
+          trigger_source?: string
+        }
+        Relationships: []
+      }
+      prospects: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          business_name: string
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_title: string | null
+          contact_whatsapp: string | null
+          contacted_at: string | null
+          converted_at: string | null
+          country: string
+          created_at: string
+          created_by: string | null
+          discovery_query: string | null
+          do_not_contact: boolean
+          do_not_contact_reason: string | null
+          evidence: Json
+          fit_breakdown: Json
+          fit_score: number
+          fit_tier: string
+          follow_up_count: number
+          id: string
+          industry: string | null
+          lead_id: string | null
+          meta: Json
+          next_follow_up_at: string | null
+          notes: string | null
+          outreach_channel: string | null
+          outreach_draft: string | null
+          outreach_subject: string | null
+          owner_name: string | null
+          pain_signals: Json
+          replied_at: string | null
+          research_summary: string | null
+          source: string
+          source_detail: string | null
+          status: string
+          status_updated_at: string
+          updated_at: string
+          website: string | null
+          website_domain: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          business_name: string
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_title?: string | null
+          contact_whatsapp?: string | null
+          contacted_at?: string | null
+          converted_at?: string | null
+          country?: string
+          created_at?: string
+          created_by?: string | null
+          discovery_query?: string | null
+          do_not_contact?: boolean
+          do_not_contact_reason?: string | null
+          evidence?: Json
+          fit_breakdown?: Json
+          fit_score?: number
+          fit_tier?: string
+          follow_up_count?: number
+          id?: string
+          industry?: string | null
+          lead_id?: string | null
+          meta?: Json
+          next_follow_up_at?: string | null
+          notes?: string | null
+          outreach_channel?: string | null
+          outreach_draft?: string | null
+          outreach_subject?: string | null
+          owner_name?: string | null
+          pain_signals?: Json
+          replied_at?: string | null
+          research_summary?: string | null
+          source?: string
+          source_detail?: string | null
+          status?: string
+          status_updated_at?: string
+          updated_at?: string
+          website?: string | null
+          website_domain?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          business_name?: string
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_title?: string | null
+          contact_whatsapp?: string | null
+          contacted_at?: string | null
+          converted_at?: string | null
+          country?: string
+          created_at?: string
+          created_by?: string | null
+          discovery_query?: string | null
+          do_not_contact?: boolean
+          do_not_contact_reason?: string | null
+          evidence?: Json
+          fit_breakdown?: Json
+          fit_score?: number
+          fit_tier?: string
+          follow_up_count?: number
+          id?: string
+          industry?: string | null
+          lead_id?: string | null
+          meta?: Json
+          next_follow_up_at?: string | null
+          notes?: string | null
+          outreach_channel?: string | null
+          outreach_draft?: string | null
+          outreach_subject?: string | null
+          owner_name?: string | null
+          pain_signals?: Json
+          replied_at?: string | null
+          research_summary?: string | null
+          source?: string
+          source_detail?: string | null
+          status?: string
+          status_updated_at?: string
+          updated_at?: string
+          website?: string | null
+          website_domain?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospects_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_comments: {
         Row: {
           author_name: string
