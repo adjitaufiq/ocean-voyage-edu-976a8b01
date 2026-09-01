@@ -24,7 +24,7 @@ import {
 type Client = SupabaseClient<Database>;
 
 export const PROSPECT_LIST_COLUMNS =
-  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name";
+  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, opportunity_reason, recommended_solution, sales_approach, last_contact_at, verified";
 
 export type ProspectListRow = {
   id: string;
@@ -39,6 +39,8 @@ export type ProspectListRow = {
   contact_title: string | null;
   contact_email: string | null;
   contact_whatsapp: string | null;
+  contact_phone: string | null;
+  social_media: string | null;
   source: string;
   source_detail: string | null;
   status: string;
@@ -54,6 +56,15 @@ export type ProspectListRow = {
   lead_id: string | null;
   converted_at: string | null;
   owner_name: string | null;
+  campaign_id: string | null;
+  business_summary: string | null;
+  opportunity_reason: string | null;
+  recommended_solution: string | null;
+  sales_approach: string | null;
+  last_contact_at: string | null;
+  verified: boolean;
+};
+
 };
 
 /* --------------------------------- ICP ------------------------------------ */
