@@ -13,20 +13,28 @@ export const PROSPECT_STATUSES = [
   "approved",
   "contacted",
   "replied",
+  "meeting",
+  "negotiation",
   "converted",
+  "deal",
+  "lost",
   "rejected",
   "do_not_contact",
 ] as const;
 export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
 
 export const PROSPECT_STATUS_LABELS: Record<ProspectStatus, string> = {
-  new: "Baru",
+  new: "Baru ditemukan",
   researched: "Sudah diriset",
   ready: "Siap dihubungi",
   approved: "Disetujui",
   contacted: "Sudah dihubungi",
   replied: "Membalas",
+  meeting: "Meeting",
+  negotiation: "Negosiasi",
   converted: "Jadi lead",
+  deal: "Deal",
+  lost: "Lost",
   rejected: "Ditolak",
   do_not_contact: "Jangan dihubungi",
 };
@@ -39,8 +47,117 @@ export const PROSPECT_FUNNEL: ProspectStatus[] = [
   "approved",
   "contacted",
   "replied",
+  "meeting",
+  "negotiation",
   "converted",
+  "deal",
 ];
+
+/** Pipeline stages a salesperson can move a prospect through manually. */
+export const PIPELINE_STAGES: ProspectStatus[] = [
+  "new",
+  "ready",
+  "contacted",
+  "replied",
+  "meeting",
+  "negotiation",
+  "deal",
+  "lost",
+];
+
+/** A prospect is actionable when at least one contact channel exists. */
+export function isActionable(prospect: {
+  contact_email?: string | null;
+  contact_whatsapp?: string | null;
+  contact_phone?: string | null;
+  website?: string | null;
+}): boolean {
+  return Boolean(
+    (prospect.contact_email ?? "").trim() ||
+      (prospect.contact_whatsapp ?? "").trim() ||
+      (prospect.contact_phone ?? "").trim() ||
+      (prospect.website ?? "").trim(),
+  );
+}
+
+/* ------------------------------- Campaigns -------------------------------- */
+
+export const CAMPAIGN_STATUSES = ["active", "paused", "done"] as const;
+export type CampaignStatus = (typeof CAMPAIGN_STATUSES)[number];
+
+export const CAMPAIGN_STATUS_LABELS: Record<CampaignStatus, string> = {
+  active: "Aktif",
+  paused: "Dijeda",
+  done: "Selesai",
+};
+
+export const CAMPAIGN_SOLUTIONS = [
+  "Website Development",
+  "Web Application",
+  "Custom Software",
+  "CRM System",
+  "Booking System",
+  "Business Dashboard",
+  "AI Assistant",
+  "Workflow Automation",
+  "Digital Transformation",
+] as const;
+
+export const CAMPAIGN_INDUSTRIES = [
+  "Restaurant",
+  "Cafe",
+  "Interior & Kitchen Set",
+  "Manufaktur",
+  "Distributor",
+  "Retail",
+  "Properti",
+  "Klinik & Healthcare",
+  "Pendidikan",
+  "Jasa Profesional",
+  "Konstruksi",
+  "Logistik",
+] as const;
+
+export const PROSPECT_SOURCES = [
+  "google_business",
+  "google_search",
+  "company_website",
+  "instagram",
+  "linkedin",
+  "business_directory",
+  "industry_listing",
+  "referral",
+  "manual",
+] as const;
+export type ProspectSource = (typeof PROSPECT_SOURCES)[number];
+
+export const PROSPECT_SOURCE_LABELS: Record<string, string> = {
+  google_business: "Google Business",
+  google_search: "Google Search",
+  company_website: "Company Website",
+  instagram: "Instagram",
+  linkedin: "LinkedIn",
+  business_directory: "Business Directory",
+  industry_listing: "Industry Listing",
+  referral: "Referral",
+  manual: "Input manual",
+};
+
+export type CampaignRow = {
+  id: string;
+  name: string;
+  industry: string;
+  location: string;
+  keywords: string[];
+  solution: string;
+  daily_target: number;
+  status: string;
+  notes: string | null;
+  last_run_at: string | null;
+  total_discovered: number;
+  created_at: string;
+};
+
 
 export const PROSPECT_ACTIVITY_ACTIONS = [
   "research",
