@@ -1615,6 +1615,57 @@ export type Database = {
           },
         ]
       }
+      prospect_campaigns: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          daily_target: number
+          id: string
+          industry: string
+          keywords: Json
+          last_run_at: string | null
+          location: string
+          name: string
+          notes: string | null
+          solution: string
+          status: string
+          total_discovered: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          daily_target?: number
+          id?: string
+          industry: string
+          keywords?: Json
+          last_run_at?: string | null
+          location: string
+          name: string
+          notes?: string | null
+          solution: string
+          status?: string
+          total_discovered?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          daily_target?: number
+          id?: string
+          industry?: string
+          keywords?: Json
+          last_run_at?: string | null
+          location?: string
+          name?: string
+          notes?: string | null
+          solution?: string
+          status?: string
+          total_discovered?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       prospect_icp_config: {
         Row: {
           config: Json
@@ -1737,9 +1788,12 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           business_name: string
+          business_summary: string | null
+          campaign_id: string | null
           city: string | null
           contact_email: string | null
           contact_name: string | null
+          contact_phone: string | null
           contact_title: string | null
           contact_whatsapp: string | null
           contacted_at: string | null
@@ -1757,22 +1811,28 @@ export type Database = {
           follow_up_count: number
           id: string
           industry: string | null
+          last_contact_at: string | null
           lead_id: string | null
           meta: Json
           next_follow_up_at: string | null
           notes: string | null
+          opportunity_reason: string | null
           outreach_channel: string | null
           outreach_draft: string | null
           outreach_subject: string | null
           owner_name: string | null
           pain_signals: Json
+          recommended_solution: string | null
           replied_at: string | null
           research_summary: string | null
+          sales_approach: string | null
+          social_media: string | null
           source: string
           source_detail: string | null
           status: string
           status_updated_at: string
           updated_at: string
+          verified: boolean
           website: string | null
           website_domain: string | null
         }
@@ -1780,9 +1840,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           business_name: string
+          business_summary?: string | null
+          campaign_id?: string | null
           city?: string | null
           contact_email?: string | null
           contact_name?: string | null
+          contact_phone?: string | null
           contact_title?: string | null
           contact_whatsapp?: string | null
           contacted_at?: string | null
@@ -1800,22 +1863,28 @@ export type Database = {
           follow_up_count?: number
           id?: string
           industry?: string | null
+          last_contact_at?: string | null
           lead_id?: string | null
           meta?: Json
           next_follow_up_at?: string | null
           notes?: string | null
+          opportunity_reason?: string | null
           outreach_channel?: string | null
           outreach_draft?: string | null
           outreach_subject?: string | null
           owner_name?: string | null
           pain_signals?: Json
+          recommended_solution?: string | null
           replied_at?: string | null
           research_summary?: string | null
+          sales_approach?: string | null
+          social_media?: string | null
           source?: string
           source_detail?: string | null
           status?: string
           status_updated_at?: string
           updated_at?: string
+          verified?: boolean
           website?: string | null
           website_domain?: string | null
         }
@@ -1823,9 +1892,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           business_name?: string
+          business_summary?: string | null
+          campaign_id?: string | null
           city?: string | null
           contact_email?: string | null
           contact_name?: string | null
+          contact_phone?: string | null
           contact_title?: string | null
           contact_whatsapp?: string | null
           contacted_at?: string | null
@@ -1843,26 +1915,39 @@ export type Database = {
           follow_up_count?: number
           id?: string
           industry?: string | null
+          last_contact_at?: string | null
           lead_id?: string | null
           meta?: Json
           next_follow_up_at?: string | null
           notes?: string | null
+          opportunity_reason?: string | null
           outreach_channel?: string | null
           outreach_draft?: string | null
           outreach_subject?: string | null
           owner_name?: string | null
           pain_signals?: Json
+          recommended_solution?: string | null
           replied_at?: string | null
           research_summary?: string | null
+          sales_approach?: string | null
+          social_media?: string | null
           source?: string
           source_detail?: string | null
           status?: string
           status_updated_at?: string
           updated_at?: string
+          verified?: boolean
           website?: string | null
           website_domain?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "prospects_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "prospects_lead_id_fkey"
             columns: ["lead_id"]
