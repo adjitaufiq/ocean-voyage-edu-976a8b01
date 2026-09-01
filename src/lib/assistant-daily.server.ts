@@ -125,12 +125,24 @@ export async function completeOwnerTask(
 
 async function buildContext(supabase: AdminClient) {
   const { buildAcquisitionSummary } = await import("@/lib/acquisition.server");
-  const [snapshot, memory, tasks, acquisition] = await Promise.all([
+  const { buildProspectingSummary } = await import("@/lib/prospecting.server");
+  const [snapshot, memory, tasks, acquisition, outbound] = await Promise.all([
     buildBusinessSnapshot(supabase),
     buildMemoryContext(supabase, "daily-brief"),
     listOwnerTasks(supabase, "open"),
     buildAcquisitionSummary(supabase, 7).catch(() => null),
+    buildProspectingSummary(supabase, 7).catch(() => null),
   ]);
+
+  const outboundBlock = outbound
+    ? [
+        `Prospek 7 hari: ${outbound.total} (tier tinggi ${outbound.byTier.high ?? 0}).`,
+        `Menunggu approval outreach: ${outbound.readyForApproval}.`,
+        `Follow-up jatuh tempo: ${outbound.dueFollowUps}.`,
+        `Sudah dihubungi ${outbound.contacted}, membalas ${outbound.replied} (${outbound.replyRate}%), jadi lead ${outbound.converted}.`,
+        `Ditandai jangan dihubungi: ${outbound.doNotContact}.`,
+      ].join("\n")
+    : "(Belum ada data prospek outbound. JANGAN membuat bagian outbound atau menyebut angka apa pun.)";
 
   const taskBlock =
     tasks.length > 0
@@ -149,6 +161,9 @@ async function buildContext(supabase: AdminClient) {
     "=== AKUISISI ORGANIK ===",
     acquisition ??
       "(Data akuisisi belum cukup. JANGAN membuat bagian akuisisi atau menyebut tren traffic apa pun.)",
+    "",
+    "=== OUTBOUND PROSPECTING ===",
+    outboundBlock,
     "",
     "=== PERSONAL TASK OWNER (dari Telegram /add) ===",
     taskBlock,
