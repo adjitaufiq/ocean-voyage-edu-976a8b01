@@ -38,7 +38,7 @@ const prospectFields = {
   verified: z.boolean().optional(),
 };
 
-const workspace = (context: { supabase: never; userId: string }) => context;
+
 
 export const getProspects = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
