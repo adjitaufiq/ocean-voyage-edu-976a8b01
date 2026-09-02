@@ -277,13 +277,12 @@ function ProspectsPage() {
       ? (raw as { label: string; score: number; max: number; detail: string }[])
       : [];
   }, [selected]);
-  const queueRows = rows.filter(
-    (row) =>
-      !row.do_not_contact &&
-      (row.status === "ready" ||
-        row.status === "approved" ||
-        isTodayOrOverdue(row.next_follow_up_at)),
-  );
+  const queueRows = rows.filter((row) => {
+    if (row.do_not_contact) return false;
+    if (TERMINAL_STATUSES.has(row.status)) return false;
+    if (isTodayOrOverdue(row.next_follow_up_at)) return true;
+    return QUEUE_STATUSES.has(row.status) && isActionable(row);
+  });
   const todayFollowUps = summary?.followUpsToday ?? 0;
   const readyContacts = summary?.actionable ?? 0;
 
