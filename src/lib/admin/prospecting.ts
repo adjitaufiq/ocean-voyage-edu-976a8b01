@@ -492,3 +492,125 @@ export function fitTierClass(tier: string): string {
       return "border-border/60 bg-muted/30 text-muted-foreground";
   }
 }
+
+/* -------------------- Contact quality & sales readiness -------------------- */
+
+/**
+ * Deterministic Contact Quality Score (0-100). Measures whether a human sales
+ * rep can actually reach this business — separate from ICP fit.
+ *
+ * WhatsApp/phone 40 · business email 25 · website 15 · PIC 10 · social 10.
+ */
+export type ContactQualityFactor = { key: string; label: string; score: number; max: number };
+
+export type VerificationStatus = "sales_ready" | "qualified" | "need_verification" | "not_ready";
+
+export const VERIFICATION_LABELS: Record<VerificationStatus, string> = {
+  sales_ready: "SALES READY",
+  qualified: "QUALIFIED",
+  need_verification: "NEED VERIFICATION",
+  not_ready: "NOT READY",
+};
+
+export type ContactQuality = {
+  score: number;
+  status: VerificationStatus;
+  factors: ContactQualityFactor[];
+  /** True when the only reachable channel is a social profile. */
+  socialOnly: boolean;
+};
+
+export type ContactableProspect = {
+  contact_email?: string | null;
+  contact_whatsapp?: string | null;
+  contact_phone?: string | null;
+  contact_name?: string | null;
+  contact_title?: string | null;
+  website?: string | null;
+  social_media?: string | null;
+};
+
+const FREE_EMAIL_DOMAINS = ["gmail.com", "yahoo.com", "yahoo.co.id", "hotmail.com", "outlook.com"];
+
+export function contactQuality(prospect: ContactableProspect): ContactQuality {
+  const phone = normalizeWhatsapp(prospect.contact_whatsapp ?? prospect.contact_phone);
+  const email = normalizeEmail(prospect.contact_email);
+  const domain = normalizeDomain(prospect.website);
+  const pic = (prospect.contact_name ?? "").trim();
+  const social = (prospect.social_media ?? "").trim();
+
+  // A free-mail address is still reachable, just weaker than a business domain.
+  const emailScore = !email ? 0 : FREE_EMAIL_DOMAINS.some((d) => email.endsWith(`@${d}`)) ? 15 : 25;
+
+  const factors: ContactQualityFactor[] = [
+    { key: "phone", label: "WhatsApp / telepon", score: phone ? 40 : 0, max: 40 },
+    { key: "email", label: "Email bisnis", score: emailScore, max: 25 },
+    { key: "website", label: "Website aktif", score: domain ? 15 : 0, max: 15 },
+    { key: "pic", label: "Decision maker / PIC", score: pic ? 10 : 0, max: 10 },
+    { key: "social", label: "Social media resmi", score: social ? 10 : 0, max: 10 },
+  ];
+
+  const score = factors.reduce((sum, factor) => sum + factor.score, 0);
+  const socialOnly = Boolean(social) && !phone && !email;
+
+  const status: VerificationStatus = socialOnly
+    ? "need_verification"
+    : score >= 90
+      ? "sales_ready"
+      : score >= 75
+        ? "qualified"
+        : score >= 50
+          ? "need_verification"
+          : "not_ready";
+
+  return { score, status, factors, socialOnly };
+}
+
+export function verificationClass(status: VerificationStatus): string {
+  switch (status) {
+    case "sales_ready":
+      return "border-primary/40 bg-primary/15 text-primary";
+    case "qualified":
+      return "border-accent/40 bg-accent/20 text-accent-foreground";
+    case "need_verification":
+      return "border-border/60 bg-secondary/40 text-secondary-foreground";
+    default:
+      return "border-destructive/40 bg-destructive/10 text-destructive";
+  }
+}
+
+export type SalesPriority = "HIGH" | "MEDIUM" | "LOW";
+
+/** Priority combines reachability (contact quality) with ICP fit. */
+export function salesPriority(contactScore: number, fitScore: number): SalesPriority {
+  if (contactScore >= 75 && fitScore >= 70) return "HIGH";
+  if (contactScore >= 50 && fitScore >= 45) return "MEDIUM";
+  return "LOW";
+}
+
+export function priorityClass(priority: SalesPriority): string {
+  if (priority === "HIGH") return "border-primary/40 bg-primary/15 text-primary";
+  if (priority === "MEDIUM") return "border-accent/40 bg-accent/20 text-accent-foreground";
+  return "border-border/60 bg-muted/30 text-muted-foreground";
+}
+
+/**
+ * Daily Sales Queue rule: valid contact, contact quality >= 75, a recorded
+ * source, an opportunity reason, not DO_NOT_CONTACT, not terminal.
+ */
+export function isQueueEligible(prospect: {
+  do_not_contact?: boolean | null;
+  status?: string | null;
+  source?: string | null;
+  opportunity_reason?: string | null;
+  research_summary?: string | null;
+  business_summary?: string | null;
+} & ContactableProspect): boolean {
+  if (prospect.do_not_contact) return false;
+  const terminal = ["converted", "deal", "lost", "rejected", "do_not_contact"];
+  if (terminal.includes(String(prospect.status ?? ""))) return false;
+  if (!(prospect.source ?? "").trim()) return false;
+  const reason = (prospect.opportunity_reason ?? prospect.business_summary ?? prospect.research_summary ?? "").trim();
+  if (!reason) return false;
+  return contactQuality(prospect).score >= 75;
+}
