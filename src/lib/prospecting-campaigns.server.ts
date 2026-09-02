@@ -73,7 +73,10 @@ export async function saveCampaign(
     name: input.name.trim().slice(0, 150),
     industry: input.industry.trim().slice(0, 120),
     location: input.location.trim().slice(0, 120),
-    keywords: input.keywords.map((item) => item.trim()).filter(Boolean).slice(0, 20) as never,
+    keywords: input.keywords
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 20) as never,
     solution: input.solution.trim().slice(0, 150),
     daily_target: Math.max(1, Math.min(50, input.dailyTarget)),
     status: input.status ?? "active",
@@ -128,7 +131,10 @@ type Candidate = {
 };
 
 function parseJsonArray(text: string): Candidate[] {
-  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const cleaned = text
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
   const start = cleaned.indexOf("[");
   const end = cleaned.lastIndexOf("]");
   if (start < 0 || end <= start) return [];
@@ -137,7 +143,9 @@ function parseJsonArray(text: string): Candidate[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (item): item is Candidate =>
-        Boolean(item) && typeof item === "object" && typeof (item as Candidate).businessName === "string",
+        Boolean(item) &&
+        typeof item === "object" &&
+        typeof (item as Candidate).businessName === "string",
     );
   } catch {
     return [];
@@ -213,7 +221,13 @@ export async function discoverProspects(
 
   const finish = async (
     status: string,
-    patch: Partial<{ found_count: number; saved_count: number; skipped_count: number; ai_calls: number; error: string }>,
+    patch: Partial<{
+      found_count: number;
+      saved_count: number;
+      skipped_count: number;
+      ai_calls: number;
+      error: string;
+    }>,
   ) => {
     if (!runId) return;
     await supabase
@@ -232,7 +246,9 @@ export async function discoverProspects(
     .select("business_name")
     .order("created_at", { ascending: false })
     .limit(80);
-  const exclude = (existing ?? []).map((row) => String((row as { business_name: string }).business_name));
+  const exclude = (existing ?? []).map((row) =>
+    String((row as { business_name: string }).business_name),
+  );
 
   let candidates: Candidate[] = [];
   try {
@@ -298,7 +314,11 @@ export async function discoverProspects(
           content: [candidate.businessSummary, candidate.opportunityReason, candidate.salesApproach]
             .filter(Boolean)
             .join("\n\n"),
-          meta: { campaign_id: campaign.id, source: normalizeSource(candidate.source), verified: false },
+          meta: {
+            campaign_id: campaign.id,
+            source: normalizeSource(candidate.source),
+            verified: false,
+          },
           userId: actor.userId,
           userEmail: actor.email ?? null,
         });
@@ -359,7 +379,10 @@ Buat analisis spesifik (bukan generik). Balas HANYA JSON:
     temperature: 0.4,
   });
 
-  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const cleaned = text
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("AI tidak mengembalikan analisis yang valid.");
@@ -368,7 +391,8 @@ Buat analisis spesifik (bukan generik). Balas HANYA JSON:
   const patch = {
     business_summary: (parsed["businessSummary"] ?? "").slice(0, 2000) || null,
     opportunity_reason:
-      ((parsed["opportunityReason"] ?? "") || (parsed["potentialNeed"] ?? "")).slice(0, 2000) || null,
+      ((parsed["opportunityReason"] ?? "") || (parsed["potentialNeed"] ?? "")).slice(0, 2000) ||
+      null,
     recommended_solution: (parsed["recommendedSolution"] ?? "").slice(0, 1000) || null,
     sales_approach: (parsed["salesApproach"] ?? "").slice(0, 2000) || null,
   };
@@ -397,7 +421,11 @@ export async function generateOutreachMessage(
   supabase: Client,
   input: { id: string; channel: string },
 ): Promise<{ subject: string | null; message: string }> {
-  const { data, error } = await supabase.from("prospects").select("*").eq("id", input.id).maybeSingle();
+  const { data, error } = await supabase
+    .from("prospects")
+    .select("*")
+    .eq("id", input.id)
+    .maybeSingle();
   if (error || !data) throw new Error(error?.message ?? "Prospek tidak ditemukan.");
   const row = data as Record<string, unknown>;
   if (row["do_not_contact"]) throw new Error("Prospek ditandai DO_NOT_CONTACT.");
@@ -423,12 +451,18 @@ ${input.channel === "email" ? 'Balas JSON: {"subject":"","message":""}' : 'Balas
     prompt,
     temperature: 0.7,
   });
-  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const cleaned = text
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start >= 0 && end > start) {
     try {
-      const parsed = JSON.parse(cleaned.slice(start, end + 1)) as { subject?: string; message?: string };
+      const parsed = JSON.parse(cleaned.slice(start, end + 1)) as {
+        subject?: string;
+        message?: string;
+      };
       if (parsed.message?.trim()) {
         return { subject: parsed.subject?.trim() || null, message: parsed.message.trim() };
       }
