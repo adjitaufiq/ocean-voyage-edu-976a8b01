@@ -273,10 +273,16 @@ export async function createProspect(
       contact_title: input.contactTitle?.trim() || null,
       contact_email: email,
       contact_whatsapp: whatsapp,
+      contact_phone: input.contactPhone?.trim() || null,
+      social_media: input.socialMedia?.trim() || null,
       source: input.source?.trim() || "manual",
       source_detail: input.sourceDetail?.trim() || null,
       discovery_query: input.discoveryQuery?.trim() || null,
       research_summary: input.researchSummary?.slice(0, 4000) || null,
+      business_summary: input.businessSummary?.slice(0, 2000) || null,
+      opportunity_reason: input.opportunityReason?.slice(0, 2000) || null,
+      recommended_solution: input.recommendedSolution?.slice(0, 1000) || null,
+      sales_approach: input.salesApproach?.slice(0, 2000) || null,
       evidence: (input.evidence ?? []) as never,
       pain_signals: (input.painSignals ?? []) as never,
       fit_score: scored.total,
@@ -285,6 +291,8 @@ export async function createProspect(
       status: input.researchSummary ? "researched" : "new",
       notes: input.notes?.slice(0, 4000) || null,
       owner_name: input.ownerName?.trim() || null,
+      campaign_id: input.campaignId ?? null,
+      verified: input.verified ?? false,
       created_by: actor.userId,
     })
     .select("id")
@@ -322,6 +330,14 @@ export async function updateProspect(
   if (patch.contactTitle !== undefined) update.contact_title = patch.contactTitle?.trim() || null;
   if (patch.contactEmail !== undefined) update.contact_email = normalizeEmail(patch.contactEmail);
   if (patch.contactWhatsapp !== undefined) update.contact_whatsapp = normalizeWhatsapp(patch.contactWhatsapp);
+  if (patch.contactPhone !== undefined) update.contact_phone = patch.contactPhone?.trim() || null;
+  if (patch.socialMedia !== undefined) update.social_media = patch.socialMedia?.trim() || null;
+  if (patch.campaignId !== undefined) update.campaign_id = patch.campaignId;
+  if (patch.businessSummary !== undefined) update.business_summary = patch.businessSummary?.slice(0, 2000) || null;
+  if (patch.opportunityReason !== undefined) update.opportunity_reason = patch.opportunityReason?.slice(0, 2000) || null;
+  if (patch.recommendedSolution !== undefined) update.recommended_solution = patch.recommendedSolution?.slice(0, 1000) || null;
+  if (patch.salesApproach !== undefined) update.sales_approach = patch.salesApproach?.slice(0, 2000) || null;
+  if (patch.verified !== undefined) update.verified = patch.verified;
   if (patch.researchSummary !== undefined) update.research_summary = patch.researchSummary?.slice(0, 4000) || null;
   if (patch.evidence !== undefined) update.evidence = patch.evidence;
   if (patch.painSignals !== undefined) update.pain_signals = patch.painSignals;
@@ -458,10 +474,12 @@ export async function recordOutreach(
   if (input.event === "sent") {
     update.status = "contacted";
     update.contacted_at = now;
+    update.last_contact_at = now;
     update.follow_up_count = (current?.follow_up_count ?? 0) + 1;
   } else if (input.event === "reply") {
     update.status = "replied";
     update.replied_at = now;
+    update.last_contact_at = now;
   }
 
   const { error } = await supabase.from("prospects").update(update as never).eq("id", input.id);
@@ -529,7 +547,8 @@ export async function convertProspectToLead(
   if (error || !prospect) throw new Error(error?.message ?? "Prospek tidak ditemukan.");
   if (prospect.lead_id) return { ok: true as const, leadId: prospect.lead_id, alreadyConverted: true };
   if (prospect.do_not_contact) throw new Error("Prospek ditandai DO_NOT_CONTACT.");
-  if (!prospect.contact_email && !prospect.contact_whatsapp)
+  const contactWhatsapp = prospect.contact_whatsapp || prospect.contact_phone || "";
+  if (!prospect.contact_email && !contactWhatsapp)
     throw new Error("Butuh minimal satu kanal kontak sebelum handoff ke CRM.");
 
   const { data: lead, error: leadError } = await supabase
@@ -537,12 +556,13 @@ export async function convertProspectToLead(
     .insert({
       name: prospect.contact_name || prospect.business_name,
       email: prospect.contact_email || "",
-      whatsapp: prospect.contact_whatsapp || "",
+      whatsapp: contactWhatsapp,
       company: prospect.business_name,
       business_name: prospect.business_name,
-      project_type: input.projectType || "Belum ditentukan",
+      project_type: input.projectType || prospect.recommended_solution || "Belum ditentukan",
       requirement:
         input.requirement ||
+        prospect.opportunity_reason ||
         prospect.research_summary ||
         "Prospek outbound — kebutuhan belum digali, jadwalkan sesi konsultasi.",
       budget: input.budget || "Belum dibahas",
@@ -552,7 +572,12 @@ export async function convertProspectToLead(
       visitor_source: prospect.source,
       lead_score: prospect.fit_score,
       lead_temperature: prospect.fit_tier === "high" ? "warm" : "cold",
-      admin_notes: `Handoff dari outbound prospecting (skor ICP ${prospect.fit_score}).`,
+      admin_notes: [
+        `Handoff dari outbound prospecting (skor ICP ${prospect.fit_score}).`,
+        prospect.opportunity_reason ? `Peluang: ${prospect.opportunity_reason}` : null,
+        prospect.recommended_solution ? `Solusi: ${prospect.recommended_solution}` : null,
+        prospect.notes ? `Catatan: ${prospect.notes}` : null,
+      ].filter(Boolean).join("\n"),
     })
     .select("id")
     .single();
@@ -595,6 +620,12 @@ export type ProspectingSummary = {
   doNotContact: number;
   dueFollowUps: number;
   readyForApproval: number;
+  actionable: number;
+  followUpsToday: number;
+  messagesPrepared: number;
+  meetings: number;
+  deals: number;
+  lost: number;
 };
 
 export async function buildProspectingSummary(
@@ -604,7 +635,7 @@ export async function buildProspectingSummary(
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const { data, error } = await supabase
     .from("prospects")
-    .select("status, fit_tier, source, do_not_contact, next_follow_up_at, created_at")
+    .select("status, fit_tier, source, do_not_contact, next_follow_up_at, created_at, contact_email, contact_whatsapp, contact_phone, website, outreach_draft")
     .gte("created_at", since)
     .limit(2000);
   if (error) throw new Error(error.message);
@@ -616,18 +647,23 @@ export async function buildProspectingSummary(
   const sources = new Map<string, number>();
   let doNotContact = 0;
   let dueFollowUps = 0;
-  const now = Date.now();
+  let actionable = 0;
+  let messagesPrepared = 0;
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
 
   for (const row of rows) {
     byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
     byTier[row.fit_tier] = (byTier[row.fit_tier] ?? 0) + 1;
     sources.set(row.source, (sources.get(row.source) ?? 0) + 1);
     if (row.do_not_contact) doNotContact += 1;
-    if (row.next_follow_up_at && new Date(row.next_follow_up_at).getTime() <= now) dueFollowUps += 1;
+    if (!row.do_not_contact && (row.contact_email || row.contact_whatsapp || row.contact_phone || row.website)) actionable += 1;
+    if (row.outreach_draft) messagesPrepared += 1;
+    if (row.next_follow_up_at && new Date(row.next_follow_up_at).getTime() <= now.getTime()) dueFollowUps += 1;
   }
 
-  const contacted = (byStatus.contacted ?? 0) + (byStatus.replied ?? 0) + (byStatus.converted ?? 0);
-  const replied = (byStatus.replied ?? 0) + (byStatus.converted ?? 0);
+  const contacted = (byStatus.contacted ?? 0) + (byStatus.replied ?? 0) + (byStatus.meeting ?? 0) + (byStatus.negotiation ?? 0) + (byStatus.deal ?? 0) + (byStatus.converted ?? 0);
+  const replied = (byStatus.replied ?? 0) + (byStatus.meeting ?? 0) + (byStatus.negotiation ?? 0) + (byStatus.deal ?? 0) + (byStatus.converted ?? 0);
   const converted = byStatus.converted ?? 0;
 
   return {
@@ -647,6 +683,12 @@ export async function buildProspectingSummary(
     doNotContact,
     dueFollowUps,
     readyForApproval: byStatus.ready ?? 0,
+    actionable,
+    followUpsToday: rows.filter((row) => row.next_follow_up_at?.slice(0, 10) === today && !row.do_not_contact).length,
+    messagesPrepared,
+    meetings: byStatus.meeting ?? 0,
+    deals: byStatus.deal ?? 0,
+    lost: byStatus.lost ?? 0,
   };
 }
 
