@@ -162,7 +162,8 @@ const TERMINAL_STATUSES = new Set<ProspectStatus>([
   "converted",
   "deal",
   "lost",
-  "disqualified",
+  "rejected",
+  "do_not_contact",
 ]);
 
 /** Active pipeline stages that still need a sales action today. */
@@ -300,9 +301,9 @@ function ProspectsPage() {
   }, [selected]);
   const queueRows = rows.filter((row) => {
     if (row.do_not_contact) return false;
-    if (TERMINAL_STATUSES.has(row.status)) return false;
+    if (TERMINAL_STATUSES.has(row.status as ProspectStatus)) return false;
     if (isTodayOrOverdue(row.next_follow_up_at)) return true;
-    return QUEUE_STATUSES.has(row.status) && isActionable(row);
+    return QUEUE_STATUSES.has(row.status as ProspectStatus) && isActionable(row);
   });
   const todayFollowUps = summary?.followUpsToday ?? 0;
   const readyContacts = summary?.actionable ?? 0;
