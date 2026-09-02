@@ -33,6 +33,7 @@ import {
   FIT_TIER_LABELS,
   OUTREACH_CHANNELS,
   PIPELINE_STAGES,
+  isActionable,
   PROSPECT_SOURCES,
   PROSPECT_SOURCE_LABELS,
   PROSPECT_STATUS_LABELS,
@@ -156,6 +157,27 @@ function isTodayOrOverdue(value: string | null): boolean {
   return Boolean(value && new Date(value).getTime() <= Date.now() + 86_400_000);
 }
 
+/** Terminal states never appear in the daily sales queue. */
+const TERMINAL_STATUSES = new Set<ProspectStatus>([
+  "converted",
+  "deal",
+  "lost",
+  "rejected",
+  "do_not_contact",
+]);
+
+/** Active pipeline stages that still need a sales action today. */
+const QUEUE_STATUSES = new Set<ProspectStatus>([
+  "new",
+  "researched",
+  "ready",
+  "approved",
+  "contacted",
+  "replied",
+  "meeting",
+  "negotiation",
+]);
+
 function ProspectsPage() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(getProspects);
@@ -277,13 +299,12 @@ function ProspectsPage() {
       ? (raw as { label: string; score: number; max: number; detail: string }[])
       : [];
   }, [selected]);
-  const queueRows = rows.filter(
-    (row) =>
-      !row.do_not_contact &&
-      (row.status === "ready" ||
-        row.status === "approved" ||
-        isTodayOrOverdue(row.next_follow_up_at)),
-  );
+  const queueRows = rows.filter((row) => {
+    if (row.do_not_contact) return false;
+    if (TERMINAL_STATUSES.has(row.status as ProspectStatus)) return false;
+    if (isTodayOrOverdue(row.next_follow_up_at)) return true;
+    return QUEUE_STATUSES.has(row.status as ProspectStatus) && isActionable(row);
+  });
   const todayFollowUps = summary?.followUpsToday ?? 0;
   const readyContacts = summary?.actionable ?? 0;
 
