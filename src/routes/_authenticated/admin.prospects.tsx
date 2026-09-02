@@ -157,6 +157,26 @@ function isTodayOrOverdue(value: string | null): boolean {
   return Boolean(value && new Date(value).getTime() <= Date.now() + 86_400_000);
 }
 
+/** Terminal states never appear in the daily sales queue. */
+const TERMINAL_STATUSES = new Set<ProspectStatus>([
+  "converted",
+  "deal",
+  "lost",
+  "disqualified",
+]);
+
+/** Active pipeline stages that still need a sales action today. */
+const QUEUE_STATUSES = new Set<ProspectStatus>([
+  "new",
+  "researched",
+  "ready",
+  "approved",
+  "contacted",
+  "replied",
+  "meeting",
+  "negotiation",
+]);
+
 function ProspectsPage() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(getProspects);
