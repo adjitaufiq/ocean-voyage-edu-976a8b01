@@ -65,7 +65,6 @@ export type ProspectListRow = {
   verified: boolean;
 };
 
-};
 
 /* --------------------------------- ICP ------------------------------------ */
 
