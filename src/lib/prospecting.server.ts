@@ -530,6 +530,47 @@ export async function setDoNotContact(
   return { ok: true as const };
 }
 
+export async function setProspectFollowUp(
+  supabase: Client,
+  input: { id: string; date: string | null },
+  actor: { userId: string; email?: string | null },
+) {
+  const { error } = await supabase
+    .from("prospects")
+    .update({ next_follow_up_at: input.date })
+    .eq("id", input.id);
+  if (error) throw new Error(error.message);
+
+  await logProspectActivity(supabase, {
+    prospectId: input.id,
+    action: "note",
+    label: input.date ? "Follow-up dijadwalkan" : "Jadwal follow-up dihapus",
+    content: input.date,
+    userId: actor.userId,
+    userEmail: actor.email ?? null,
+  });
+
+  return { ok: true as const };
+}
+
+export async function addProspectNote(
+  supabase: Client,
+  input: { id: string; note: string },
+  actor: { userId: string; email?: string | null },
+) {
+  await logProspectActivity(supabase, {
+    prospectId: input.id,
+    action: "note",
+    label: "Catatan sales",
+    content: input.note.slice(0, 2000),
+    userId: actor.userId,
+    userEmail: actor.email ?? null,
+  });
+
+  return { ok: true as const };
+}
+
+
 /**
  * Handoff to the inbound CRM. Only happens after a real signal (reply or
  * explicit human decision) — the prospect row stays as the outbound record.
