@@ -65,7 +65,6 @@ export type ProspectListRow = {
   verified: boolean;
 };
 
-
 /* --------------------------------- ICP ------------------------------------ */
 
 export async function fetchIcpConfig(supabase: Client): Promise<IcpConfig> {
@@ -215,9 +214,6 @@ export type ProspectInput = {
   verified?: boolean;
 };
 
-
-
-
 /** Returns the existing prospect id when the identity already exists. */
 export async function findDuplicate(
   supabase: Client,
@@ -304,7 +300,9 @@ export async function createProspect(
     prospectId: data.id,
     action: "score",
     label: `Skor ICP ${scored.total}/${scored.max} (${scored.tier})`,
-    content: scored.factors.map((factor) => `${factor.label}: ${factor.score}/${factor.max} — ${factor.detail}`).join("\n"),
+    content: scored.factors
+      .map((factor) => `${factor.label}: ${factor.score}/${factor.max} — ${factor.detail}`)
+      .join("\n"),
     userId: actor.userId,
     userEmail: actor.email ?? null,
   });
@@ -319,7 +317,8 @@ export async function updateProspect(
   actor: { userId: string; email?: string | null },
 ) {
   const update: Record<string, unknown> = {};
-  if (patch.businessName !== undefined) update.business_name = patch.businessName.trim().slice(0, 200);
+  if (patch.businessName !== undefined)
+    update.business_name = patch.businessName.trim().slice(0, 200);
   if (patch.industry !== undefined) update.industry = patch.industry?.trim() || null;
   if (patch.city !== undefined) update.city = patch.city?.trim() || null;
   if (patch.website !== undefined) {
@@ -329,16 +328,22 @@ export async function updateProspect(
   if (patch.contactName !== undefined) update.contact_name = patch.contactName?.trim() || null;
   if (patch.contactTitle !== undefined) update.contact_title = patch.contactTitle?.trim() || null;
   if (patch.contactEmail !== undefined) update.contact_email = normalizeEmail(patch.contactEmail);
-  if (patch.contactWhatsapp !== undefined) update.contact_whatsapp = normalizeWhatsapp(patch.contactWhatsapp);
+  if (patch.contactWhatsapp !== undefined)
+    update.contact_whatsapp = normalizeWhatsapp(patch.contactWhatsapp);
   if (patch.contactPhone !== undefined) update.contact_phone = patch.contactPhone?.trim() || null;
   if (patch.socialMedia !== undefined) update.social_media = patch.socialMedia?.trim() || null;
   if (patch.campaignId !== undefined) update.campaign_id = patch.campaignId;
-  if (patch.businessSummary !== undefined) update.business_summary = patch.businessSummary?.slice(0, 2000) || null;
-  if (patch.opportunityReason !== undefined) update.opportunity_reason = patch.opportunityReason?.slice(0, 2000) || null;
-  if (patch.recommendedSolution !== undefined) update.recommended_solution = patch.recommendedSolution?.slice(0, 1000) || null;
-  if (patch.salesApproach !== undefined) update.sales_approach = patch.salesApproach?.slice(0, 2000) || null;
+  if (patch.businessSummary !== undefined)
+    update.business_summary = patch.businessSummary?.slice(0, 2000) || null;
+  if (patch.opportunityReason !== undefined)
+    update.opportunity_reason = patch.opportunityReason?.slice(0, 2000) || null;
+  if (patch.recommendedSolution !== undefined)
+    update.recommended_solution = patch.recommendedSolution?.slice(0, 1000) || null;
+  if (patch.salesApproach !== undefined)
+    update.sales_approach = patch.salesApproach?.slice(0, 2000) || null;
   if (patch.verified !== undefined) update.verified = patch.verified;
-  if (patch.researchSummary !== undefined) update.research_summary = patch.researchSummary?.slice(0, 4000) || null;
+  if (patch.researchSummary !== undefined)
+    update.research_summary = patch.researchSummary?.slice(0, 4000) || null;
   if (patch.evidence !== undefined) update.evidence = patch.evidence;
   if (patch.painSignals !== undefined) update.pain_signals = patch.painSignals;
   if (patch.notes !== undefined) update.notes = patch.notes?.slice(0, 4000) || null;
@@ -348,7 +353,10 @@ export async function updateProspect(
     update.status_updated_at = new Date().toISOString();
   }
 
-  const { error } = await supabase.from("prospects").update(update as never).eq("id", id);
+  const { error } = await supabase
+    .from("prospects")
+    .update(update as never)
+    .eq("id", id);
   if (error) throw new Error(error.message);
 
   await logProspectActivity(supabase, {
@@ -430,7 +438,9 @@ export async function saveOutreachDraft(
       outreach_draft: input.draft.slice(0, 8000),
       status: input.approve ? "approved" : "ready",
       status_updated_at: new Date().toISOString(),
-      ...(input.approve ? { approved_by: actor.userId, approved_at: new Date().toISOString() } : {}),
+      ...(input.approve
+        ? { approved_by: actor.userId, approved_at: new Date().toISOString() }
+        : {}),
     })
     .eq("id", input.id);
   if (error) throw new Error(error.message);
@@ -470,7 +480,10 @@ export async function recordOutreach(
       ? new Date(Date.now() + input.followUpInDays * 86_400_000).toISOString()
       : null;
 
-  const update: Record<string, unknown> = { status_updated_at: now, next_follow_up_at: nextFollowUp };
+  const update: Record<string, unknown> = {
+    status_updated_at: now,
+    next_follow_up_at: nextFollowUp,
+  };
   if (input.event === "sent") {
     update.status = "contacted";
     update.contacted_at = now;
@@ -482,7 +495,10 @@ export async function recordOutreach(
     update.last_contact_at = now;
   }
 
-  const { error } = await supabase.from("prospects").update(update as never).eq("id", input.id);
+  const { error } = await supabase
+    .from("prospects")
+    .update(update as never)
+    .eq("id", input.id);
   if (error) throw new Error(error.message);
 
   await logProspectActivity(supabase, {
@@ -513,7 +529,9 @@ export async function setDoNotContact(
       do_not_contact: input.enabled,
       do_not_contact_reason: input.enabled ? (input.reason?.slice(0, 500) ?? null) : null,
       next_follow_up_at: input.enabled ? null : undefined,
-      ...(input.enabled ? { status: "do_not_contact", status_updated_at: new Date().toISOString() } : {}),
+      ...(input.enabled
+        ? { status: "do_not_contact", status_updated_at: new Date().toISOString() }
+        : {}),
     })
     .eq("id", input.id);
   if (error) throw new Error(error.message);
@@ -570,14 +588,19 @@ export async function addProspectNote(
   return { ok: true as const };
 }
 
-
 /**
  * Handoff to the inbound CRM. Only happens after a real signal (reply or
  * explicit human decision) — the prospect row stays as the outbound record.
  */
 export async function convertProspectToLead(
   supabase: Client,
-  input: { id: string; projectType?: string; requirement?: string; budget?: string; timeline?: string },
+  input: {
+    id: string;
+    projectType?: string;
+    requirement?: string;
+    budget?: string;
+    timeline?: string;
+  },
   actor: { userId: string; email?: string | null },
 ) {
   const { data: prospect, error } = await supabase
@@ -586,7 +609,8 @@ export async function convertProspectToLead(
     .eq("id", input.id)
     .maybeSingle();
   if (error || !prospect) throw new Error(error?.message ?? "Prospek tidak ditemukan.");
-  if (prospect.lead_id) return { ok: true as const, leadId: prospect.lead_id, alreadyConverted: true };
+  if (prospect.lead_id)
+    return { ok: true as const, leadId: prospect.lead_id, alreadyConverted: true };
   if (prospect.do_not_contact) throw new Error("Prospek ditandai DO_NOT_CONTACT.");
   const contactWhatsapp = prospect.contact_whatsapp || prospect.contact_phone || "";
   if (!prospect.contact_email && !contactWhatsapp)
@@ -618,7 +642,9 @@ export async function convertProspectToLead(
         prospect.opportunity_reason ? `Peluang: ${prospect.opportunity_reason}` : null,
         prospect.recommended_solution ? `Solusi: ${prospect.recommended_solution}` : null,
         prospect.notes ? `Catatan: ${prospect.notes}` : null,
-      ].filter(Boolean).join("\n"),
+      ]
+        .filter(Boolean)
+        .join("\n"),
     })
     .select("id")
     .single();
@@ -676,7 +702,9 @@ export async function buildProspectingSummary(
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const { data, error } = await supabase
     .from("prospects")
-    .select("status, fit_tier, source, do_not_contact, next_follow_up_at, created_at, contact_email, contact_whatsapp, contact_phone, website, outreach_draft")
+    .select(
+      "status, fit_tier, source, do_not_contact, next_follow_up_at, created_at, contact_email, contact_whatsapp, contact_phone, website, outreach_draft",
+    )
     .gte("created_at", since)
     .limit(2000);
   if (error) throw new Error(error.message);
@@ -698,13 +726,29 @@ export async function buildProspectingSummary(
     byTier[row.fit_tier] = (byTier[row.fit_tier] ?? 0) + 1;
     sources.set(row.source, (sources.get(row.source) ?? 0) + 1);
     if (row.do_not_contact) doNotContact += 1;
-    if (!row.do_not_contact && (row.contact_email || row.contact_whatsapp || row.contact_phone || row.website)) actionable += 1;
+    if (
+      !row.do_not_contact &&
+      (row.contact_email || row.contact_whatsapp || row.contact_phone || row.website)
+    )
+      actionable += 1;
     if (row.outreach_draft) messagesPrepared += 1;
-    if (row.next_follow_up_at && new Date(row.next_follow_up_at).getTime() <= now.getTime()) dueFollowUps += 1;
+    if (row.next_follow_up_at && new Date(row.next_follow_up_at).getTime() <= now.getTime())
+      dueFollowUps += 1;
   }
 
-  const contacted = (byStatus.contacted ?? 0) + (byStatus.replied ?? 0) + (byStatus.meeting ?? 0) + (byStatus.negotiation ?? 0) + (byStatus.deal ?? 0) + (byStatus.converted ?? 0);
-  const replied = (byStatus.replied ?? 0) + (byStatus.meeting ?? 0) + (byStatus.negotiation ?? 0) + (byStatus.deal ?? 0) + (byStatus.converted ?? 0);
+  const contacted =
+    (byStatus.contacted ?? 0) +
+    (byStatus.replied ?? 0) +
+    (byStatus.meeting ?? 0) +
+    (byStatus.negotiation ?? 0) +
+    (byStatus.deal ?? 0) +
+    (byStatus.converted ?? 0);
+  const replied =
+    (byStatus.replied ?? 0) +
+    (byStatus.meeting ?? 0) +
+    (byStatus.negotiation ?? 0) +
+    (byStatus.deal ?? 0) +
+    (byStatus.converted ?? 0);
   const converted = byStatus.converted ?? 0;
 
   return {
@@ -725,7 +769,9 @@ export async function buildProspectingSummary(
     dueFollowUps,
     readyForApproval: byStatus.ready ?? 0,
     actionable,
-    followUpsToday: rows.filter((row) => row.next_follow_up_at?.slice(0, 10) === today && !row.do_not_contact).length,
+    followUpsToday: rows.filter(
+      (row) => row.next_follow_up_at?.slice(0, 10) === today && !row.do_not_contact,
+    ).length,
     messagesPrepared,
     meetings: byStatus.meeting ?? 0,
     deals: byStatus.deal ?? 0,
