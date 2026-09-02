@@ -213,6 +213,9 @@ export type ProspectInput = {
   recommendedSolution?: string | null;
   salesApproach?: string | null;
   verified?: boolean;
+};
+
+
 
 
 /** Returns the existing prospect id when the identity already exists. */
