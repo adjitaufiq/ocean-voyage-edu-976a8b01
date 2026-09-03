@@ -309,14 +309,20 @@ function ProspectsPage() {
       ? (raw as { label: string; score: number; max: number; detail: string }[])
       : [];
   }, [selected]);
+  // Daily Sales Queue rule V3: contact quality >= 75, sumber tercatat, ada
+  // opportunity reason, bukan DNC/terminal. Follow-up jatuh tempo tetap masuk
+  // selama prospek masih punya kanal kontak.
   const queueRows = rows.filter((row) => {
     if (row.do_not_contact) return false;
     if (TERMINAL_STATUSES.has(row.status as ProspectStatus)) return false;
-    if (isTodayOrOverdue(row.next_follow_up_at)) return true;
-    return QUEUE_STATUSES.has(row.status as ProspectStatus) && isActionable(row);
+    if (isTodayOrOverdue(row.next_follow_up_at) && contactQuality(row).score >= 50) return true;
+    return isQueueEligible(row);
   });
   const todayFollowUps = summary?.followUpsToday ?? 0;
-  const readyContacts = summary?.actionable ?? 0;
+  const salesReady = rows.filter((row) => contactQuality(row).status === "sales_ready").length;
+  const needVerification = rows.filter(
+    (row) => !row.do_not_contact && contactQuality(row).score < 75,
+  ).length;
 
   const generateMessage = () => {
     if (!selected) return;
