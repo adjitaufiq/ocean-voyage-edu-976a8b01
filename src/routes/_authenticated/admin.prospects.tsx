@@ -1094,7 +1094,13 @@ function ProspectDetail({
                     Social media
                   </a>
                 ) : null}
+                {selected.contact_title ? (
+                  <p className="text-xs text-muted-foreground">
+                    Posisi PIC: <span className="text-foreground">{selected.contact_title}</span>
+                  </p>
+                ) : null}
               </div>
+              <ContactQualityPanel selected={selected} />
             </SectionCard>
             <SectionCard
               title="Opportunity analysis"
@@ -1106,6 +1112,10 @@ function ProspectDetail({
                   value={selected.business_summary || selected.research_summary}
                 />
                 <Info label="Mengapa relevan" value={selected.opportunity_reason} />
+                <Info label="Kebutuhan potensial" value={selected.potential_need} />
+                <Info label="Masalah bisnis" value={selected.business_problem} />
+                <Info label="Buying signal" value={selected.buying_signal} />
+                <Info label="Decision maker" value={selected.decision_maker} />
                 <Info label="Solusi disarankan" value={selected.recommended_solution} />
                 <Info label="Pendekatan sales" value={selected.sales_approach} />
               </div>
