@@ -67,6 +67,7 @@ import {
   setDoNotContactFn,
   setFollowUpFn,
   setPipelineStageFn,
+  updateProspectFn,
 } from "@/lib/prospecting.functions";
 import { cn } from "@/lib/utils";
 
@@ -187,6 +188,7 @@ function ProspectsPage() {
   const pipelineFn = useServerFn(setPipelineStageFn);
   const followUpFn = useServerFn(setFollowUpFn);
   const noteFn = useServerFn(addNoteFn);
+  const updateFn = useServerFn(updateProspectFn);
 
   const [tab, setTab] = useState<"queue" | "campaigns" | "prospects">("queue");
   const [status, setStatus] = useState("all");
