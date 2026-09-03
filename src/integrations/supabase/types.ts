@@ -1789,6 +1789,7 @@ export type Database = {
           approved_by: string | null
           business_name: string
           business_problem: string | null
+          business_profile: string | null
           business_summary: string | null
           buying_signal: string | null
           campaign_id: string | null
@@ -1814,6 +1815,7 @@ export type Database = {
           follow_up_count: number
           id: string
           industry: string | null
+          industry_fit: string | null
           last_contact_at: string | null
           lead_id: string | null
           meta: Json
@@ -1830,6 +1832,7 @@ export type Database = {
           replied_at: string | null
           research_summary: string | null
           sales_approach: string | null
+          sales_priority: string | null
           social_media: string | null
           source: string
           source_detail: string | null
@@ -1845,6 +1848,7 @@ export type Database = {
           approved_by?: string | null
           business_name: string
           business_problem?: string | null
+          business_profile?: string | null
           business_summary?: string | null
           buying_signal?: string | null
           campaign_id?: string | null
@@ -1870,6 +1874,7 @@ export type Database = {
           follow_up_count?: number
           id?: string
           industry?: string | null
+          industry_fit?: string | null
           last_contact_at?: string | null
           lead_id?: string | null
           meta?: Json
@@ -1886,6 +1891,7 @@ export type Database = {
           replied_at?: string | null
           research_summary?: string | null
           sales_approach?: string | null
+          sales_priority?: string | null
           social_media?: string | null
           source?: string
           source_detail?: string | null
@@ -1901,6 +1907,7 @@ export type Database = {
           approved_by?: string | null
           business_name?: string
           business_problem?: string | null
+          business_profile?: string | null
           business_summary?: string | null
           buying_signal?: string | null
           campaign_id?: string | null
@@ -1926,6 +1933,7 @@ export type Database = {
           follow_up_count?: number
           id?: string
           industry?: string | null
+          industry_fit?: string | null
           last_contact_at?: string | null
           lead_id?: string | null
           meta?: Json
@@ -1942,6 +1950,7 @@ export type Database = {
           replied_at?: string | null
           research_summary?: string | null
           sales_approach?: string | null
+          sales_priority?: string | null
           social_media?: string | null
           source?: string
           source_detail?: string | null
