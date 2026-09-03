@@ -1788,7 +1788,9 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           business_name: string
+          business_problem: string | null
           business_summary: string | null
+          buying_signal: string | null
           campaign_id: string | null
           city: string | null
           contact_email: string | null
@@ -1801,6 +1803,7 @@ export type Database = {
           country: string
           created_at: string
           created_by: string | null
+          decision_maker: string | null
           discovery_query: string | null
           do_not_contact: boolean
           do_not_contact_reason: string | null
@@ -1822,6 +1825,7 @@ export type Database = {
           outreach_subject: string | null
           owner_name: string | null
           pain_signals: Json
+          potential_need: string | null
           recommended_solution: string | null
           replied_at: string | null
           research_summary: string | null
@@ -1840,7 +1844,9 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           business_name: string
+          business_problem?: string | null
           business_summary?: string | null
+          buying_signal?: string | null
           campaign_id?: string | null
           city?: string | null
           contact_email?: string | null
@@ -1853,6 +1859,7 @@ export type Database = {
           country?: string
           created_at?: string
           created_by?: string | null
+          decision_maker?: string | null
           discovery_query?: string | null
           do_not_contact?: boolean
           do_not_contact_reason?: string | null
@@ -1874,6 +1881,7 @@ export type Database = {
           outreach_subject?: string | null
           owner_name?: string | null
           pain_signals?: Json
+          potential_need?: string | null
           recommended_solution?: string | null
           replied_at?: string | null
           research_summary?: string | null
@@ -1892,7 +1900,9 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           business_name?: string
+          business_problem?: string | null
           business_summary?: string | null
+          buying_signal?: string | null
           campaign_id?: string | null
           city?: string | null
           contact_email?: string | null
@@ -1905,6 +1915,7 @@ export type Database = {
           country?: string
           created_at?: string
           created_by?: string | null
+          decision_maker?: string | null
           discovery_query?: string | null
           do_not_contact?: boolean
           do_not_contact_reason?: string | null
@@ -1926,6 +1937,7 @@ export type Database = {
           outreach_subject?: string | null
           owner_name?: string | null
           pain_signals?: Json
+          potential_need?: string | null
           recommended_solution?: string | null
           replied_at?: string | null
           research_summary?: string | null
