@@ -296,6 +296,13 @@ function ProspectsPage() {
   const needVerification = rows.filter(
     (row) => !row.do_not_contact && contactQuality(row).score < 75,
   ).length;
+  // Prospek yang hampir layak masuk queue: kontak belum lengkap / belum diverifikasi.
+  const verificationRows = rows
+    .filter((row) => !row.do_not_contact && !isQueueEligible(row))
+    .map((row) => ({ row, quality: contactQuality(row) }))
+    .sort((a, b) => b.quality.score - a.quality.score)
+    .slice(0, 8);
+
 
   const generateMessage = () => {
     if (!selected) return;
