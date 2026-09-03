@@ -795,6 +795,8 @@ function ProspectsPage() {
 }
 
 function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
+  const quality = contactQuality(row);
+  const priority = salesPriority(quality.score, row.fit_score);
   return (
     <button
       type="button"
@@ -804,8 +806,9 @@ function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{row.business_name}</span>
         <span className="block truncate text-xs text-muted-foreground">
-          {[row.industry, row.city, row.contact_name].filter(Boolean).join(" • ") ||
-            "Belum ada detail"}
+          {[row.industry, row.city, row.contact_name, row.contact_title]
+            .filter(Boolean)
+            .join(" • ") || "Belum ada detail"}
         </span>
       </span>
       {row.source ? (
@@ -818,6 +821,23 @@ function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
           DNC
         </span>
       ) : null}
+      <span
+        className={cn(
+          "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+          verificationClass(quality.status),
+        )}
+        title="Contact quality score"
+      >
+        {quality.score} · {VERIFICATION_LABELS[quality.status]}
+      </span>
+      <span
+        className={cn(
+          "hidden rounded-full border px-2 py-0.5 text-[0.65rem] font-medium sm:inline",
+          priorityClass(priority),
+        )}
+      >
+        {priority}
+      </span>
       <span className="rounded-full border border-border/50 px-2 py-0.5 text-[0.65rem] text-muted-foreground">
         {PROSPECT_STATUS_LABELS[row.status as ProspectStatus] ?? row.status}
       </span>
