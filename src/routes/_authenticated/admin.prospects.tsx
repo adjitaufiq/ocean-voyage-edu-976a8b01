@@ -103,11 +103,14 @@ type ListRow = {
   next_follow_up_at: string | null;
   lead_id: string | null;
   business_summary?: string | null;
+  business_profile?: string | null;
+  industry_fit?: string | null;
   opportunity_reason?: string | null;
   potential_need?: string | null;
   business_problem?: string | null;
   buying_signal?: string | null;
   decision_maker?: string | null;
+  sales_priority?: string | null;
   recommended_solution?: string | null;
   sales_approach?: string | null;
   research_summary?: string | null;
@@ -1122,14 +1125,16 @@ function ProspectDetail({
             >
               <div className="space-y-3 text-sm">
                 <Info
-                  label="Ringkasan bisnis"
-                  value={selected.business_summary || selected.research_summary}
+                  label="Business profile"
+                  value={selected.business_profile || selected.business_summary || selected.research_summary}
                 />
+                <Info label="Industry fit" value={selected.industry_fit} />
                 <Info label="Mengapa relevan" value={selected.opportunity_reason} />
                 <Info label="Kebutuhan potensial" value={selected.potential_need} />
                 <Info label="Masalah bisnis" value={selected.business_problem} />
                 <Info label="Buying signal" value={selected.buying_signal} />
                 <Info label="Decision maker" value={selected.decision_maker} />
+                <Info label="Priority" value={selected.sales_priority} />
                 <Info label="Solusi disarankan" value={selected.recommended_solution} />
                 <Info label="Pendekatan sales" value={selected.sales_approach} />
               </div>

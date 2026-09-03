@@ -216,6 +216,8 @@ export type ProspectInput = {
   socialMedia?: string | null;
   campaignId?: string | null;
   businessSummary?: string | null;
+  businessProfile?: string | null;
+  industryFit?: string | null;
   opportunityReason?: string | null;
   recommendedSolution?: string | null;
   salesApproach?: string | null;
@@ -223,6 +225,7 @@ export type ProspectInput = {
   businessProblem?: string | null;
   buyingSignal?: string | null;
   decisionMaker?: string | null;
+  salesPriority?: string | null;
   verified?: boolean;
 };
 
@@ -287,14 +290,17 @@ export async function createProspect(
       source_detail: input.sourceDetail?.trim() || null,
       discovery_query: input.discoveryQuery?.trim() || null,
       research_summary: input.researchSummary?.slice(0, 4000) || null,
-      business_summary: input.businessSummary?.slice(0, 2000) || null,
-      opportunity_reason: input.opportunityReason?.slice(0, 2000) || null,
-      recommended_solution: input.recommendedSolution?.slice(0, 1000) || null,
-      sales_approach: input.salesApproach?.slice(0, 2000) || null,
-      potential_need: input.potentialNeed?.slice(0, 1000) || null,
-      business_problem: input.businessProblem?.slice(0, 1000) || null,
-      buying_signal: input.buyingSignal?.slice(0, 1000) || null,
-      decision_maker: input.decisionMaker?.slice(0, 300) || null,
+       business_summary: input.businessSummary?.slice(0, 2000) || null,
+       business_profile: input.businessProfile?.slice(0, 2000) || null,
+       industry_fit: input.industryFit?.slice(0, 1000) || null,
+       opportunity_reason: input.opportunityReason?.slice(0, 2000) || null,
+       recommended_solution: input.recommendedSolution?.slice(0, 1000) || null,
+       sales_approach: input.salesApproach?.slice(0, 2000) || null,
+       potential_need: input.potentialNeed?.slice(0, 1000) || null,
+       business_problem: input.businessProblem?.slice(0, 1000) || null,
+       buying_signal: input.buyingSignal?.slice(0, 1000) || null,
+       decision_maker: input.decisionMaker?.slice(0, 300) || null,
+       sales_priority: input.salesPriority?.slice(0, 20) || null,
       evidence: (input.evidence ?? []) as never,
       pain_signals: (input.painSignals ?? []) as never,
       fit_score: scored.total,
