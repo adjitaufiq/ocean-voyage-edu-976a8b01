@@ -67,6 +67,7 @@ import {
   setDoNotContactFn,
   setFollowUpFn,
   setPipelineStageFn,
+  updateProspectFn,
 } from "@/lib/prospecting.functions";
 import { cn } from "@/lib/utils";
 
@@ -187,6 +188,7 @@ function ProspectsPage() {
   const pipelineFn = useServerFn(setPipelineStageFn);
   const followUpFn = useServerFn(setFollowUpFn);
   const noteFn = useServerFn(addNoteFn);
+  const updateFn = useServerFn(updateProspectFn);
 
   const [tab, setTab] = useState<"queue" | "campaigns" | "prospects">("queue");
   const [status, setStatus] = useState("all");
@@ -665,52 +667,52 @@ function ProspectsPage() {
           <div className="mt-4 space-y-2">
             {list.isLoading ? (
               <p className="text-sm text-muted-foreground">Memuat prospek…</p>
-             ) : (tab === "queue" ? queueRows : rows).length === 0 ? (
-               <div className="space-y-4">
-                 <p className="text-sm text-muted-foreground">
-                   {tab === "queue"
-                     ? "Belum ada prospek yang memenuhi syarat Daily Sales Queue."
-                     : "Belum ada prospek. Jalankan discovery AI dari sebuah kampanye atau tambahkan prospek manual."}
-                 </p>
-                 {tab === "queue" && verificationRows.length > 0 ? (
-                   <div className="border-t border-border/40 pt-4">
-                     <div className="mb-3">
-                       <h3 className="text-sm font-medium">Prioritas verifikasi</h3>
-                       <p className="text-xs text-muted-foreground">
-                         Kandidat terdekat ke queue, diurutkan dari contact quality tertinggi.
-                       </p>
-                     </div>
-                     <div className="space-y-2">
-                       {verificationRows.map(({ row, quality }) => (
-                         <button
-                           key={row.id}
-                           type="button"
-                           onClick={() => setOpenId(row.id)}
-                           className="flex w-full items-start gap-3 rounded-xl border border-border/40 px-3 py-2 text-left transition hover:border-primary/40"
-                         >
-                           <span className="min-w-0 flex-1">
-                             <span className="block truncate text-sm font-medium">{row.business_name}</span>
-                             <span className="mt-0.5 block text-xs text-muted-foreground">
-                               {quality.score}/100 · {VERIFICATION_LABELS[quality.status]}
-                             </span>
-                             <span className="mt-1 block text-xs text-muted-foreground">
-                               {queueBlockers(row).slice(0, 2).join(" · ")}
-                             </span>
-                           </span>
-                           <span className="shrink-0 text-xs text-primary">Buka detail</span>
-                         </button>
-                       ))}
-                     </div>
-                   </div>
-                 ) : null}
-               </div>
-
+            ) : (tab === "queue" ? queueRows : rows).length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {tab === "queue"
+                  ? "Belum ada prospek yang memenuhi syarat Daily Sales Queue."
+                  : "Belum ada prospek. Jalankan discovery AI dari sebuah kampanye atau tambahkan prospek manual."}
+              </p>
             ) : (
               (tab === "queue" ? queueRows : rows).map((row) => (
                 <ProspectRow key={row.id} row={row} onOpen={() => setOpenId(row.id)} />
               ))
             )}
           </div>
+          {tab === "queue" && !list.isLoading && verificationRows.length > 0 ? (
+            <div className="mt-6 border-t border-border/40 pt-4">
+              <div className="mb-3">
+                <h3 className="text-sm font-medium">Prioritas verifikasi</h3>
+                <p className="text-xs text-muted-foreground">
+                  Kandidat terdekat ke queue, diurutkan dari contact quality tertinggi. Buka detail
+                  lalu lengkapi data kontak agar prospek bisa masuk queue.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {verificationRows.map(({ row, quality }) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => setOpenId(row.id)}
+                    className="flex w-full items-start gap-3 rounded-xl border border-border/40 px-3 py-2 text-left transition hover:border-primary/40"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">
+                        {row.business_name}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {quality.score}/100 · {VERIFICATION_LABELS[quality.status]}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {queueBlockers(row).slice(0, 2).join(" · ")}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs text-primary">Lengkapi</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </GlassCard>
       )}
 
