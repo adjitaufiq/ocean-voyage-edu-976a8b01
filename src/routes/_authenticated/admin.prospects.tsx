@@ -40,6 +40,7 @@ import {
   PROSPECT_SOURCE_LABELS,
   PROSPECT_STATUS_LABELS,
   PROSPECT_STATUSES,
+  queueBlockers,
   salesPriority,
   VERIFICATION_LABELS,
   verificationClass,
