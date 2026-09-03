@@ -163,30 +163,6 @@ function tierClass(tier: string): string {
   }
 }
 
-function isTodayOrOverdue(value: string | null): boolean {
-  return Boolean(value && new Date(value).getTime() <= Date.now() + 86_400_000);
-}
-
-/** Terminal states never appear in the daily sales queue. */
-const TERMINAL_STATUSES = new Set<ProspectStatus>([
-  "converted",
-  "deal",
-  "lost",
-  "rejected",
-  "do_not_contact",
-]);
-
-/** Active pipeline stages that still need a sales action today. */
-const QUEUE_STATUSES = new Set<ProspectStatus>([
-  "new",
-  "researched",
-  "ready",
-  "approved",
-  "contacted",
-  "replied",
-  "meeting",
-  "negotiation",
-]);
 
 function ProspectsPage() {
   const queryClient = useQueryClient();
@@ -309,15 +285,9 @@ function ProspectsPage() {
       ? (raw as { label: string; score: number; max: number; detail: string }[])
       : [];
   }, [selected]);
-  // Daily Sales Queue rule V3: contact quality >= 75, sumber tercatat, ada
-  // opportunity reason, bukan DNC/terminal. Follow-up jatuh tempo tetap masuk
-  // selama prospek masih punya kanal kontak.
-  const queueRows = rows.filter((row) => {
-    if (row.do_not_contact) return false;
-    if (TERMINAL_STATUSES.has(row.status as ProspectStatus)) return false;
-    if (isTodayOrOverdue(row.next_follow_up_at) && contactQuality(row).score >= 50) return true;
-    return isQueueEligible(row);
-  });
+  // Daily Sales Queue hanya berisi prospek yang memenuhi seluruh kriteria
+  // verifikasi kontak dan kualitas minimum V3.
+  const queueRows = rows.filter((row) => isQueueEligible(row));
   const todayFollowUps = summary?.followUpsToday ?? 0;
   const salesReady = rows.filter((row) => contactQuality(row).status === "sales_ready").length;
   const needVerification = rows.filter(

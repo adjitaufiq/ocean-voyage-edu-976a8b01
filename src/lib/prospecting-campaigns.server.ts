@@ -119,10 +119,17 @@ type Candidate = {
   email?: string;
   socialMedia?: string;
   contactPerson?: string;
+  contactTitle?: string;
   source?: string;
   sourceDetail?: string;
   businessSummary?: string;
+  businessProfile?: string;
+  industryFit?: string;
   potentialNeed?: string;
+  businessProblem?: string;
+  buyingSignal?: string;
+  decisionMaker?: string;
+  priority?: string;
   opportunityReason?: string;
   recommendedSolution?: string;
   salesApproach?: string;
