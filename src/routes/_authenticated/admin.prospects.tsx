@@ -89,6 +89,7 @@ type ListRow = {
   city: string | null;
   website: string | null;
   contact_name: string | null;
+  contact_title?: string | null;
   contact_email: string | null;
   contact_whatsapp: string | null;
   contact_phone?: string | null;
