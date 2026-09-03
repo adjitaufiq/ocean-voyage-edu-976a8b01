@@ -179,13 +179,17 @@ Jangan ulang bisnis berikut: ${exclude.slice(0, 40).join("; ") || "-"}
 
 Aturan:
 - Utamakan bisnis yang punya jejak kontak publik (website, telepon, WhatsApp, email, atau Instagram bisnis).
-- Isi hanya data yang kamu yakini; kalau tidak tahu, kosongkan field-nya (jangan mengarang nomor atau email).
+- Isi hanya data yang kamu yakini; kalau tidak tahu, kosongkan field-nya (jangan mengarang nomor, email, atau nama orang).
+- Prioritas kanal kontak: (1) WhatsApp bisnis / telepon kantor, (2) email perusahaan atau LinkedIn decision maker, (3) form website atau social media resmi.
+- Instagram tidak boleh menjadi satu-satunya kanal kontak yang diandalkan; kalau hanya itu yang ada, tetap isi apa adanya agar bisa diverifikasi manusia.
+- Sebisa mungkin isi "contactPerson" (nama PIC/decision maker) dan "contactTitle" (jabatannya). Kosongkan bila tidak yakin.
 - Setiap kandidat WAJIB punya "source" salah satu dari: google_business, google_search, company_website, instagram, linkedin, business_directory, industry_listing.
 - "sourceDetail" berisi petunjuk pencarian konkret (contoh: kata kunci Google Maps yang dipakai).
-- Analisis harus spesifik untuk bisnis tersebut, bukan kalimat generik.
+- Analisis harus spesifik untuk bisnis tersebut, bukan kalimat generik: isi businessProfile, industryFit, potentialNeed, businessProblem, buyingSignal, decisionMaker, dan priority (HIGH/MEDIUM/LOW).
+- "salesApproach" memakai consultative selling (membuka percakapan), bukan penawaran langsung.
 
 Balas HANYA array JSON dengan bentuk:
-[{"businessName":"","industry":"","city":"","website":"","phone":"","whatsapp":"","email":"","socialMedia":"","contactPerson":"","source":"","sourceDetail":"","businessSummary":"","potentialNeed":"","opportunityReason":"","recommendedSolution":"","salesApproach":"","painSignals":[""],"evidence":[""]}]`;
+[{"businessName":"","industry":"","city":"","website":"","phone":"","whatsapp":"","email":"","socialMedia":"","contactPerson":"","contactTitle":"","source":"","sourceDetail":"","businessSummary":"","businessProfile":"","industryFit":"","potentialNeed":"","businessProblem":"","buyingSignal":"","decisionMaker":"","priority":"","opportunityReason":"","recommendedSolution":"","salesApproach":"","painSignals":[""],"evidence":[""]}]`;
 }
 
 export type DiscoveryResult = {
@@ -291,19 +295,27 @@ export async function discoverProspects(
           industry: candidate.industry ?? campaign.industry,
           city: candidate.city ?? campaign.location,
           website: candidate.website ?? null,
-          contactName: candidate.contactPerson ?? null,
-          contactEmail: candidate.email ?? null,
-          contactWhatsapp: candidate.whatsapp ?? candidate.phone ?? null,
-          contactPhone: candidate.phone ?? null,
-          socialMedia: candidate.socialMedia ?? null,
-          source: normalizeSource(candidate.source),
-          sourceDetail: candidate.sourceDetail ?? null,
-          discoveryQuery: `${campaign.industry} • ${campaign.location}`,
-          researchSummary: candidate.businessSummary ?? null,
-          businessSummary: candidate.businessSummary ?? null,
-          opportunityReason: candidate.opportunityReason ?? candidate.potentialNeed ?? null,
-          recommendedSolution: candidate.recommendedSolution ?? campaign.solution,
-          salesApproach: candidate.salesApproach ?? null,
+           contactName: candidate.contactPerson ?? null,
+           contactTitle: candidate.contactTitle ?? null,
+           contactEmail: candidate.email ?? null,
+           contactWhatsapp: candidate.whatsapp ?? candidate.phone ?? null,
+           contactPhone: candidate.phone ?? null,
+           socialMedia: candidate.socialMedia ?? null,
+           source: normalizeSource(candidate.source),
+           sourceDetail: candidate.sourceDetail ?? null,
+            discoveryQuery: `${campaign.industry} • ${campaign.location}`,
+            researchSummary: candidate.businessSummary ?? candidate.businessProfile ?? null,
+            businessSummary: candidate.businessSummary ?? candidate.businessProfile ?? null,
+            businessProfile: candidate.businessProfile ?? candidate.businessSummary ?? null,
+            industryFit: candidate.industryFit ?? null,
+            potentialNeed: candidate.potentialNeed ?? null,
+            businessProblem: candidate.businessProblem ?? null,
+            buyingSignal: candidate.buyingSignal ?? null,
+            decisionMaker: candidate.decisionMaker ?? candidate.contactPerson ?? null,
+            opportunityReason: candidate.opportunityReason ?? candidate.potentialNeed ?? null,
+            recommendedSolution: candidate.recommendedSolution ?? campaign.solution,
+            salesApproach: candidate.salesApproach ?? null,
+            salesPriority: candidate.priority ?? null,
           painSignals: (candidate.painSignals ?? []).filter(Boolean).slice(0, 8),
           evidence: (candidate.evidence ?? []).filter(Boolean).slice(0, 8),
           campaignId: campaign.id,
@@ -377,8 +389,8 @@ Data prospek:
 - Kontak: ${[row["contact_name"], row["contact_email"], row["contact_whatsapp"], row["contact_phone"]].filter(Boolean).join(" | ") || "-"}
 - Catatan riset: ${String(row["research_summary"] ?? "-")}
 
-Buat analisis spesifik (bukan generik). Balas HANYA JSON:
-{"businessSummary":"","potentialNeed":"","opportunityReason":"","recommendedSolution":"","salesApproach":""}`;
+Buat analisis spesifik (bukan generik). Bedakan fakta dari dugaan; jangan mengarang kontak atau buying signal. Balas HANYA JSON:
+{"businessSummary":"","businessProfile":"","industryFit":"","potentialNeed":"","businessProblem":"","buyingSignal":"","decisionMaker":"","priority":"HIGH|MEDIUM|LOW","opportunityReason":"","recommendedSolution":"","salesApproach":""}`;
 
   const { text } = await generateText({
     model: createAiModel("ORDER_BRIEF"),
@@ -396,7 +408,15 @@ Buat analisis spesifik (bukan generik). Balas HANYA JSON:
   const parsed = JSON.parse(cleaned.slice(start, end + 1)) as Record<string, string>;
 
   const patch = {
-    business_summary: (parsed["businessSummary"] ?? "").slice(0, 2000) || null,
+    business_summary:
+      ((parsed["businessSummary"] ?? "") || (parsed["businessProfile"] ?? "")).slice(0, 2000) || null,
+    business_profile: (parsed["businessProfile"] ?? "").slice(0, 2000) || null,
+    industry_fit: (parsed["industryFit"] ?? "").slice(0, 1000) || null,
+    potential_need: (parsed["potentialNeed"] ?? "").slice(0, 1000) || null,
+    business_problem: (parsed["businessProblem"] ?? "").slice(0, 1000) || null,
+    buying_signal: (parsed["buyingSignal"] ?? "").slice(0, 1000) || null,
+    decision_maker: (parsed["decisionMaker"] ?? "").slice(0, 300) || null,
+    sales_priority: (parsed["priority"] ?? "").slice(0, 20) || null,
     opportunity_reason:
       ((parsed["opportunityReason"] ?? "") || (parsed["potentialNeed"] ?? "")).slice(0, 2000) ||
       null,

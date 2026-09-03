@@ -12,16 +12,30 @@ Outbound melengkapi CRM inbound. **Prospek bukan lead**: data prospek hidup di t
 3. **Scoring** — skor ICP deterministik (industri, kota, peluang digitalisasi, sinyal masalah,
    kelengkapan kontak, bukti). Setiap poin dapat dijelaskan di UI. Kata kunci eksklusi
    (agency, software house, reseller) langsung mendiskualifikasi.
-4. **Draft outreach** — draft disimpan sebagai teks. Sistem **tidak pernah** mengirim pesan
-   otomatis.
-5. **Approval manusia** — status `ready` → `approved` hanya oleh manusia berwenang.
-6. **Kirim manual** — setelah dikirim, catat lewat "Catat outreach" (`sent` / `reply` /
-   `no_reply`) dan tentukan jadwal follow-up.
-7. **Follow-up** — scan automation membuat task internal saat follow-up jatuh tempo dan saat
-   prospek `ready` menganggur >3 hari. Task ini hanya pengingat internal.
-8. **Handoff** — prospek yang berminat dikonversi jadi lead CRM; scoring, proposal, dan
-   billing memakai alur inbound yang sudah ada.
-9. **DO_NOT_CONTACT** — sekali ditandai, follow-up dihentikan dan outreach ditolak sistem.
+4. **Contact verification** — validasi kontak sebelum prospek dianggap siap sales:
+   WhatsApp bisnis / telepon kantor adalah prioritas pertama; email perusahaan atau PIC/LinkedIn
+   berikutnya; form website atau social media resmi menjadi fallback. Instagram saja tidak cukup.
+   Data yang belum terkonfirmasi diberi status `NEED VERIFICATION` dan tidak boleh diperlakukan
+   sebagai prospek siap dihubungi.
+5. **Contact quality** — skor deterministik 0–100: WhatsApp/telepon 40, email bisnis 25,
+   website aktif 15, PIC/decision maker 10, social media resmi 10. Status `SALES READY` untuk
+   90–100, `QUALIFIED` untuk 75–89, `NEED VERIFICATION` untuk 50–74, dan `NOT READY` di bawah 50.
+6. **Qualification** — catat Business Profile, Industry Fit, Potential Need, Business Problem,
+   Buying Signal, Decision Maker, Opportunity Reason, serta Priority HIGH/MEDIUM/LOW. Fakta,
+   dugaan, dan sumber harus dapat dibedakan; jangan mengarang kontak atau buying signal.
+7. **Daily Sales Queue** — hanya prospek dengan skor kontak minimal 75, kanal kontak valid, sumber
+   tercatat, opportunity reason, relevansi KERJAKU, tidak duplikat, bukan `DO_NOT_CONTACT`, dan
+   bukan status terminal. Prospek yang hanya memiliki social media tidak boleh masuk queue.
+8. **Draft outreach** — draft disimpan sebagai teks. Sistem **tidak pernah** mengirim pesan
+   otomatis; setiap pesan harus personal dan consultative.
+9. **Approval manusia** — status `ready` → `approved` hanya oleh manusia berwenang.
+10. **Kirim manual** — setelah dikirim, catat lewat "Catat outreach" (`sent` / `reply` /
+    `no_reply`) dan tentukan jadwal follow-up.
+11. **Follow-up** — scan automation membuat task internal saat follow-up jatuh tempo dan saat
+    prospek `ready` menganggur >3 hari. Task ini hanya pengingat internal.
+12. **Handoff** — prospek yang berminat dikonversi jadi lead CRM; scoring, proposal, dan
+    billing memakai alur inbound yang sudah ada.
+13. **DO_NOT_CONTACT** — sekali ditandai, follow-up dihentikan dan outreach ditolak sistem.
 
 ## Role matrix
 

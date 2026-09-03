@@ -24,7 +24,7 @@ import {
 type Client = SupabaseClient<Database>;
 
 export const PROSPECT_LIST_COLUMNS =
-  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, opportunity_reason, recommended_solution, sales_approach, last_contact_at, verified";
+  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, business_profile, industry_fit, opportunity_reason, recommended_solution, sales_approach, potential_need, business_problem, buying_signal, decision_maker, sales_priority, research_summary, last_contact_at, verified";
 
 export type ProspectListRow = {
   id: string;
@@ -58,9 +58,17 @@ export type ProspectListRow = {
   owner_name: string | null;
   campaign_id: string | null;
   business_summary: string | null;
+  business_profile: string | null;
+  industry_fit: string | null;
   opportunity_reason: string | null;
   recommended_solution: string | null;
   sales_approach: string | null;
+  potential_need: string | null;
+  business_problem: string | null;
+  buying_signal: string | null;
+  decision_maker: string | null;
+  sales_priority: string | null;
+  research_summary: string | null;
   last_contact_at: string | null;
   verified: boolean;
 };
@@ -208,9 +216,16 @@ export type ProspectInput = {
   socialMedia?: string | null;
   campaignId?: string | null;
   businessSummary?: string | null;
+  businessProfile?: string | null;
+  industryFit?: string | null;
   opportunityReason?: string | null;
   recommendedSolution?: string | null;
   salesApproach?: string | null;
+  potentialNeed?: string | null;
+  businessProblem?: string | null;
+  buyingSignal?: string | null;
+  decisionMaker?: string | null;
+  salesPriority?: string | null;
   verified?: boolean;
 };
 
@@ -275,10 +290,17 @@ export async function createProspect(
       source_detail: input.sourceDetail?.trim() || null,
       discovery_query: input.discoveryQuery?.trim() || null,
       research_summary: input.researchSummary?.slice(0, 4000) || null,
-      business_summary: input.businessSummary?.slice(0, 2000) || null,
-      opportunity_reason: input.opportunityReason?.slice(0, 2000) || null,
-      recommended_solution: input.recommendedSolution?.slice(0, 1000) || null,
-      sales_approach: input.salesApproach?.slice(0, 2000) || null,
+       business_summary: input.businessSummary?.slice(0, 2000) || null,
+       business_profile: input.businessProfile?.slice(0, 2000) || null,
+       industry_fit: input.industryFit?.slice(0, 1000) || null,
+       opportunity_reason: input.opportunityReason?.slice(0, 2000) || null,
+       recommended_solution: input.recommendedSolution?.slice(0, 1000) || null,
+       sales_approach: input.salesApproach?.slice(0, 2000) || null,
+       potential_need: input.potentialNeed?.slice(0, 1000) || null,
+       business_problem: input.businessProblem?.slice(0, 1000) || null,
+       buying_signal: input.buyingSignal?.slice(0, 1000) || null,
+       decision_maker: input.decisionMaker?.slice(0, 300) || null,
+       sales_priority: input.salesPriority?.slice(0, 20) || null,
       evidence: (input.evidence ?? []) as never,
       pain_signals: (input.painSignals ?? []) as never,
       fit_score: scored.total,
@@ -341,6 +363,14 @@ export async function updateProspect(
     update.recommended_solution = patch.recommendedSolution?.slice(0, 1000) || null;
   if (patch.salesApproach !== undefined)
     update.sales_approach = patch.salesApproach?.slice(0, 2000) || null;
+  if (patch.potentialNeed !== undefined)
+    update.potential_need = patch.potentialNeed?.slice(0, 1000) || null;
+  if (patch.businessProblem !== undefined)
+    update.business_problem = patch.businessProblem?.slice(0, 1000) || null;
+  if (patch.buyingSignal !== undefined)
+    update.buying_signal = patch.buyingSignal?.slice(0, 1000) || null;
+  if (patch.decisionMaker !== undefined)
+    update.decision_maker = patch.decisionMaker?.slice(0, 300) || null;
   if (patch.verified !== undefined) update.verified = patch.verified;
   if (patch.researchSummary !== undefined)
     update.research_summary = patch.researchSummary?.slice(0, 4000) || null;
