@@ -33,11 +33,16 @@ import {
   FIT_TIER_LABELS,
   OUTREACH_CHANNELS,
   PIPELINE_STAGES,
-  isActionable,
+  contactQuality,
+  isQueueEligible,
+  priorityClass,
   PROSPECT_SOURCES,
   PROSPECT_SOURCE_LABELS,
   PROSPECT_STATUS_LABELS,
   PROSPECT_STATUSES,
+  salesPriority,
+  VERIFICATION_LABELS,
+  verificationClass,
   type CampaignRow,
   type FitTier,
   type OutreachChannel,
@@ -84,6 +89,7 @@ type ListRow = {
   city: string | null;
   website: string | null;
   contact_name: string | null;
+  contact_title?: string | null;
   contact_email: string | null;
   contact_whatsapp: string | null;
   contact_phone?: string | null;
@@ -98,6 +104,10 @@ type ListRow = {
   lead_id: string | null;
   business_summary?: string | null;
   opportunity_reason?: string | null;
+  potential_need?: string | null;
+  business_problem?: string | null;
+  buying_signal?: string | null;
+  decision_maker?: string | null;
   recommended_solution?: string | null;
   sales_approach?: string | null;
   research_summary?: string | null;
