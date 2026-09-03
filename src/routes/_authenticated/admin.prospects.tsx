@@ -163,30 +163,6 @@ function tierClass(tier: string): string {
   }
 }
 
-function isTodayOrOverdue(value: string | null): boolean {
-  return Boolean(value && new Date(value).getTime() <= Date.now() + 86_400_000);
-}
-
-/** Terminal states never appear in the daily sales queue. */
-const TERMINAL_STATUSES = new Set<ProspectStatus>([
-  "converted",
-  "deal",
-  "lost",
-  "rejected",
-  "do_not_contact",
-]);
-
-/** Active pipeline stages that still need a sales action today. */
-const QUEUE_STATUSES = new Set<ProspectStatus>([
-  "new",
-  "researched",
-  "ready",
-  "approved",
-  "contacted",
-  "replied",
-  "meeting",
-  "negotiation",
-]);
 
 function ProspectsPage() {
   const queryClient = useQueryClient();
@@ -309,14 +285,14 @@ function ProspectsPage() {
       ? (raw as { label: string; score: number; max: number; detail: string }[])
       : [];
   }, [selected]);
-  const queueRows = rows.filter((row) => {
-    if (row.do_not_contact) return false;
-    if (TERMINAL_STATUSES.has(row.status as ProspectStatus)) return false;
-    if (isTodayOrOverdue(row.next_follow_up_at)) return true;
-    return QUEUE_STATUSES.has(row.status as ProspectStatus) && isActionable(row);
-  });
+  // Daily Sales Queue hanya berisi prospek yang memenuhi seluruh kriteria
+  // verifikasi kontak dan kualitas minimum V3.
+  const queueRows = rows.filter((row) => isQueueEligible(row));
   const todayFollowUps = summary?.followUpsToday ?? 0;
-  const readyContacts = summary?.actionable ?? 0;
+  const salesReady = rows.filter((row) => contactQuality(row).status === "sales_ready").length;
+  const needVerification = rows.filter(
+    (row) => !row.do_not_contact && contactQuality(row).score < 75,
+  ).length;
 
   const generateMessage = () => {
     if (!selected) return;
@@ -388,9 +364,9 @@ function ProspectsPage() {
       {summary ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
           <MetricTile label="Ditemukan" value={summary.total} />
-          <MetricTile label="Contact ready" value={readyContacts} tone="primary" />
+          <MetricTile label="Sales ready" value={salesReady} tone="primary" />
+          <MetricTile label="Perlu verifikasi" value={needVerification} />
           <MetricTile label="Follow-up hari ini" value={todayFollowUps} tone="hot" />
-          <MetricTile label="Draft pesan" value={summary.messagesPrepared} />
           <MetricTile label="Dihubungi" value={summary.contacted} />
           <MetricTile label="Reply rate" value={`${summary.replyRate}%`} />
           <MetricTile label="Meeting" value={summary.meetings} />
@@ -789,6 +765,8 @@ function ProspectsPage() {
 }
 
 function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
+  const quality = contactQuality(row);
+  const priority = salesPriority(quality.score, row.fit_score);
   return (
     <button
       type="button"
@@ -798,8 +776,9 @@ function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{row.business_name}</span>
         <span className="block truncate text-xs text-muted-foreground">
-          {[row.industry, row.city, row.contact_name].filter(Boolean).join(" • ") ||
-            "Belum ada detail"}
+          {[row.industry, row.city, row.contact_name, row.contact_title]
+            .filter(Boolean)
+            .join(" • ") || "Belum ada detail"}
         </span>
       </span>
       {row.source ? (
@@ -812,6 +791,23 @@ function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
           DNC
         </span>
       ) : null}
+      <span
+        className={cn(
+          "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+          verificationClass(quality.status),
+        )}
+        title="Contact quality score"
+      >
+        {quality.score} · {VERIFICATION_LABELS[quality.status]}
+      </span>
+      <span
+        className={cn(
+          "hidden rounded-full border px-2 py-0.5 text-[0.65rem] font-medium sm:inline",
+          priorityClass(priority),
+        )}
+      >
+        {priority}
+      </span>
       <span className="rounded-full border border-border/50 px-2 py-0.5 text-[0.65rem] text-muted-foreground">
         {PROSPECT_STATUS_LABELS[row.status as ProspectStatus] ?? row.status}
       </span>
@@ -897,6 +893,50 @@ function CampaignList({
           </GlassCard>
         ))
       )}
+    </div>
+  );
+}
+
+function ContactQualityPanel({ selected }: { selected: ListRow & Record<string, unknown> }) {
+  const quality = contactQuality(selected);
+  const priority = salesPriority(quality.score, selected.fit_score);
+
+  return (
+    <div className="mt-4 border-t border-border/40 pt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">Kualitas kontak</span>
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+            verificationClass(quality.status),
+          )}
+        >
+          {quality.score}/100 · {VERIFICATION_LABELS[quality.status]}
+        </span>
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+            priorityClass(priority),
+          )}
+        >
+          Priority {priority}
+        </span>
+      </div>
+      <ul className="mt-3 grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+        {quality.factors.map((factor) => (
+          <li key={factor.key} className="flex items-center justify-between gap-3">
+            <span>{factor.label}</span>
+            <span className="text-foreground">
+              {factor.score}/{factor.max}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {quality.socialOnly ? (
+        <p className="mt-2 text-xs text-secondary-foreground">
+          Social media menjadi satu-satunya kanal; verifikasi kontak diperlukan sebelum outreach.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1068,7 +1108,13 @@ function ProspectDetail({
                     Social media
                   </a>
                 ) : null}
+                {selected.contact_title ? (
+                  <p className="text-xs text-muted-foreground">
+                    Posisi PIC: <span className="text-foreground">{selected.contact_title}</span>
+                  </p>
+                ) : null}
               </div>
+              <ContactQualityPanel selected={selected} />
             </SectionCard>
             <SectionCard
               title="Opportunity analysis"
@@ -1080,6 +1126,10 @@ function ProspectDetail({
                   value={selected.business_summary || selected.research_summary}
                 />
                 <Info label="Mengapa relevan" value={selected.opportunity_reason} />
+                <Info label="Kebutuhan potensial" value={selected.potential_need} />
+                <Info label="Masalah bisnis" value={selected.business_problem} />
+                <Info label="Buying signal" value={selected.buying_signal} />
+                <Info label="Decision maker" value={selected.decision_maker} />
                 <Info label="Solusi disarankan" value={selected.recommended_solution} />
                 <Info label="Pendekatan sales" value={selected.sales_approach} />
               </div>
