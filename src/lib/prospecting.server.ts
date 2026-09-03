@@ -24,7 +24,7 @@ import {
 type Client = SupabaseClient<Database>;
 
 export const PROSPECT_LIST_COLUMNS =
-  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, opportunity_reason, recommended_solution, sales_approach, last_contact_at, verified";
+  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, opportunity_reason, recommended_solution, sales_approach, potential_need, business_problem, buying_signal, decision_maker, research_summary, last_contact_at, verified";
 
 export type ProspectListRow = {
   id: string;
@@ -61,6 +61,11 @@ export type ProspectListRow = {
   opportunity_reason: string | null;
   recommended_solution: string | null;
   sales_approach: string | null;
+  potential_need: string | null;
+  business_problem: string | null;
+  buying_signal: string | null;
+  decision_maker: string | null;
+  research_summary: string | null;
   last_contact_at: string | null;
   verified: boolean;
 };
@@ -211,6 +216,10 @@ export type ProspectInput = {
   opportunityReason?: string | null;
   recommendedSolution?: string | null;
   salesApproach?: string | null;
+  potentialNeed?: string | null;
+  businessProblem?: string | null;
+  buyingSignal?: string | null;
+  decisionMaker?: string | null;
   verified?: boolean;
 };
 
@@ -279,6 +288,10 @@ export async function createProspect(
       opportunity_reason: input.opportunityReason?.slice(0, 2000) || null,
       recommended_solution: input.recommendedSolution?.slice(0, 1000) || null,
       sales_approach: input.salesApproach?.slice(0, 2000) || null,
+      potential_need: input.potentialNeed?.slice(0, 1000) || null,
+      business_problem: input.businessProblem?.slice(0, 1000) || null,
+      buying_signal: input.buyingSignal?.slice(0, 1000) || null,
+      decision_maker: input.decisionMaker?.slice(0, 300) || null,
       evidence: (input.evidence ?? []) as never,
       pain_signals: (input.painSignals ?? []) as never,
       fit_score: scored.total,
