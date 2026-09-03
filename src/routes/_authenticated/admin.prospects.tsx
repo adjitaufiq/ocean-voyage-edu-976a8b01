@@ -104,6 +104,10 @@ type ListRow = {
   lead_id: string | null;
   business_summary?: string | null;
   opportunity_reason?: string | null;
+  potential_need?: string | null;
+  business_problem?: string | null;
+  buying_signal?: string | null;
+  decision_maker?: string | null;
   recommended_solution?: string | null;
   sales_approach?: string | null;
   research_summary?: string | null;
