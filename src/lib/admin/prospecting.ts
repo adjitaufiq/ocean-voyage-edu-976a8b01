@@ -614,3 +614,37 @@ export function isQueueEligible(prospect: {
   if (!reason) return false;
   return contactQuality(prospect).score >= 75;
 }
+
+/** Human-readable reasons a prospect is not yet allowed into the Daily Sales Queue. */
+export function queueBlockers(
+  prospect: {
+    do_not_contact?: boolean | null;
+    status?: string | null;
+    source?: string | null;
+    opportunity_reason?: string | null;
+    research_summary?: string | null;
+    business_summary?: string | null;
+  } & ContactableProspect,
+): string[] {
+  const blockers: string[] = [];
+  if (prospect.do_not_contact) blockers.push("Ditandai DO NOT CONTACT");
+  const terminal = ["converted", "deal", "lost", "rejected", "do_not_contact"];
+  if (terminal.includes(String(prospect.status ?? ""))) blockers.push("Status sudah selesai/terminal");
+  if (!(prospect.source ?? "").trim()) blockers.push("Sumber data belum dicatat");
+  const reason = (
+    prospect.opportunity_reason ??
+    prospect.business_summary ??
+    prospect.research_summary ??
+    ""
+  ).trim();
+  if (!reason) blockers.push("Belum ada opportunity reason (jalankan Prospect intelligence)");
+  const quality = contactQuality(prospect);
+  if (quality.score < 75) {
+    const missing = quality.factors.filter((f) => f.score === 0).map((f) => f.label);
+    blockers.push(
+      `Contact quality ${quality.score}/100${missing.length ? ` — lengkapi: ${missing.join(", ")}` : ""}`,
+    );
+  }
+  return blockers;
+}
+

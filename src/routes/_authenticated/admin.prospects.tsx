@@ -40,6 +40,7 @@ import {
   PROSPECT_SOURCE_LABELS,
   PROSPECT_STATUS_LABELS,
   PROSPECT_STATUSES,
+  queueBlockers,
   salesPriority,
   VERIFICATION_LABELS,
   verificationClass,
@@ -296,6 +297,13 @@ function ProspectsPage() {
   const needVerification = rows.filter(
     (row) => !row.do_not_contact && contactQuality(row).score < 75,
   ).length;
+  // Prospek yang hampir layak masuk queue: kontak belum lengkap / belum diverifikasi.
+  const verificationRows = rows
+    .filter((row) => !row.do_not_contact && !isQueueEligible(row))
+    .map((row) => ({ row, quality: contactQuality(row) }))
+    .sort((a, b) => b.quality.score - a.quality.score)
+    .slice(0, 8);
+
 
   const generateMessage = () => {
     if (!selected) return;
@@ -657,12 +665,46 @@ function ProspectsPage() {
           <div className="mt-4 space-y-2">
             {list.isLoading ? (
               <p className="text-sm text-muted-foreground">Memuat prospek…</p>
-            ) : (tab === "queue" ? queueRows : rows).length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {tab === "queue"
-                  ? "Belum ada prospek actionable untuk hari ini."
-                  : "Belum ada prospek. Jalankan discovery AI dari sebuah kampanye atau tambahkan prospek manual."}
-              </p>
+             ) : (tab === "queue" ? queueRows : rows).length === 0 ? (
+               <div className="space-y-4">
+                 <p className="text-sm text-muted-foreground">
+                   {tab === "queue"
+                     ? "Belum ada prospek yang memenuhi syarat Daily Sales Queue."
+                     : "Belum ada prospek. Jalankan discovery AI dari sebuah kampanye atau tambahkan prospek manual."}
+                 </p>
+                 {tab === "queue" && verificationRows.length > 0 ? (
+                   <div className="border-t border-border/40 pt-4">
+                     <div className="mb-3">
+                       <h3 className="text-sm font-medium">Prioritas verifikasi</h3>
+                       <p className="text-xs text-muted-foreground">
+                         Kandidat terdekat ke queue, diurutkan dari contact quality tertinggi.
+                       </p>
+                     </div>
+                     <div className="space-y-2">
+                       {verificationRows.map(({ row, quality }) => (
+                         <button
+                           key={row.id}
+                           type="button"
+                           onClick={() => setOpenId(row.id)}
+                           className="flex w-full items-start gap-3 rounded-xl border border-border/40 px-3 py-2 text-left transition hover:border-primary/40"
+                         >
+                           <span className="min-w-0 flex-1">
+                             <span className="block truncate text-sm font-medium">{row.business_name}</span>
+                             <span className="mt-0.5 block text-xs text-muted-foreground">
+                               {quality.score}/100 · {VERIFICATION_LABELS[quality.status]}
+                             </span>
+                             <span className="mt-1 block text-xs text-muted-foreground">
+                               {queueBlockers(row).slice(0, 2).join(" · ")}
+                             </span>
+                           </span>
+                           <span className="shrink-0 text-xs text-primary">Buka detail</span>
+                         </button>
+                       ))}
+                     </div>
+                   </div>
+                 ) : null}
+               </div>
+
             ) : (
               (tab === "queue" ? queueRows : rows).map((row) => (
                 <ProspectRow key={row.id} row={row} onOpen={() => setOpenId(row.id)} />
