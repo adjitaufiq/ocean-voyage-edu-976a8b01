@@ -394,9 +394,9 @@ function ProspectsPage() {
       {summary ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
           <MetricTile label="Ditemukan" value={summary.total} />
-          <MetricTile label="Contact ready" value={readyContacts} tone="primary" />
+          <MetricTile label="Sales ready" value={salesReady} tone="primary" />
+          <MetricTile label="Perlu verifikasi" value={needVerification} />
           <MetricTile label="Follow-up hari ini" value={todayFollowUps} tone="hot" />
-          <MetricTile label="Draft pesan" value={summary.messagesPrepared} />
           <MetricTile label="Dihubungi" value={summary.contacted} />
           <MetricTile label="Reply rate" value={`${summary.replyRate}%`} />
           <MetricTile label="Meeting" value={summary.meetings} />
