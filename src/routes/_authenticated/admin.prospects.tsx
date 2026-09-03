@@ -927,6 +927,50 @@ function CampaignList({
   );
 }
 
+function ContactQualityPanel({ selected }: { selected: ListRow & Record<string, unknown> }) {
+  const quality = contactQuality(selected);
+  const priority = salesPriority(quality.score, selected.fit_score);
+
+  return (
+    <div className="mt-4 border-t border-border/40 pt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">Kualitas kontak</span>
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+            verificationClass(quality.status),
+          )}
+        >
+          {quality.score}/100 · {VERIFICATION_LABELS[quality.status]}
+        </span>
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+            priorityClass(priority),
+          )}
+        >
+          Priority {priority}
+        </span>
+      </div>
+      <ul className="mt-3 grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+        {quality.factors.map((factor) => (
+          <li key={factor.key} className="flex items-center justify-between gap-3">
+            <span>{factor.label}</span>
+            <span className="text-foreground">
+              {factor.score}/{factor.max}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {quality.socialOnly ? (
+        <p className="mt-2 text-xs text-secondary-foreground">
+          Social media menjadi satu-satunya kanal; verifikasi kontak diperlukan sebelum outreach.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function ProspectDetail({
   selected,
   detail,
