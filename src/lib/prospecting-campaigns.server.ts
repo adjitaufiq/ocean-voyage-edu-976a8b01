@@ -179,13 +179,17 @@ Jangan ulang bisnis berikut: ${exclude.slice(0, 40).join("; ") || "-"}
 
 Aturan:
 - Utamakan bisnis yang punya jejak kontak publik (website, telepon, WhatsApp, email, atau Instagram bisnis).
-- Isi hanya data yang kamu yakini; kalau tidak tahu, kosongkan field-nya (jangan mengarang nomor atau email).
+- Isi hanya data yang kamu yakini; kalau tidak tahu, kosongkan field-nya (jangan mengarang nomor, email, atau nama orang).
+- Prioritas kanal kontak: (1) WhatsApp bisnis / telepon kantor, (2) email perusahaan atau LinkedIn decision maker, (3) form website atau social media resmi.
+- Instagram tidak boleh menjadi satu-satunya kanal kontak yang diandalkan; kalau hanya itu yang ada, tetap isi apa adanya agar bisa diverifikasi manusia.
+- Sebisa mungkin isi "contactPerson" (nama PIC/decision maker) dan "contactTitle" (jabatannya). Kosongkan bila tidak yakin.
 - Setiap kandidat WAJIB punya "source" salah satu dari: google_business, google_search, company_website, instagram, linkedin, business_directory, industry_listing.
 - "sourceDetail" berisi petunjuk pencarian konkret (contoh: kata kunci Google Maps yang dipakai).
-- Analisis harus spesifik untuk bisnis tersebut, bukan kalimat generik.
+- Analisis harus spesifik untuk bisnis tersebut, bukan kalimat generik: isi businessProfile, industryFit, potentialNeed, businessProblem, buyingSignal, decisionMaker, dan priority (HIGH/MEDIUM/LOW).
+- "salesApproach" memakai consultative selling (membuka percakapan), bukan penawaran langsung.
 
 Balas HANYA array JSON dengan bentuk:
-[{"businessName":"","industry":"","city":"","website":"","phone":"","whatsapp":"","email":"","socialMedia":"","contactPerson":"","source":"","sourceDetail":"","businessSummary":"","potentialNeed":"","opportunityReason":"","recommendedSolution":"","salesApproach":"","painSignals":[""],"evidence":[""]}]`;
+[{"businessName":"","industry":"","city":"","website":"","phone":"","whatsapp":"","email":"","socialMedia":"","contactPerson":"","contactTitle":"","source":"","sourceDetail":"","businessSummary":"","businessProfile":"","industryFit":"","potentialNeed":"","businessProblem":"","buyingSignal":"","decisionMaker":"","priority":"","opportunityReason":"","recommendedSolution":"","salesApproach":"","painSignals":[""],"evidence":[""]}]`;
 }
 
 export type DiscoveryResult = {
