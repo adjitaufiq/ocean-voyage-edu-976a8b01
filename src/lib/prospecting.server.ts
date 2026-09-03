@@ -354,6 +354,14 @@ export async function updateProspect(
     update.recommended_solution = patch.recommendedSolution?.slice(0, 1000) || null;
   if (patch.salesApproach !== undefined)
     update.sales_approach = patch.salesApproach?.slice(0, 2000) || null;
+  if (patch.potentialNeed !== undefined)
+    update.potential_need = patch.potentialNeed?.slice(0, 1000) || null;
+  if (patch.businessProblem !== undefined)
+    update.business_problem = patch.businessProblem?.slice(0, 1000) || null;
+  if (patch.buyingSignal !== undefined)
+    update.buying_signal = patch.buyingSignal?.slice(0, 1000) || null;
+  if (patch.decisionMaker !== undefined)
+    update.decision_maker = patch.decisionMaker?.slice(0, 300) || null;
   if (patch.verified !== undefined) update.verified = patch.verified;
   if (patch.researchSummary !== undefined)
     update.research_summary = patch.researchSummary?.slice(0, 4000) || null;
