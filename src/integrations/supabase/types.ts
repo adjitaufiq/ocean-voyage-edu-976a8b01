@@ -1615,6 +1615,75 @@ export type Database = {
           },
         ]
       }
+      prospect_audits: {
+        Row: {
+          accurate: boolean | null
+          ai_claims: Json
+          ai_stage: string | null
+          batch_key: string | null
+          campaign_id: string | null
+          created_at: string
+          created_by: string | null
+          findings: Json
+          id: string
+          prospect_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_email: string | null
+          reviewer_notes: string | null
+          reviewer_verdict: string | null
+        }
+        Insert: {
+          accurate?: boolean | null
+          ai_claims?: Json
+          ai_stage?: string | null
+          batch_key?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          findings?: Json
+          id?: string
+          prospect_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_email?: string | null
+          reviewer_notes?: string | null
+          reviewer_verdict?: string | null
+        }
+        Update: {
+          accurate?: boolean | null
+          ai_claims?: Json
+          ai_stage?: string | null
+          batch_key?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          findings?: Json
+          id?: string
+          prospect_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_email?: string | null
+          reviewer_notes?: string | null
+          reviewer_verdict?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_audits_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_audits_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospect_campaigns: {
         Row: {
           created_at: string
@@ -1627,13 +1696,16 @@ export type Database = {
           last_run_at: string | null
           location: string
           name: string
+          needs_review: boolean
           notes: string | null
           primary_solution: string | null
+          review_reason: string | null
           solution: string
           solutions: Json
           status: string
           total_discovered: number
           updated_at: string
+          validation_accuracy: number | null
         }
         Insert: {
           created_at?: string
@@ -1646,13 +1718,16 @@ export type Database = {
           last_run_at?: string | null
           location: string
           name: string
+          needs_review?: boolean
           notes?: string | null
           primary_solution?: string | null
+          review_reason?: string | null
           solution: string
           solutions?: Json
           status?: string
           total_discovered?: number
           updated_at?: string
+          validation_accuracy?: number | null
         }
         Update: {
           created_at?: string
@@ -1665,13 +1740,16 @@ export type Database = {
           last_run_at?: string | null
           location?: string
           name?: string
+          needs_review?: boolean
           notes?: string | null
           primary_solution?: string | null
+          review_reason?: string | null
           solution?: string
           solutions?: Json
           status?: string
           total_discovered?: number
           updated_at?: string
+          validation_accuracy?: number | null
         }
         Relationships: []
       }
@@ -1817,6 +1895,7 @@ export type Database = {
           discovery_query: string | null
           do_not_contact: boolean
           do_not_contact_reason: string | null
+          duplicate_of: string | null
           email_source: string | null
           email_source_url: string | null
           evidence: Json
@@ -1842,7 +1921,10 @@ export type Database = {
           phone_source: string | null
           phone_source_url: string | null
           potential_need: string | null
+          quality_gate: Json
+          quality_gate_passed: boolean
           recommended_solution: string | null
+          rejected_reason: string | null
           replied_at: string | null
           research_summary: string | null
           sales_approach: string | null
@@ -1855,6 +1937,11 @@ export type Database = {
           status: string
           status_updated_at: string
           updated_at: string
+          validated_at: string | null
+          validation_checks: Json
+          validation_notes: string | null
+          validation_score: number
+          validation_stage: string
           verified: boolean
           verified_at: string | null
           website: string | null
@@ -1886,6 +1973,7 @@ export type Database = {
           discovery_query?: string | null
           do_not_contact?: boolean
           do_not_contact_reason?: string | null
+          duplicate_of?: string | null
           email_source?: string | null
           email_source_url?: string | null
           evidence?: Json
@@ -1911,7 +1999,10 @@ export type Database = {
           phone_source?: string | null
           phone_source_url?: string | null
           potential_need?: string | null
+          quality_gate?: Json
+          quality_gate_passed?: boolean
           recommended_solution?: string | null
+          rejected_reason?: string | null
           replied_at?: string | null
           research_summary?: string | null
           sales_approach?: string | null
@@ -1924,6 +2015,11 @@ export type Database = {
           status?: string
           status_updated_at?: string
           updated_at?: string
+          validated_at?: string | null
+          validation_checks?: Json
+          validation_notes?: string | null
+          validation_score?: number
+          validation_stage?: string
           verified?: boolean
           verified_at?: string | null
           website?: string | null
@@ -1955,6 +2051,7 @@ export type Database = {
           discovery_query?: string | null
           do_not_contact?: boolean
           do_not_contact_reason?: string | null
+          duplicate_of?: string | null
           email_source?: string | null
           email_source_url?: string | null
           evidence?: Json
@@ -1980,7 +2077,10 @@ export type Database = {
           phone_source?: string | null
           phone_source_url?: string | null
           potential_need?: string | null
+          quality_gate?: Json
+          quality_gate_passed?: boolean
           recommended_solution?: string | null
+          rejected_reason?: string | null
           replied_at?: string | null
           research_summary?: string | null
           sales_approach?: string | null
@@ -1993,6 +2093,11 @@ export type Database = {
           status?: string
           status_updated_at?: string
           updated_at?: string
+          validated_at?: string | null
+          validation_checks?: Json
+          validation_notes?: string | null
+          validation_score?: number
+          validation_stage?: string
           verified?: boolean
           verified_at?: string | null
           website?: string | null
@@ -2006,6 +2111,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "prospect_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospects_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "prospects"
             referencedColumns: ["id"]
           },
           {

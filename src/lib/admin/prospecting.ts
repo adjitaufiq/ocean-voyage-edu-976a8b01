@@ -899,3 +899,144 @@ export function queueBlockers(
 }
 
 
+
+/* ------------------ Prospect Validation & Audit System --------------------- */
+
+/**
+ * AI discovery never lands in the Daily Sales Queue directly. Every prospect
+ * walks the validation ladder first; only `sales_ready` is sellable.
+ */
+export const VALIDATION_STAGES = [
+  "raw",
+  "validating",
+  "verified",
+  "sales_ready",
+  "rejected",
+] as const;
+export type ValidationStage = (typeof VALIDATION_STAGES)[number];
+
+export const VALIDATION_STAGE_LABELS: Record<ValidationStage, string> = {
+  raw: "RAW",
+  validating: "VALIDATING",
+  verified: "VERIFIED",
+  sales_ready: "SALES READY",
+  rejected: "REJECTED",
+};
+
+export function validationStageClass(stage: string): string {
+  switch (stage) {
+    case "sales_ready":
+      return "border-primary/40 bg-primary/15 text-primary";
+    case "verified":
+      return "border-accent/40 bg-accent/20 text-accent-foreground";
+    case "validating":
+      return "border-border/60 bg-secondary/40 text-secondary-foreground";
+    case "rejected":
+      return "border-destructive/40 bg-destructive/15 text-destructive";
+    default:
+      return "border-border/60 bg-muted/40 text-muted-foreground";
+  }
+}
+
+export function isValidationStage(value: unknown): value is ValidationStage {
+  return typeof value === "string" && (VALIDATION_STAGES as readonly string[]).includes(value);
+}
+
+/** The six mandatory validation checks, in display order. */
+export const VALIDATION_CHECK_KEYS = [
+  "business_existence",
+  "google_maps",
+  "contact_source",
+  "website",
+  "social_match",
+  "duplicate",
+] as const;
+export type ValidationCheckKey = (typeof VALIDATION_CHECK_KEYS)[number];
+
+export const VALIDATION_CHECK_LABELS: Record<ValidationCheckKey, string> = {
+  business_existence: "Business existence",
+  google_maps: "Google Maps availability",
+  contact_source: "Contact source verification",
+  website: "Website availability",
+  social_match: "Social media matching",
+  duplicate: "Duplicate detection",
+};
+
+export type ValidationCheckState = "pass" | "warn" | "fail" | "skip";
+
+export type ValidationCheck = {
+  key: ValidationCheckKey;
+  label: string;
+  state: ValidationCheckState;
+  detail: string;
+  /** Blocking checks must pass before a prospect can reach VERIFIED. */
+  blocking: boolean;
+};
+
+export function validationCheckClass(state: string): string {
+  switch (state) {
+    case "pass":
+      return "border-primary/40 bg-primary/10 text-primary";
+    case "warn":
+      return "border-accent/40 bg-accent/15 text-accent-foreground";
+    case "fail":
+      return "border-destructive/40 bg-destructive/10 text-destructive";
+    default:
+      return "border-border/60 bg-muted/30 text-muted-foreground";
+  }
+}
+
+export function parseValidationChecks(raw: unknown): ValidationCheck[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item) => ({
+      key: String(item["key"] ?? "") as ValidationCheckKey,
+      label: String(item["label"] ?? VALIDATION_CHECK_LABELS[item["key"] as ValidationCheckKey] ?? ""),
+      state: (String(item["state"] ?? "skip") as ValidationCheckState) ?? "skip",
+      detail: String(item["detail"] ?? ""),
+      blocking: Boolean(item["blocking"]),
+    }))
+    .filter((check) => (VALIDATION_CHECK_KEYS as readonly string[]).includes(check.key));
+}
+
+export type QualityGateResult = {
+  passed: boolean;
+  score: number;
+  reasons: string[];
+  risks: string[];
+  model?: string | null;
+  at?: string | null;
+};
+
+export function parseQualityGate(raw: unknown): QualityGateResult | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (value["passed"] === undefined && value["score"] === undefined) return null;
+  const list = (input: unknown) =>
+    Array.isArray(input) ? input.map((item) => String(item)).filter(Boolean).slice(0, 8) : [];
+  return {
+    passed: Boolean(value["passed"]),
+    score: Number(value["score"] ?? 0),
+    reasons: list(value["reasons"]),
+    risks: list(value["risks"]),
+    model: (value["model"] as string | null) ?? null,
+    at: (value["at"] as string | null) ?? null,
+  };
+}
+
+/** Reviewer verdicts used by the Random Audit Dashboard. */
+export const AUDIT_VERDICTS = ["accurate", "partial", "inaccurate"] as const;
+export type AuditVerdict = (typeof AUDIT_VERDICTS)[number];
+
+export const AUDIT_VERDICT_LABELS: Record<AuditVerdict, string> = {
+  accurate: "Akurat",
+  partial: "Sebagian akurat",
+  inaccurate: "Tidak akurat",
+};
+
+/** Sampling rate for random quality audits. */
+export const AUDIT_SAMPLE_RATE = 0.1;
+
+/** Campaigns below this validation accuracy get flagged for owner review. */
+export const AUDIT_ACCURACY_THRESHOLD = 70;
