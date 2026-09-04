@@ -29,6 +29,7 @@ import { GlassCard, MetricTile, SectionCard } from "@/components/admin/ui";
 import {
   CAMPAIGN_INDUSTRIES,
   CAMPAIGN_SOLUTIONS,
+  campaignSolutionList,
   CAMPAIGN_STATUS_LABELS,
   FIT_TIER_LABELS,
   OUTREACH_CHANNELS,
@@ -1053,7 +1054,23 @@ function CampaignList({
                   campaign.status}
               </span>
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
+              {campaignSolutionList(campaign).map((item, index) => (
+                <span
+                  key={item}
+                  className={cn(
+                    "rounded-full px-2 py-0.5",
+                    index === 0
+                      ? "bg-primary/20 text-primary"
+                      : "bg-muted/40 text-muted-foreground",
+                  )}
+                >
+                  {index === 0 ? "Primary: " : ""}
+                  {item}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {campaign.keywords.map((keyword) => (
                 <span
                   key={keyword}
