@@ -168,6 +168,15 @@ type Candidate = {
   salesApproach?: string;
   painSignals?: string[];
   evidence?: string[];
+  phoneSource?: string;
+  phoneSourceUrl?: string;
+  emailSource?: string;
+  emailSourceUrl?: string;
+  websiteSource?: string;
+  websiteSourceUrl?: string;
+  socialSource?: string;
+  socialSourceUrl?: string;
+  googleMapsUrl?: string;
 };
 
 function parseJsonArray(text: string): Candidate[] {
@@ -224,11 +233,13 @@ Aturan:
 - Sebisa mungkin isi "contactPerson" (nama PIC/decision maker) dan "contactTitle" (jabatannya). Kosongkan bila tidak yakin.
 - Setiap kandidat WAJIB punya "source" salah satu dari: google_business, google_search, company_website, instagram, linkedin, business_directory, industry_listing.
 - "sourceDetail" berisi petunjuk pencarian konkret (contoh: kata kunci Google Maps yang dipakai).
+- WAJIB: setiap data kontak harus menyebut asalnya. Isi "phoneSource"/"emailSource"/"websiteSource"/"socialSource" dengan salah satu dari: google_business, google_maps, official_website, instagram, linkedin, facebook, manual — dan isi URL buktinya di "phoneSourceUrl"/"emailSourceUrl"/"websiteSourceUrl"/"socialSourceUrl". Isi juga "googleMapsUrl" bila ada listing Google Maps.
+- Kalau kamu tidak bisa menyebut sumber dan URL bukti untuk sebuah kontak, kosongkan nilai kontaknya. Data kontak tanpa bukti tidak akan dipakai tim sales.
 - Analisis harus spesifik untuk bisnis tersebut, bukan kalimat generik: isi businessProfile, industryFit, potentialNeed, businessProblem, buyingSignal, decisionMaker, dan priority (HIGH/MEDIUM/LOW).
 - "salesApproach" memakai consultative selling (membuka percakapan), bukan penawaran langsung.
 
 Balas HANYA array JSON dengan bentuk:
-[{"businessName":"","industry":"","city":"","website":"","phone":"","whatsapp":"","email":"","socialMedia":"","contactPerson":"","contactTitle":"","source":"","sourceDetail":"","businessSummary":"","businessProfile":"","industryFit":"","potentialNeed":"","businessProblem":"","buyingSignal":"","decisionMaker":"","priority":"","opportunityReason":"","recommendedSolution":"","salesApproach":"","painSignals":[""],"evidence":[""]}]`;
+[{"businessName":"","industry":"","city":"","website":"","phone":"","whatsapp":"","email":"","socialMedia":"","contactPerson":"","contactTitle":"","source":"","sourceDetail":"","businessSummary":"","businessProfile":"","industryFit":"","potentialNeed":"","businessProblem":"","buyingSignal":"","decisionMaker":"","priority":"","opportunityReason":"","recommendedSolution":"","salesApproach":"","painSignals":[""],"evidence":[""],"phoneSource":"","phoneSourceUrl":"","emailSource":"","emailSourceUrl":"","websiteSource":"","websiteSourceUrl":"","socialSource":"","socialSourceUrl":"","googleMapsUrl":""}]`;
 }
 
 export type DiscoveryResult = {
@@ -362,6 +373,15 @@ export async function discoverProspects(
           evidence: (candidate.evidence ?? []).filter(Boolean).slice(0, 8),
           campaignId: campaign.id,
           verified: false,
+          phoneSource: candidate.phoneSource ?? null,
+          phoneSourceUrl: candidate.phoneSourceUrl ?? null,
+          emailSource: candidate.emailSource ?? null,
+          emailSourceUrl: candidate.emailSourceUrl ?? null,
+          websiteSource: candidate.websiteSource ?? null,
+          websiteSourceUrl: candidate.websiteSourceUrl ?? null,
+          socialSource: candidate.socialSource ?? null,
+          socialSourceUrl: candidate.socialSourceUrl ?? null,
+          googleMapsUrl: candidate.googleMapsUrl ?? null,
         },
         actor,
       );

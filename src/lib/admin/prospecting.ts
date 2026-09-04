@@ -705,13 +705,17 @@ export function contactProvenance(
   // Evidence URL: explicit per-channel URL, else Google Maps link for Maps/GBP,
   // else the website itself for website-sourced data, else the row source detail.
   const mapsUrl = isHttpUrl(prospect.google_maps_url) ? (prospect.google_maps_url ?? null) : null;
+  const ownUrl = isHttpUrl(own.url) ? (own.url as string) : null;
+  const websiteUrl =
+    sourceType === "official_website" && isHttpUrl(prospect.website)
+      ? (prospect.website as string)
+      : null;
+  const detailUrl = isHttpUrl(prospect.source_detail) ? (prospect.source_detail as string) : null;
   const evidence =
-    (isHttpUrl(own.url) ? (own.url ?? null) : null) ??
+    ownUrl ??
     (sourceType === "google_business" || sourceType === "google_maps" ? mapsUrl : null) ??
-    (sourceType === "official_website" && isHttpUrl(prospect.website)
-      ? (prospect.website ?? null)
-      : null) ??
-    (isHttpUrl(prospect.source_detail) ? (prospect.source_detail ?? null) : null);
+    websiteUrl ??
+    detailUrl;
 
   let level: ProvenanceLevel = "unknown";
   if (value) {
@@ -831,8 +835,8 @@ export function priorityClass(priority: SalesPriority): string {
 }
 
 /**
- * Daily Sales Queue rule: valid contact, contact quality >= 75, a recorded
- * source, an opportunity reason, not DO_NOT_CONTACT, not terminal.
+ * Daily Sales Queue rule: valid contact, contact quality >= 75, a provable
+ * contact source, an opportunity reason, not DO_NOT_CONTACT, not terminal.
  */
 export function isQueueEligible(prospect: {
   do_not_contact?: boolean | null;
@@ -848,8 +852,11 @@ export function isQueueEligible(prospect: {
   if (!(prospect.source ?? "").trim()) return false;
   const reason = (prospect.opportunity_reason ?? prospect.business_summary ?? prospect.research_summary ?? "").trim();
   if (!reason) return false;
-  return contactQuality(prospect).score >= 75;
+  const quality = contactQuality(prospect);
+  if (!quality.hasProvenSource || !quality.fullyAttributed) return false;
+  return quality.score >= 75;
 }
+
 
 /** Human-readable reasons a prospect is not yet allowed into the Daily Sales Queue. */
 export function queueBlockers(
@@ -881,6 +888,14 @@ export function queueBlockers(
       `Contact quality ${quality.score}/100${missing.length ? ` — lengkapi: ${missing.join(", ")}` : ""}`,
     );
   }
+  if (!quality.hasProvenSource) blockers.push("Sumber kontak tidak terbukti (isi source type + URL bukti)");
+  else if (!quality.fullyAttributed) {
+    const unattributed = quality.provenance
+      .filter((entry) => entry.value && entry.level === "unknown")
+      .map((entry) => entry.label);
+    blockers.push(`Kontak tanpa sumber: ${unattributed.join(", ")}`);
+  }
   return blockers;
 }
+
 

@@ -42,6 +42,15 @@ const prospectFields = {
   notes: z.string().max(4000).nullable().optional(),
   ownerName: z.string().max(120).nullable().optional(),
   verified: z.boolean().optional(),
+  phoneSource: z.string().max(60).nullable().optional(),
+  phoneSourceUrl: z.string().max(600).nullable().optional(),
+  emailSource: z.string().max(60).nullable().optional(),
+  emailSourceUrl: z.string().max(600).nullable().optional(),
+  websiteSource: z.string().max(60).nullable().optional(),
+  websiteSourceUrl: z.string().max(600).nullable().optional(),
+  socialSource: z.string().max(60).nullable().optional(),
+  socialSourceUrl: z.string().max(600).nullable().optional(),
+  googleMapsUrl: z.string().max(600).nullable().optional(),
 };
 
 export const getProspects = createServerFn({ method: "GET" })
