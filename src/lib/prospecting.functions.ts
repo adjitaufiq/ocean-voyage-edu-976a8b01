@@ -363,6 +363,29 @@ export const addNoteFn = createServerFn({ method: "POST" })
     });
   });
 
+/** Data Reverification: refresh contact provenance + scores for one or all prospects. */
+export const reverifyProspectsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid().optional(),
+        scope: z.enum(["one", "all"]).default("one"),
+        limit: z.number().int().min(1).max(500).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { reverifyProspects } = await import("./prospecting-reverify.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return reverifyProspects(
+      context.supabase,
+      data.scope === "all" ? { scope: "all", limit: data.limit } : { ids: data.id ? [data.id] : [] },
+      { userId: context.userId, email: actorEmail(context.claims) },
+    );
+  });
+
 export const saveIcpConfigFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
