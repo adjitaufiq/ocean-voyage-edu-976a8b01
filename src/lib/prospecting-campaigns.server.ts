@@ -111,7 +111,7 @@ export async function saveCampaign(
         primary_solution: primary ? primary.slice(0, 150) : null,
       };
     })(),
-    daily_target: Math.max(1, Math.min(50, input.dailyTarget)),
+    daily_target: Math.max(1, Math.min(500, input.dailyTarget)),
     status: input.status ?? "active",
     notes: input.notes?.slice(0, 2000) ?? null,
   };

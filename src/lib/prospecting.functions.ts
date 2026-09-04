@@ -242,7 +242,7 @@ export const saveCampaignFn = createServerFn({ method: "POST" })
         solutions: z.array(z.string().max(150)).max(20).optional(),
         customSolutions: z.array(z.string().max(150)).max(20).optional(),
         primarySolution: z.string().max(150).nullable().optional(),
-        dailyTarget: z.number().int().min(1).max(50),
+        dailyTarget: z.number().int().min(1).max(500),
         status: z.string().max(20).optional(),
         notes: z.string().max(2000).nullable().optional(),
       })
