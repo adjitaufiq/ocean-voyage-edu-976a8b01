@@ -78,3 +78,11 @@ pengiriman massal otomatis, dan permintaan berhenti dihormati lewat DO_NOT_CONTA
 | --- | --- |
 | `outbound.follow_up_reminder` | Task internal saat `next_follow_up_at` jatuh tempo |
 | `outbound.stale_ready_alert` | Task internal saat prospek `ready` >3 hari tanpa approval |
+
+## Reverifikasi data prospek lama
+
+- Gunakan tombol **Refresh data verification** di header halaman Prospects untuk memindai seluruh prospek lama, atau tombol yang sama di panel detail untuk satu prospek.
+- Proses hanya mengisi field sumber (`phone_source`, `email_source`, `website_source`, `social_source` beserta `*_source_url`) bila masih kosong; data lama tidak pernah dihapus.
+- Website dicek apakah benar-benar merespons, URL social divalidasi sebagai profil bisnis, lalu contact quality score dan ICP score dihitung ulang serta status SALES READY diperbarui.
+- Setiap perubahan tercatat di Activity CRM prospek, sehingga audit sumber data tetap bisa ditelusuri.
+- Jalankan reverifikasi minimal sekali per minggu untuk prospek berstatus contact ready yang belum dihubungi.
