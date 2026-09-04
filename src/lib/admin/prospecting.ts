@@ -92,6 +92,7 @@ export const CAMPAIGN_STATUS_LABELS: Record<CampaignStatus, string> = {
 };
 
 export const CAMPAIGN_SOLUTIONS = [
+  "Qresto / POS System",
   "Website Development",
   "Web Application",
   "Custom Software",
@@ -101,6 +102,8 @@ export const CAMPAIGN_SOLUTIONS = [
   "AI Assistant",
   "Workflow Automation",
   "Digital Transformation",
+  "Digital Menu",
+  "Customer Loyalty System",
 ] as const;
 
 export const CAMPAIGN_INDUSTRIES = [
@@ -150,6 +153,9 @@ export type CampaignRow = {
   location: string;
   keywords: string[];
   solution: string;
+  solutions: string[];
+  custom_solutions: string[];
+  primary_solution: string | null;
   daily_target: number;
   status: string;
   notes: string | null;
@@ -158,6 +164,43 @@ export type CampaignRow = {
   created_at: string;
 };
 
+
+/** All solutions of a campaign, primary first, without duplicates. */
+export function campaignSolutionList(campaign: {
+  solution?: string | null;
+  solutions?: string[] | null;
+  custom_solutions?: string[] | null;
+  primary_solution?: string | null;
+}): string[] {
+  const all = [
+    campaign.primary_solution ?? "",
+    ...(campaign.solutions ?? []),
+    ...(campaign.custom_solutions ?? []),
+    campaign.solution ?? "",
+  ]
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return Array.from(new Set(all));
+}
+
+/** Primary solution = entry offer; the rest are upsell candidates. */
+export function campaignPrimarySolution(campaign: {
+  solution?: string | null;
+  primary_solution?: string | null;
+  solutions?: string[] | null;
+  custom_solutions?: string[] | null;
+}): string {
+  return campaignSolutionList(campaign)[0] ?? "";
+}
+
+export function campaignSecondarySolutions(campaign: {
+  solution?: string | null;
+  primary_solution?: string | null;
+  solutions?: string[] | null;
+  custom_solutions?: string[] | null;
+}): string[] {
+  return campaignSolutionList(campaign).slice(1);
+}
 
 export const PROSPECT_ACTIVITY_ACTIONS = [
   "research",
