@@ -45,6 +45,9 @@ import {
   salesPriority,
   VERIFICATION_LABELS,
   verificationClass,
+  CONTACT_SOURCE_TYPES,
+  CONTACT_SOURCE_LABELS,
+  PROVENANCE_LABELS,
   type CampaignRow,
   type FitTier,
   type OutreachChannel,
@@ -807,6 +810,13 @@ function ProspectsPage() {
           onHandoff={() =>
             selected && void run(handoffFn({ data: { id: selected.id } }), "Prospek jadi lead CRM.")
           }
+          onSaveSources={(payload) =>
+            selected &&
+            void run(
+              updateFn({ data: { id: selected.id, ...payload } }),
+              "Sumber kontak diperbarui.",
+            )
+          }
         />
       ) : null}
     </div>
@@ -1147,11 +1157,155 @@ function ContactQualityPanel({ selected }: { selected: ListRow & Record<string, 
           </li>
         ))}
       </ul>
+      <div className="mt-4 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">Asal data kontak</p>
+        {quality.provenance
+          .filter((entry) => entry.value)
+          .map((entry) => (
+            <div
+              key={entry.channel}
+              className="flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-muted/20 px-3 py-2 text-xs"
+            >
+              <span className="text-foreground">{entry.label}</span>
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[0.65rem]",
+                  entry.level === "verified"
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : entry.level === "declared"
+                      ? "border-accent/40 bg-accent/20 text-accent-foreground"
+                      : "border-destructive/40 bg-destructive/10 text-destructive",
+                )}
+              >
+                {entry.sourceLabel ?? "Tanpa sumber"} · {PROVENANCE_LABELS[entry.level]}
+              </span>
+              {entry.sourceUrl ? (
+                <a
+                  href={entry.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto inline-flex items-center gap-1 text-primary hover:underline"
+                >
+                  Lihat sumber <ExternalLink className="h-3 w-3" />
+                </a>
+              ) : null}
+            </div>
+          ))}
+        {typeof selected.google_maps_url === "string" && selected.google_maps_url ? (
+          <a
+            href={selected.google_maps_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            Open Google Maps <ExternalLink className="h-3 w-3" />
+          </a>
+        ) : null}
+        {!quality.hasProvenSource ? (
+          <p className="text-xs text-destructive">
+            Sumber kontak belum terbukti — prospek tidak akan masuk Daily Sales Queue dan tidak bisa
+            berstatus SALES READY.
+          </p>
+        ) : null}
+      </div>
       {quality.socialOnly ? (
         <p className="mt-2 text-xs text-secondary-foreground">
           Social media menjadi satu-satunya kanal; verifikasi kontak diperlukan sebelum outreach.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+const SOURCE_CHANNELS = [
+  { key: "phone", label: "Telepon / WhatsApp", type: "phone_source", url: "phone_source_url" },
+  { key: "email", label: "Email", type: "email_source", url: "email_source_url" },
+  { key: "website", label: "Website", type: "website_source", url: "website_source_url" },
+  { key: "social", label: "Social media", type: "social_source", url: "social_source_url" },
+] as const;
+
+function ContactSourceForm({
+  selected,
+  onSave,
+}: {
+  selected: ListRow & Record<string, unknown>;
+  onSave: (payload: Record<string, string | null>) => void;
+}) {
+  const initial = useMemo(() => {
+    const base: Record<string, string> = { google_maps_url: String(selected.google_maps_url ?? "") };
+    for (const channel of SOURCE_CHANNELS) {
+      base[channel.type] = String(selected[channel.type] ?? "");
+      base[channel.url] = String(selected[channel.url] ?? "");
+    }
+    return base;
+  }, [selected]);
+  const [form, setForm] = useState(initial);
+  const [lastId, setLastId] = useState(selected.id);
+  if (lastId !== selected.id) {
+    setLastId(selected.id);
+    setForm(initial);
+  }
+
+  const field = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  return (
+    <div className="space-y-3">
+      {SOURCE_CHANNELS.map((channel) => (
+        <div key={channel.key} className="grid gap-2 sm:grid-cols-2">
+          <label className="text-xs text-muted-foreground">
+            {channel.label} — sumber
+            <select
+              value={form[channel.type] ?? ""}
+              onChange={(event) => field(channel.type, event.target.value)}
+              className="mt-1 w-full rounded-xl border border-border/50 bg-background/60 px-3 py-2 text-sm text-foreground"
+            >
+              <option value="">Belum dicatat</option>
+              {CONTACT_SOURCE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {CONTACT_SOURCE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs text-muted-foreground">
+            URL bukti
+            <input
+              value={form[channel.url] ?? ""}
+              onChange={(event) => field(channel.url, event.target.value)}
+              placeholder="https://..."
+              className="mt-1 w-full rounded-xl border border-border/50 bg-background/60 px-3 py-2 text-sm text-foreground"
+            />
+          </label>
+        </div>
+      ))}
+      <label className="block text-xs text-muted-foreground">
+        Google Maps URL
+        <input
+          value={form.google_maps_url ?? ""}
+          onChange={(event) => field("google_maps_url", event.target.value)}
+          placeholder="https://maps.google.com/..."
+          className="mt-1 w-full rounded-xl border border-border/50 bg-background/60 px-3 py-2 text-sm text-foreground"
+        />
+      </label>
+      <button
+        type="button"
+        onClick={() =>
+          onSave({
+            phoneSource: form.phone_source || null,
+            phoneSourceUrl: form.phone_source_url || null,
+            emailSource: form.email_source || null,
+            emailSourceUrl: form.email_source_url || null,
+            websiteSource: form.website_source || null,
+            websiteSourceUrl: form.website_source_url || null,
+            socialSource: form.social_source || null,
+            socialSourceUrl: form.social_source_url || null,
+            googleMapsUrl: form.google_maps_url || null,
+          })
+        }
+        className="rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
+      >
+        Simpan verifikasi sumber
+      </button>
     </div>
   );
 }
@@ -1180,6 +1334,7 @@ function ProspectDetail({
   onFollowUp,
   onNote,
   onHandoff,
+  onSaveSources,
 }: {
   selected?: ListRow & Record<string, unknown>;
   detail?: {
@@ -1330,6 +1485,12 @@ function ProspectDetail({
                 ) : null}
               </div>
               <ContactQualityPanel selected={selected} />
+            </SectionCard>
+            <SectionCard
+              title="Verifikasi sumber kontak"
+              description="Setiap kontak wajib punya source type dan URL bukti sebelum masuk queue."
+            >
+              <ContactSourceForm selected={selected} onSave={onSaveSources} />
             </SectionCard>
             <SectionCard
               title="Opportunity analysis"
