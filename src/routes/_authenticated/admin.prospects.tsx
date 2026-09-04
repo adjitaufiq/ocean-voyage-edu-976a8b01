@@ -436,7 +436,7 @@ function ProspectsPage() {
               <input
                 type="number"
                 min="1"
-                max="50"
+                max="500"
                 className={inputClass}
                 value={campaignDraft.dailyTarget}
                 onChange={(e) =>
