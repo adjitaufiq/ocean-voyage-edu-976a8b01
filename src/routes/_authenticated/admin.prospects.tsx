@@ -1368,6 +1368,7 @@ function ProspectDetail({
   onFollowUp: () => void;
   onNote: () => void;
   onHandoff: () => void;
+  onSaveSources: (payload: Record<string, string | null>) => void;
 }) {
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
