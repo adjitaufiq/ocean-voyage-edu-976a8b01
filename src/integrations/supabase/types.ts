@@ -1817,11 +1817,14 @@ export type Database = {
           discovery_query: string | null
           do_not_contact: boolean
           do_not_contact_reason: string | null
+          email_source: string | null
+          email_source_url: string | null
           evidence: Json
           fit_breakdown: Json
           fit_score: number
           fit_tier: string
           follow_up_count: number
+          google_maps_url: string | null
           id: string
           industry: string | null
           industry_fit: string | null
@@ -1836,6 +1839,8 @@ export type Database = {
           outreach_subject: string | null
           owner_name: string | null
           pain_signals: Json
+          phone_source: string | null
+          phone_source_url: string | null
           potential_need: string | null
           recommended_solution: string | null
           replied_at: string | null
@@ -1843,14 +1848,19 @@ export type Database = {
           sales_approach: string | null
           sales_priority: string | null
           social_media: string | null
+          social_source: string | null
+          social_source_url: string | null
           source: string
           source_detail: string | null
           status: string
           status_updated_at: string
           updated_at: string
           verified: boolean
+          verified_at: string | null
           website: string | null
           website_domain: string | null
+          website_source: string | null
+          website_source_url: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -1876,11 +1886,14 @@ export type Database = {
           discovery_query?: string | null
           do_not_contact?: boolean
           do_not_contact_reason?: string | null
+          email_source?: string | null
+          email_source_url?: string | null
           evidence?: Json
           fit_breakdown?: Json
           fit_score?: number
           fit_tier?: string
           follow_up_count?: number
+          google_maps_url?: string | null
           id?: string
           industry?: string | null
           industry_fit?: string | null
@@ -1895,6 +1908,8 @@ export type Database = {
           outreach_subject?: string | null
           owner_name?: string | null
           pain_signals?: Json
+          phone_source?: string | null
+          phone_source_url?: string | null
           potential_need?: string | null
           recommended_solution?: string | null
           replied_at?: string | null
@@ -1902,14 +1917,19 @@ export type Database = {
           sales_approach?: string | null
           sales_priority?: string | null
           social_media?: string | null
+          social_source?: string | null
+          social_source_url?: string | null
           source?: string
           source_detail?: string | null
           status?: string
           status_updated_at?: string
           updated_at?: string
           verified?: boolean
+          verified_at?: string | null
           website?: string | null
           website_domain?: string | null
+          website_source?: string | null
+          website_source_url?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -1935,11 +1955,14 @@ export type Database = {
           discovery_query?: string | null
           do_not_contact?: boolean
           do_not_contact_reason?: string | null
+          email_source?: string | null
+          email_source_url?: string | null
           evidence?: Json
           fit_breakdown?: Json
           fit_score?: number
           fit_tier?: string
           follow_up_count?: number
+          google_maps_url?: string | null
           id?: string
           industry?: string | null
           industry_fit?: string | null
@@ -1954,6 +1977,8 @@ export type Database = {
           outreach_subject?: string | null
           owner_name?: string | null
           pain_signals?: Json
+          phone_source?: string | null
+          phone_source_url?: string | null
           potential_need?: string | null
           recommended_solution?: string | null
           replied_at?: string | null
@@ -1961,14 +1986,19 @@ export type Database = {
           sales_approach?: string | null
           sales_priority?: string | null
           social_media?: string | null
+          social_source?: string | null
+          social_source_url?: string | null
           source?: string
           source_detail?: string | null
           status?: string
           status_updated_at?: string
           updated_at?: string
           verified?: boolean
+          verified_at?: string | null
           website?: string | null
           website_domain?: string | null
+          website_source?: string | null
+          website_source_url?: string | null
         }
         Relationships: [
           {
