@@ -1619,6 +1619,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          custom_solutions: Json
           daily_target: number
           id: string
           industry: string
@@ -1627,7 +1628,9 @@ export type Database = {
           location: string
           name: string
           notes: string | null
+          primary_solution: string | null
           solution: string
+          solutions: Json
           status: string
           total_discovered: number
           updated_at: string
@@ -1635,6 +1638,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          custom_solutions?: Json
           daily_target?: number
           id?: string
           industry: string
@@ -1643,7 +1647,9 @@ export type Database = {
           location: string
           name: string
           notes?: string | null
+          primary_solution?: string | null
           solution: string
+          solutions?: Json
           status?: string
           total_discovered?: number
           updated_at?: string
@@ -1651,6 +1657,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          custom_solutions?: Json
           daily_target?: number
           id?: string
           industry?: string
@@ -1659,7 +1666,9 @@ export type Database = {
           location?: string
           name?: string
           notes?: string | null
+          primary_solution?: string | null
           solution?: string
+          solutions?: Json
           status?: string
           total_discovered?: number
           updated_at?: string
