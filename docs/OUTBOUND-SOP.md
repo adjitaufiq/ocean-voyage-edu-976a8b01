@@ -36,16 +36,16 @@ Outbound melengkapi CRM inbound. **Prospek bukan lead**: data prospek hidup di t
    `DO_NOT_CONTACT`, dan bukan status terminal. Prospek yang hanya memiliki social media, atau
    yang kontaknya tidak dapat dibuktikan sumbernya, tidak boleh masuk queue.
 
-8. **Draft outreach** — draft disimpan sebagai teks. Sistem **tidak pernah** mengirim pesan
+9. **Draft outreach** — draft disimpan sebagai teks. Sistem **tidak pernah** mengirim pesan
    otomatis; setiap pesan harus personal dan consultative.
-9. **Approval manusia** — status `ready` → `approved` hanya oleh manusia berwenang.
-10. **Kirim manual** — setelah dikirim, catat lewat "Catat outreach" (`sent` / `reply` /
+10. **Approval manusia** — status `ready` → `approved` hanya oleh manusia berwenang.
+11. **Kirim manual** — setelah dikirim, catat lewat "Catat outreach" (`sent` / `reply` /
     `no_reply`) dan tentukan jadwal follow-up.
-11. **Follow-up** — scan automation membuat task internal saat follow-up jatuh tempo dan saat
+12. **Follow-up** — scan automation membuat task internal saat follow-up jatuh tempo dan saat
     prospek `ready` menganggur >3 hari. Task ini hanya pengingat internal.
-12. **Handoff** — prospek yang berminat dikonversi jadi lead CRM; scoring, proposal, dan
+13. **Handoff** — prospek yang berminat dikonversi jadi lead CRM; scoring, proposal, dan
     billing memakai alur inbound yang sudah ada.
-13. **DO_NOT_CONTACT** — sekali ditandai, follow-up dihentikan dan outreach ditolak sistem.
+14. **DO_NOT_CONTACT** — sekali ditandai, follow-up dihentikan dan outreach ditolak sistem.
 
 ## Role matrix
 
