@@ -831,8 +831,8 @@ export function priorityClass(priority: SalesPriority): string {
 }
 
 /**
- * Daily Sales Queue rule: valid contact, contact quality >= 75, a recorded
- * source, an opportunity reason, not DO_NOT_CONTACT, not terminal.
+ * Daily Sales Queue rule: valid contact, contact quality >= 75, a provable
+ * contact source, an opportunity reason, not DO_NOT_CONTACT, not terminal.
  */
 export function isQueueEligible(prospect: {
   do_not_contact?: boolean | null;
@@ -848,8 +848,11 @@ export function isQueueEligible(prospect: {
   if (!(prospect.source ?? "").trim()) return false;
   const reason = (prospect.opportunity_reason ?? prospect.business_summary ?? prospect.research_summary ?? "").trim();
   if (!reason) return false;
-  return contactQuality(prospect).score >= 75;
+  const quality = contactQuality(prospect);
+  if (!quality.hasProvenSource || !quality.fullyAttributed) return false;
+  return quality.score >= 75;
 }
+
 
 /** Human-readable reasons a prospect is not yet allowed into the Daily Sales Queue. */
 export function queueBlockers(
