@@ -884,6 +884,14 @@ export function queueBlockers(
       `Contact quality ${quality.score}/100${missing.length ? ` — lengkapi: ${missing.join(", ")}` : ""}`,
     );
   }
+  if (!quality.hasProvenSource) blockers.push("Sumber kontak tidak terbukti (isi source type + URL bukti)");
+  else if (!quality.fullyAttributed) {
+    const unattributed = quality.provenance
+      .filter((entry) => entry.value && entry.level === "unknown")
+      .map((entry) => entry.label);
+    blockers.push(`Kontak tanpa sumber: ${unattributed.join(", ")}`);
+  }
   return blockers;
 }
+
 
