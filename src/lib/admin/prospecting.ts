@@ -536,15 +536,101 @@ export function fitTierClass(tier: string): string {
   }
 }
 
+/* ------------------ Contact data provenance (sumber & bukti) ---------------- */
+
+/** Where a contact value came from. Every contact must declare one. */
+export const CONTACT_SOURCE_TYPES = [
+  "google_business",
+  "google_maps",
+  "official_website",
+  "instagram",
+  "linkedin",
+  "facebook",
+  "manual",
+] as const;
+export type ContactSourceType = (typeof CONTACT_SOURCE_TYPES)[number];
+
+export const CONTACT_SOURCE_LABELS: Record<string, string> = {
+  google_business: "Google Business Profile",
+  google_maps: "Google Maps",
+  official_website: "Official Website",
+  instagram: "Instagram",
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+  manual: "Manual Input",
+};
+
+/** Legacy row-level `source` values mapped onto the provenance vocabulary. */
+const LEGACY_SOURCE_MAP: Record<string, ContactSourceType> = {
+  google_business: "google_business",
+  google_search: "google_business",
+  company_website: "official_website",
+  instagram: "instagram",
+  linkedin: "linkedin",
+  facebook: "facebook",
+  manual: "manual",
+};
+
+export type ProvenanceLevel = "verified" | "declared" | "unknown";
+
+export const PROVENANCE_LABELS: Record<ProvenanceLevel, string> = {
+  verified: "Sumber terbukti",
+  declared: "Sumber diklaim",
+  unknown: "Sumber tidak jelas",
+};
+
+/** Provenance weight applied to the raw channel score. */
+const PROVENANCE_WEIGHT: Record<ProvenanceLevel, number> = {
+  verified: 1,
+  declared: 0.6,
+  unknown: 0.25,
+};
+
+export type ContactChannelKey = "phone" | "email" | "website" | "social";
+
+export type ContactProvenance = {
+  channel: ContactChannelKey;
+  label: string;
+  value: string | null;
+  sourceType: string | null;
+  sourceLabel: string | null;
+  sourceUrl: string | null;
+  level: ProvenanceLevel;
+};
+
+function isHttpUrl(value: string | null | undefined): boolean {
+  const raw = (value ?? "").trim();
+  if (!raw) return false;
+  try {
+    const url = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+    return Boolean(url.hostname) && url.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
+
+export function contactSourceLabel(sourceType: string | null | undefined): string | null {
+  const key = (sourceType ?? "").trim();
+  if (!key) return null;
+  return CONTACT_SOURCE_LABELS[key] ?? PROSPECT_SOURCE_LABELS[key] ?? key;
+}
+
 /* -------------------- Contact quality & sales readiness -------------------- */
 
 /**
  * Deterministic Contact Quality Score (0-100). Measures whether a human sales
  * rep can actually reach this business — separate from ICP fit.
  *
- * WhatsApp/phone 40 · business email 25 · website 15 · PIC 10 · social 10.
+ * WhatsApp/phone 40 · business email 25 · website 15 · PIC 10 · social 10,
+ * each channel damped by how well its data provenance can be proven.
  */
-export type ContactQualityFactor = { key: string; label: string; score: number; max: number };
+export type ContactQualityFactor = {
+  key: string;
+  label: string;
+  score: number;
+  max: number;
+  level?: ProvenanceLevel;
+};
 
 export type VerificationStatus = "sales_ready" | "qualified" | "need_verification" | "not_ready";
 
@@ -561,6 +647,11 @@ export type ContactQuality = {
   factors: ContactQualityFactor[];
   /** True when the only reachable channel is a social profile. */
   socialOnly: boolean;
+  provenance: ContactProvenance[];
+  /** At least one reachable channel has a provable source. */
+  hasProvenSource: boolean;
+  /** Every channel that carries a value declares where it came from. */
+  fullyAttributed: boolean;
 };
 
 export type ContactableProspect = {
@@ -571,9 +662,73 @@ export type ContactableProspect = {
   contact_title?: string | null;
   website?: string | null;
   social_media?: string | null;
+  phone_source?: string | null;
+  phone_source_url?: string | null;
+  email_source?: string | null;
+  email_source_url?: string | null;
+  website_source?: string | null;
+  website_source_url?: string | null;
+  social_source?: string | null;
+  social_source_url?: string | null;
+  google_maps_url?: string | null;
+  source?: string | null;
+  source_detail?: string | null;
+  verified_at?: string | null;
 };
 
 const FREE_EMAIL_DOMAINS = ["gmail.com", "yahoo.com", "yahoo.co.id", "hotmail.com", "outlook.com"];
+
+/** Resolves the source + evidence URL for one contact channel. */
+export function contactProvenance(
+  prospect: ContactableProspect,
+  channel: ContactChannelKey,
+  value: string | null,
+): ContactProvenance {
+  const labels: Record<ContactChannelKey, string> = {
+    phone: "WhatsApp / telepon",
+    email: "Email bisnis",
+    website: "Website aktif",
+    social: "Social media resmi",
+  };
+
+  const perChannel: Record<ContactChannelKey, { type?: string | null; url?: string | null }> = {
+    phone: { type: prospect.phone_source, url: prospect.phone_source_url },
+    email: { type: prospect.email_source, url: prospect.email_source_url },
+    website: { type: prospect.website_source, url: prospect.website_source_url },
+    social: { type: prospect.social_source, url: prospect.social_source_url },
+  };
+
+  const own = perChannel[channel];
+  const legacyType = LEGACY_SOURCE_MAP[(prospect.source ?? "").trim()] ?? null;
+  const sourceType = (own.type ?? "").trim() || legacyType;
+
+  // Evidence URL: explicit per-channel URL, else Google Maps link for Maps/GBP,
+  // else the website itself for website-sourced data, else the row source detail.
+  const mapsUrl = isHttpUrl(prospect.google_maps_url) ? (prospect.google_maps_url ?? null) : null;
+  const evidence =
+    (isHttpUrl(own.url) ? (own.url ?? null) : null) ??
+    (sourceType === "google_business" || sourceType === "google_maps" ? mapsUrl : null) ??
+    (sourceType === "official_website" && isHttpUrl(prospect.website)
+      ? (prospect.website ?? null)
+      : null) ??
+    (isHttpUrl(prospect.source_detail) ? (prospect.source_detail ?? null) : null);
+
+  let level: ProvenanceLevel = "unknown";
+  if (value) {
+    if (sourceType && sourceType !== "manual" && evidence) level = "verified";
+    else if (sourceType) level = "declared";
+  }
+
+  return {
+    channel,
+    label: labels[channel],
+    value,
+    sourceType: sourceType ?? null,
+    sourceLabel: contactSourceLabel(sourceType),
+    sourceUrl: evidence,
+    level,
+  };
+}
 
 export function contactQuality(prospect: ContactableProspect): ContactQuality {
   const phone = normalizeWhatsapp(prospect.contact_whatsapp ?? prospect.contact_phone);
@@ -583,31 +738,69 @@ export function contactQuality(prospect: ContactableProspect): ContactQuality {
   const social = (prospect.social_media ?? "").trim();
 
   // A free-mail address is still reachable, just weaker than a business domain.
-  const emailScore = !email ? 0 : FREE_EMAIL_DOMAINS.some((d) => email.endsWith(`@${d}`)) ? 15 : 25;
+  const emailBase = !email ? 0 : FREE_EMAIL_DOMAINS.some((d) => email.endsWith(`@${d}`)) ? 15 : 25;
+
+  const provenance: ContactProvenance[] = [
+    contactProvenance(prospect, "phone", phone),
+    contactProvenance(prospect, "email", email),
+    contactProvenance(prospect, "website", domain ? (prospect.website ?? domain) : null),
+    contactProvenance(prospect, "social", social || null),
+  ];
+  const levelOf = (channel: ContactChannelKey): ProvenanceLevel =>
+    provenance.find((entry) => entry.channel === channel)?.level ?? "unknown";
+  const damp = (base: number, channel: ContactChannelKey) =>
+    base === 0 ? 0 : Math.round(base * PROVENANCE_WEIGHT[levelOf(channel)]);
 
   const factors: ContactQualityFactor[] = [
-    { key: "phone", label: "WhatsApp / telepon", score: phone ? 40 : 0, max: 40 },
-    { key: "email", label: "Email bisnis", score: emailScore, max: 25 },
-    { key: "website", label: "Website aktif", score: domain ? 15 : 0, max: 15 },
+    {
+      key: "phone",
+      label: "WhatsApp / telepon",
+      score: damp(phone ? 40 : 0, "phone"),
+      max: 40,
+      level: levelOf("phone"),
+    },
+    { key: "email", label: "Email bisnis", score: damp(emailBase, "email"), max: 25, level: levelOf("email") },
+    {
+      key: "website",
+      label: "Website aktif",
+      score: damp(domain ? 15 : 0, "website"),
+      max: 15,
+      level: levelOf("website"),
+    },
     { key: "pic", label: "Decision maker / PIC", score: pic ? 10 : 0, max: 10 },
-    { key: "social", label: "Social media resmi", score: social ? 10 : 0, max: 10 },
+    {
+      key: "social",
+      label: "Social media resmi",
+      score: damp(social ? 10 : 0, "social"),
+      max: 10,
+      level: levelOf("social"),
+    },
   ];
 
   const score = factors.reduce((sum, factor) => sum + factor.score, 0);
   const socialOnly = Boolean(social) && !phone && !email;
 
+  const withValue = provenance.filter((entry) => Boolean(entry.value));
+  const hasProvenSource = withValue.some((entry) => entry.level === "verified");
+  const fullyAttributed = withValue.length > 0 && withValue.every((entry) => entry.level !== "unknown");
+  // A contact is never "sales ready" while its origin cannot be proven.
+  const reachProven = provenance.some(
+    (entry) => (entry.channel === "phone" || entry.channel === "email") && entry.level === "verified",
+  );
+
   const status: VerificationStatus = socialOnly
     ? "need_verification"
-    : score >= 90
+    : score >= 80 && reachProven && fullyAttributed
       ? "sales_ready"
-      : score >= 75
+      : score >= 60 && hasProvenSource
         ? "qualified"
-        : score >= 50
+        : score >= 35
           ? "need_verification"
           : "not_ready";
 
-  return { score, status, factors, socialOnly };
+  return { score, status, factors, socialOnly, provenance, hasProvenSource, fullyAttributed };
 }
+
 
 export function verificationClass(status: VerificationStatus): string {
   switch (status) {
