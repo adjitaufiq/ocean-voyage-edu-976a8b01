@@ -24,7 +24,7 @@ import {
 type Client = SupabaseClient<Database>;
 
 export const PROSPECT_LIST_COLUMNS =
-  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, business_profile, industry_fit, opportunity_reason, recommended_solution, sales_approach, potential_need, business_problem, buying_signal, decision_maker, sales_priority, research_summary, last_contact_at, verified";
+  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, business_profile, industry_fit, opportunity_reason, recommended_solution, sales_approach, potential_need, business_problem, buying_signal, decision_maker, sales_priority, research_summary, last_contact_at, verified, phone_source, phone_source_url, email_source, email_source_url, website_source, website_source_url, social_source, social_source_url, google_maps_url, verified_at";
 
 export type ProspectListRow = {
   id: string;
@@ -71,6 +71,16 @@ export type ProspectListRow = {
   research_summary: string | null;
   last_contact_at: string | null;
   verified: boolean;
+  phone_source: string | null;
+  phone_source_url: string | null;
+  email_source: string | null;
+  email_source_url: string | null;
+  website_source: string | null;
+  website_source_url: string | null;
+  social_source: string | null;
+  social_source_url: string | null;
+  google_maps_url: string | null;
+  verified_at: string | null;
 };
 
 /* --------------------------------- ICP ------------------------------------ */
@@ -227,6 +237,15 @@ export type ProspectInput = {
   decisionMaker?: string | null;
   salesPriority?: string | null;
   verified?: boolean;
+  phoneSource?: string | null;
+  phoneSourceUrl?: string | null;
+  emailSource?: string | null;
+  emailSourceUrl?: string | null;
+  websiteSource?: string | null;
+  websiteSourceUrl?: string | null;
+  socialSource?: string | null;
+  socialSourceUrl?: string | null;
+  googleMapsUrl?: string | null;
 };
 
 /** Returns the existing prospect id when the identity already exists. */
@@ -311,6 +330,16 @@ export async function createProspect(
       owner_name: input.ownerName?.trim() || null,
       campaign_id: input.campaignId ?? null,
       verified: input.verified ?? false,
+      verified_at: input.verified ? new Date().toISOString() : null,
+      phone_source: input.phoneSource?.trim() || null,
+      phone_source_url: input.phoneSourceUrl?.trim() || null,
+      email_source: input.emailSource?.trim() || null,
+      email_source_url: input.emailSourceUrl?.trim() || null,
+      website_source: input.websiteSource?.trim() || null,
+      website_source_url: input.websiteSourceUrl?.trim() || null,
+      social_source: input.socialSource?.trim() || null,
+      social_source_url: input.socialSourceUrl?.trim() || null,
+      google_maps_url: input.googleMapsUrl?.trim() || null,
       created_by: actor.userId,
     })
     .select("id")
@@ -371,7 +400,25 @@ export async function updateProspect(
     update.buying_signal = patch.buyingSignal?.slice(0, 1000) || null;
   if (patch.decisionMaker !== undefined)
     update.decision_maker = patch.decisionMaker?.slice(0, 300) || null;
-  if (patch.verified !== undefined) update.verified = patch.verified;
+  if (patch.verified !== undefined) {
+    update.verified = patch.verified;
+    update.verified_at = patch.verified ? new Date().toISOString() : null;
+  }
+  if (patch.phoneSource !== undefined) update.phone_source = patch.phoneSource?.trim() || null;
+  if (patch.phoneSourceUrl !== undefined)
+    update.phone_source_url = patch.phoneSourceUrl?.trim() || null;
+  if (patch.emailSource !== undefined) update.email_source = patch.emailSource?.trim() || null;
+  if (patch.emailSourceUrl !== undefined)
+    update.email_source_url = patch.emailSourceUrl?.trim() || null;
+  if (patch.websiteSource !== undefined)
+    update.website_source = patch.websiteSource?.trim() || null;
+  if (patch.websiteSourceUrl !== undefined)
+    update.website_source_url = patch.websiteSourceUrl?.trim() || null;
+  if (patch.socialSource !== undefined) update.social_source = patch.socialSource?.trim() || null;
+  if (patch.socialSourceUrl !== undefined)
+    update.social_source_url = patch.socialSourceUrl?.trim() || null;
+  if (patch.googleMapsUrl !== undefined)
+    update.google_maps_url = patch.googleMapsUrl?.trim() || null;
   if (patch.researchSummary !== undefined)
     update.research_summary = patch.researchSummary?.slice(0, 4000) || null;
   if (patch.evidence !== undefined) update.evidence = patch.evidence;
