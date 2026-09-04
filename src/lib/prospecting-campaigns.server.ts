@@ -10,13 +10,19 @@ import { generateText } from "ai";
 
 import type { Database } from "@/integrations/supabase/types";
 import { createAiModel, isAiConfigured } from "@/lib/ai/router";
-import { PROSPECT_SOURCES, type CampaignRow } from "@/lib/admin/prospecting";
+import {
+  campaignPrimarySolution,
+  campaignSecondarySolutions,
+  campaignSolutionList,
+  PROSPECT_SOURCES,
+  type CampaignRow,
+} from "@/lib/admin/prospecting";
 import { createProspect, logProspectActivity } from "@/lib/prospecting.server";
 
 type Client = SupabaseClient<Database>;
 
 const CAMPAIGN_COLUMNS =
-  "id, name, industry, location, keywords, solution, daily_target, status, notes, last_run_at, total_discovered, created_at";
+  "id, name, industry, location, keywords, solution, solutions, custom_solutions, primary_solution, daily_target, status, notes, last_run_at, total_discovered, created_at";
 
 function toKeywords(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean);
@@ -30,7 +36,10 @@ function rowToCampaign(row: Record<string, unknown>): CampaignRow {
     industry: String(row["industry"]),
     location: String(row["location"]),
     keywords: toKeywords(row["keywords"]),
-    solution: String(row["solution"]),
+    solution: String(row["solution"] ?? ""),
+    solutions: toKeywords(row["solutions"]),
+    custom_solutions: toKeywords(row["custom_solutions"]),
+    primary_solution: (row["primary_solution"] as string | null) ?? null,
     daily_target: Number(row["daily_target"] ?? 10),
     status: String(row["status"] ?? "active"),
     notes: (row["notes"] as string | null) ?? null,
@@ -58,7 +67,10 @@ export type CampaignInput = {
   industry: string;
   location: string;
   keywords: string[];
-  solution: string;
+  solution?: string;
+  solutions?: string[];
+  customSolutions?: string[];
+  primarySolution?: string | null;
   dailyTarget: number;
   status?: string;
   notes?: string | null;
@@ -77,7 +89,28 @@ export async function saveCampaign(
       .map((item) => item.trim())
       .filter(Boolean)
       .slice(0, 20) as never,
-    solution: input.solution.trim().slice(0, 150),
+    ...(() => {
+      const presets = (input.solutions ?? [])
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 20);
+      const customs = (input.customSolutions ?? [])
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 20);
+      const fallback = (input.solution ?? "").trim();
+      const all = Array.from(new Set([...presets, ...customs, fallback].filter(Boolean)));
+      const primary =
+        (input.primarySolution ?? "").trim() && all.includes((input.primarySolution ?? "").trim())
+          ? (input.primarySolution ?? "").trim()
+          : (all[0] ?? fallback);
+      return {
+        solution: (primary || fallback).slice(0, 150),
+        solutions: presets as never,
+        custom_solutions: customs as never,
+        primary_solution: primary ? primary.slice(0, 150) : null,
+      };
+    })(),
     daily_target: Math.max(1, Math.min(50, input.dailyTarget)),
     status: input.status ?? "active",
     notes: input.notes?.slice(0, 2000) ?? null,
@@ -173,11 +206,17 @@ Parameter kampanye:
 - Industri target: ${campaign.industry}
 - Lokasi: ${campaign.location}
 - Kata kunci: ${campaign.keywords.join(", ") || "-"}
-- Solusi yang ditawarkan: ${campaign.solution}
+- Solusi utama (entry offer): ${campaignPrimarySolution(campaign) || campaign.solution}
+- Solusi tambahan (potensi upsell): ${campaignSecondarySolutions(campaign).join(", ") || "-"}
+- Seluruh solusi kampanye: ${campaignSolutionList(campaign).join(", ") || campaign.solution}
 
 Jangan ulang bisnis berikut: ${exclude.slice(0, 40).join("; ") || "-"}
 
+Kerangka kerja: DISCOVER -> IDENTIFY -> QUALIFY -> ENGAGE -> FOLLOW UP -> CONVERT.
+Solution matching: nilai profil bisnis, ukuran/skala, dan digital maturity-nya, lalu tentukan solusi mana dari daftar kampanye yang paling relevan sebagai pembuka percakapan dan mana yang jadi upsell berikutnya. Contoh pola: usaha kecil butuh solusi operasional harian lebih dulu; usaha yang sedang bertumbuh butuh akuisisi dan retensi pelanggan; usaha multi-cabang butuh visibilitas data dan sistem custom.
+
 Aturan:
+- "recommendedSolution" harus dipilih dari daftar solusi kampanye di atas dan disesuaikan dengan kondisi bisnis; sebut juga solusi upsell lanjutan bila relevan.
 - Utamakan bisnis yang punya jejak kontak publik (website, telepon, WhatsApp, email, atau Instagram bisnis).
 - Isi hanya data yang kamu yakini; kalau tidak tahu, kosongkan field-nya (jangan mengarang nomor, email, atau nama orang).
 - Prioritas kanal kontak: (1) WhatsApp bisnis / telepon kantor, (2) email perusahaan atau LinkedIn decision maker, (3) form website atau social media resmi.
@@ -313,7 +352,10 @@ export async function discoverProspects(
             buyingSignal: candidate.buyingSignal ?? null,
             decisionMaker: candidate.decisionMaker ?? candidate.contactPerson ?? null,
             opportunityReason: candidate.opportunityReason ?? candidate.potentialNeed ?? null,
-            recommendedSolution: candidate.recommendedSolution ?? campaign.solution,
+            recommendedSolution:
+              candidate.recommendedSolution ??
+              campaignPrimarySolution(campaign) ??
+              campaign.solution,
             salesApproach: candidate.salesApproach ?? null,
             salesPriority: candidate.priority ?? null,
           painSignals: (candidate.painSignals ?? []).filter(Boolean).slice(0, 8),
