@@ -126,7 +126,9 @@ type CampaignDraft = {
   industry: string;
   location: string;
   keywords: string;
-  solution: string;
+  solutions: string[];
+  customSolutions: string[];
+  primarySolution: string;
   dailyTarget: string;
   notes: string;
 };
@@ -152,7 +154,9 @@ const emptyCampaign: CampaignDraft = {
   industry: CAMPAIGN_INDUSTRIES[0],
   location: "Jakarta",
   keywords: "",
-  solution: CAMPAIGN_SOLUTIONS[0],
+  solutions: [CAMPAIGN_SOLUTIONS[0]],
+  customSolutions: [],
+  primarySolution: CAMPAIGN_SOLUTIONS[0],
   dailyTarget: "10",
   notes: "",
 };
@@ -330,7 +334,9 @@ function ProspectsPage() {
             .split(",")
             .map((item) => item.trim())
             .filter(Boolean),
-          solution: campaignDraft.solution,
+          solutions: campaignDraft.solutions,
+          customSolutions: campaignDraft.customSolutions,
+          primarySolution: campaignDraft.primarySolution || campaignDraft.solutions[0] || null,
           dailyTarget: Number(campaignDraft.dailyTarget) || 10,
           notes: campaignDraft.notes.trim() || null,
         },
@@ -458,18 +464,9 @@ function ProspectsPage() {
                 placeholder="Jakarta, Bandung, Indonesia"
               />
             </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-xs text-muted-foreground">Solusi ditawarkan</span>
-              <select
-                className={inputClass}
-                value={campaignDraft.solution}
-                onChange={(e) => setCampaignDraft({ ...campaignDraft, solution: e.target.value })}
-              >
-                {CAMPAIGN_SOLUTIONS.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
+            <div className="space-y-1 text-sm lg:col-span-3">
+              <SolutionPicker draft={campaignDraft} onChange={setCampaignDraft} />
+            </div>
             <label className="space-y-1 text-sm lg:col-span-2">
               <span className="text-xs text-muted-foreground">
                 Kata kunci, pisahkan dengan koma
@@ -493,7 +490,11 @@ function ProspectsPage() {
           <div className="mt-4 flex gap-2">
             <button
               type="button"
-              disabled={campaignDraft.name.trim().length < 2 || saveCampaignMutation.isPending}
+              disabled={
+                campaignDraft.name.trim().length < 2 ||
+                campaignDraft.solutions.length + campaignDraft.customSolutions.length === 0 ||
+                saveCampaignMutation.isPending
+              }
               onClick={() => saveCampaignMutation.mutate()}
               className="rounded-xl bg-primary/20 px-4 py-2 text-sm font-medium text-primary disabled:opacity-50"
             >
@@ -867,6 +868,156 @@ function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
         {row.fit_score} · {FIT_TIER_LABELS[row.fit_tier as FitTier] ?? row.fit_tier}
       </span>
     </button>
+  );
+}
+
+function SolutionPicker({
+  draft,
+  onChange,
+}: {
+  draft: CampaignDraft;
+  onChange: (draft: CampaignDraft) => void;
+}) {
+  const [customInput, setCustomInput] = useState("");
+  const all = [...draft.solutions, ...draft.customSolutions];
+  const primary = all.includes(draft.primarySolution) ? draft.primarySolution : (all[0] ?? "");
+  const secondary = all.filter((item) => item !== primary);
+
+  const toggle = (item: string) => {
+    const next = draft.solutions.includes(item)
+      ? draft.solutions.filter((value) => value !== item)
+      : [...draft.solutions, item];
+    const remaining = [...next, ...draft.customSolutions];
+    onChange({
+      ...draft,
+      solutions: next,
+      primarySolution: remaining.includes(primary) ? primary : (remaining[0] ?? ""),
+    });
+  };
+
+  const addCustom = () => {
+    const value = customInput.trim();
+    if (!value || [...draft.solutions, ...draft.customSolutions].includes(value)) return;
+    const customs = [...draft.customSolutions, value];
+    onChange({
+      ...draft,
+      customSolutions: customs,
+      primarySolution: primary || value,
+    });
+    setCustomInput("");
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl border border-border/60 bg-background/30 p-3">
+      <div>
+        <span className="text-xs text-muted-foreground">Solusi ditawarkan (bisa lebih dari satu)</span>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {CAMPAIGN_SOLUTIONS.map((item) => {
+            const active = draft.solutions.includes(item);
+            return (
+              <button
+                key={item}
+                type="button"
+                onClick={() => toggle(item)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs transition",
+                  active
+                    ? "border-primary/50 bg-primary/20 text-primary"
+                    : "border-border/60 text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {active ? "✓ " : "+ "}
+                {item}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <span className="text-xs text-muted-foreground">+ Tambahkan solusi custom</span>
+        <div className="flex gap-2">
+          <input
+            className={inputClass}
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addCustom();
+              }
+            }}
+            placeholder="Contoh: Integrasi WhatsApp Bot"
+          />
+          <button
+            type="button"
+            onClick={addCustom}
+            className="shrink-0 rounded-xl bg-primary/20 px-3 py-2 text-xs font-medium text-primary"
+          >
+            Tambah
+          </button>
+        </div>
+        {draft.customSolutions.length ? (
+          <div className="flex flex-wrap gap-2">
+            {draft.customSolutions.map((item) => (
+              <span
+                key={item}
+                className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary"
+              >
+                {item}
+                <button
+                  type="button"
+                  aria-label={`Hapus ${item}`}
+                  onClick={() => {
+                    const customs = draft.customSolutions.filter((value) => value !== item);
+                    const remaining = [...draft.solutions, ...customs];
+                    onChange({
+                      ...draft,
+                      customSolutions: customs,
+                      primarySolution: remaining.includes(primary) ? primary : (remaining[0] ?? ""),
+                    });
+                  }}
+                  className="text-primary/70 hover:text-primary"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {all.length ? (
+        <div className="space-y-2 rounded-lg border border-border/50 bg-background/40 p-3 text-xs">
+          <label className="block space-y-1">
+            <span className="text-muted-foreground">Primary solution (entry offer)</span>
+            <select
+              className={inputClass}
+              value={primary}
+              onChange={(e) => onChange({ ...draft, primarySolution: e.target.value })}
+            >
+              {all.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <p className="text-muted-foreground">
+            <span className="text-foreground">Secondary (upsell):</span>{" "}
+            {secondary.join(", ") || "—"}
+          </p>
+          <p className="text-muted-foreground">
+            <span className="text-foreground">Solusi preset:</span>{" "}
+            {draft.solutions.join(", ") || "—"}
+          </p>
+          <p className="text-muted-foreground">
+            <span className="text-foreground">Solusi custom:</span>{" "}
+            {draft.customSolutions.join(", ") || "—"}
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">Pilih minimal satu solusi.</p>
+      )}
+    </div>
   );
 }
 
