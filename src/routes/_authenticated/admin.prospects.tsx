@@ -72,6 +72,7 @@ import {
   setFollowUpFn,
   setPipelineStageFn,
   updateProspectFn,
+  reverifyProspectsFn,
 } from "@/lib/prospecting.functions";
 import { cn } from "@/lib/utils";
 
@@ -197,6 +198,8 @@ function ProspectsPage() {
   const followUpFn = useServerFn(setFollowUpFn);
   const noteFn = useServerFn(addNoteFn);
   const updateFn = useServerFn(updateProspectFn);
+  const reverifyFn = useServerFn(reverifyProspectsFn);
+  const [reverifying, setReverifying] = useState(false);
 
   const [tab, setTab] = useState<"queue" | "campaigns" | "prospects">("queue");
   const [status, setStatus] = useState("all");
@@ -248,6 +251,21 @@ function ProspectsPage() {
       .catch((error: unknown) => {
         toast.error(error instanceof Error ? error.message : "Gagal memproses aksi.");
       });
+
+  const runReverify = (payload: { id?: string; scope: "one" | "all" }) => {
+    setReverifying(true);
+    reverifyFn({ data: payload })
+      .then((result) => {
+        toast.success(
+          `Reverifikasi selesai: ${result.scanned} dipindai, ${result.updated} diperbarui, ${result.salesReady} sales ready.`,
+        );
+        invalidate();
+      })
+      .catch((error: unknown) => {
+        toast.error(error instanceof Error ? error.message : "Gagal memproses reverifikasi.");
+      })
+      .finally(() => setReverifying(false));
+  };
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -368,6 +386,15 @@ function ProspectsPage() {
             manual.
           </p>
         </div>
+        <button
+          type="button"
+          disabled={reverifying}
+          onClick={() => runReverify({ scope: "all" })}
+          className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50 disabled:opacity-60"
+        >
+          <RefreshCcw className={`h-4 w-4 ${reverifying ? "animate-spin" : ""}`} /> Refresh data
+          verification
+        </button>
         <button
           type="button"
           onClick={() => setShowCampaignForm((value) => !value)}
@@ -744,6 +771,8 @@ function ProspectsPage() {
           onRescore={() =>
             selected && void run(rescoreFn({ data: { id: selected.id } }), "Skor diperbarui.")
           }
+          onReverify={() => selected && runReverify({ id: selected.id, scope: "one" })}
+          reverifying={reverifying}
           onSaveDraft={(approve) =>
             selected &&
             void run(
@@ -1327,6 +1356,8 @@ function ProspectDetail({
   onGenerateMessage,
   onIntelligence,
   onRescore,
+  onReverify,
+  reverifying,
   onSaveDraft,
   onOutreach,
   onDnc,
@@ -1361,6 +1392,8 @@ function ProspectDetail({
   onGenerateMessage: () => void;
   onIntelligence: () => void;
   onRescore: () => void;
+  onReverify: () => void;
+  reverifying: boolean;
   onSaveDraft: (approve: boolean) => void;
   onOutreach: (event: "sent" | "reply") => void;
   onDnc: () => void;
@@ -1537,6 +1570,15 @@ function ProspectDetail({
                 className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-1.5 text-xs"
               >
                 <RefreshCcw className="h-3.5 w-3.5" /> Hitung ulang
+              </button>
+              <button
+                type="button"
+                onClick={onReverify}
+                disabled={reverifying}
+                className="ml-2 mt-3 inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-60"
+              >
+                <RefreshCcw className={`h-3.5 w-3.5 ${reverifying ? "animate-spin" : ""}`} /> Refresh
+                data verification
               </button>
             </SectionCard>
             <SectionCard
