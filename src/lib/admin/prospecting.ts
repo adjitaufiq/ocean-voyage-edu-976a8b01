@@ -705,13 +705,17 @@ export function contactProvenance(
   // Evidence URL: explicit per-channel URL, else Google Maps link for Maps/GBP,
   // else the website itself for website-sourced data, else the row source detail.
   const mapsUrl = isHttpUrl(prospect.google_maps_url) ? (prospect.google_maps_url ?? null) : null;
+  const ownUrl = isHttpUrl(own.url) ? (own.url as string) : null;
+  const websiteUrl =
+    sourceType === "official_website" && isHttpUrl(prospect.website)
+      ? (prospect.website as string)
+      : null;
+  const detailUrl = isHttpUrl(prospect.source_detail) ? (prospect.source_detail as string) : null;
   const evidence =
-    (isHttpUrl(own.url) ? (own.url ?? null) : null) ??
+    ownUrl ??
     (sourceType === "google_business" || sourceType === "google_maps" ? mapsUrl : null) ??
-    (sourceType === "official_website" && isHttpUrl(prospect.website)
-      ? (prospect.website ?? null)
-      : null) ??
-    (isHttpUrl(prospect.source_detail) ? (prospect.source_detail ?? null) : null);
+    websiteUrl ??
+    detailUrl;
 
   let level: ProvenanceLevel = "unknown";
   if (value) {
