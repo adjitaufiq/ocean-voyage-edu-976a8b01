@@ -141,6 +141,15 @@ function MemoryPage() {
                       >
                         {MEMORY_CATEGORY_LABELS[memory.category]}
                       </span>
+                      <span
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 text-[0.6rem] uppercase tracking-[0.16em]",
+                          memoryProvenanceClass(memory.provenance),
+                        )}
+                        title="Asal data memory ini"
+                      >
+                        {MEMORY_PROVENANCE_LABELS[memory.provenance]}
+                      </span>
                       <h2 className="truncate text-sm font-semibold">{memory.title}</h2>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">

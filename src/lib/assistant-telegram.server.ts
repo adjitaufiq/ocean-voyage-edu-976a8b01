@@ -10,7 +10,7 @@ import { createHash, timingSafeEqual } from "crypto";
 import { generateText } from "ai";
 
 import { createAiModel, isAiConfigured } from "@/lib/ai-gateway.server";
-import { isMemoryCategory } from "@/lib/assistant/memory";
+import { clampAiProvenance, isMemoryCategory } from "@/lib/assistant/memory";
 import {
   appendMessage,
   buildBusinessSnapshot,
@@ -298,7 +298,7 @@ export async function handleTelegramUpdate(update: unknown): Promise<void> {
         supabase: supabaseAdmin,
         userId,
         role: "owner",
-        threadId,
+        threadId: thread.id,
         origin: "telegram",
       }),
       stopWhen: stepCountIs(50),
