@@ -21,12 +21,73 @@ export function isMemoryCategory(value: unknown): value is MemoryCategory {
   return typeof value === "string" && (MEMORY_CATEGORIES as readonly string[]).includes(value);
 }
 
+/* ------------------------------ Provenance ------------------------------- */
+
+/**
+ * Where a memory came from. Trust is ordered: system/database truth outranks
+ * user-confirmed facts, which outrank AI recommendations and hypotheses.
+ */
+export const MEMORY_PROVENANCES = [
+  "database_fact",
+  "user_confirmed_fact",
+  "user_preference",
+  "assistant_recommendation",
+  "hypothesis",
+] as const;
+export type MemoryProvenance = (typeof MEMORY_PROVENANCES)[number];
+
+/** Provenances an AI extraction pipeline may ever assign. Facts require a trusted source. */
+export const AI_ASSIGNABLE_PROVENANCES = [
+  "user_confirmed_fact",
+  "user_preference",
+  "assistant_recommendation",
+  "hypothesis",
+] as const;
+
+export const MEMORY_PROVENANCE_LABELS: Record<MemoryProvenance, string> = {
+  database_fact: "Fakta sistem",
+  user_confirmed_fact: "Dikonfirmasi owner",
+  user_preference: "Preferensi owner",
+  assistant_recommendation: "Rekomendasi AI",
+  hypothesis: "Dugaan AI",
+};
+
+export const MEMORY_TRUST_RANK: Record<MemoryProvenance, number> = {
+  database_fact: 5,
+  user_confirmed_fact: 4,
+  user_preference: 3,
+  assistant_recommendation: 2,
+  hypothesis: 1,
+};
+
+export function isMemoryProvenance(value: unknown): value is MemoryProvenance {
+  return typeof value === "string" && (MEMORY_PROVENANCES as readonly string[]).includes(value);
+}
+
+/** Never lets AI output claim database-level truth; unknown values fall back to hypothesis. */
+export function clampAiProvenance(value: unknown): MemoryProvenance {
+  return (AI_ASSIGNABLE_PROVENANCES as readonly string[]).includes(String(value))
+    ? (value as MemoryProvenance)
+    : "hypothesis";
+}
+
+export function isTrustedFact(provenance: MemoryProvenance): boolean {
+  return MEMORY_TRUST_RANK[provenance] >= 3;
+}
+
+export function memoryProvenanceClass(provenance: MemoryProvenance): string {
+  return isTrustedFact(provenance)
+    ? "border-primary/40 bg-primary/10 text-primary"
+    : "border-border/60 bg-muted/40 text-muted-foreground";
+}
+
 export type AssistantMemory = {
   id: string;
   category: MemoryCategory;
   title: string;
   content: string;
   importance: number;
+  provenance: MemoryProvenance;
   source_thread_id: string | null;
   created_at: string;
   updated_at: string;

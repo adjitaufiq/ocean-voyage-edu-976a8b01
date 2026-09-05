@@ -1,18 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Simple cooldown so this public test endpoint cannot be used to spam the chat.
-let lastCall = 0;
-const COOLDOWN_MS = 30_000;
-
+/**
+ * Telegram connectivity diagnostic. Operational-only: it can trigger an outbound
+ * Telegram message, so it requires the dedicated server-only CRON_SECRET. Ordinary
+ * public visitors can never reach the send path.
+ */
 export const Route = createFileRoute("/api/public/telegram/test")({
   server: {
     handlers: {
-      GET: async () => {
-        const now = Date.now();
-        if (now - lastCall < COOLDOWN_MS) {
-          return Response.json({ ok: false, error: "cooldown" }, { status: 429 });
+      GET: async ({ request }) => {
+        const { verifyOpsRequest } = await import("@/lib/security/ops-auth.server");
+        const auth = verifyOpsRequest(request);
+        if (!auth.ok) return auth.response;
+
+        const { rateLimit } = await import("@/lib/rate-limit.server");
+        const limited = rateLimit({ key: "telegram-test", limit: 3, windowMs: 60_000 });
+        if (!limited.ok) {
+          return Response.json(
+            { ok: false, error: "Permintaan terlalu sering. Coba lagi sebentar." },
+            { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } },
+          );
         }
-        lastCall = now;
 
         const { sendTelegramMessage, TEST_MESSAGE } = await import("@/lib/telegram.server");
         const result = await sendTelegramMessage(TEST_MESSAGE);
@@ -22,10 +30,9 @@ export const Route = createFileRoute("/api/public/telegram/test")({
         return Response.json(
           {
             ok: false,
-            error: result.error,
-            instructions: "Please confirm you have started @cs_kerjaku_bot in Telegram and that TELEGRAM_CHAT_ID is correct. The bot cannot send messages to a chat until the conversation has been initiated.",
+            error: "Telegram tidak dapat dihubungi. Pastikan bot sudah dimulai dan chat ID benar.",
           },
-          { status: 502 }
+          { status: 502 },
         );
       },
     },

@@ -22,6 +22,10 @@ import {
 
 type Body = { messages?: unknown; sessionId?: unknown; attribution?: unknown };
 
+/** Abuse guards for this public AI surface. Sized for a real consultation, not a bot. */
+const MAX_BODY_BYTES = 128_000;
+const MAX_MESSAGES = 40;
+
 const SYSTEM = `Kamu adalah "Team KERJAKU Consultant" — konsultan digital yang ramah, tajam, dan berpengalaman.
 KERJAKU adalah digital solution & business automation agency (Indonesia): website profesional,
 custom business system (CRM/ERP ringan/database), dashboard & BI, workflow automation
@@ -463,15 +467,66 @@ export const Route = createFileRoute("/api/public/consultant-chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const body = (await request.json()) as Body;
+        const { clientIp, rateLimit } = await import("@/lib/rate-limit.server");
+
+        const tooMany = (retryAfterSeconds: number) =>
+          new Response("AI Consultant sedang sibuk. Silakan coba kembali sebentar lagi.", {
+            status: 429,
+            headers: { "Retry-After": String(retryAfterSeconds) },
+          });
+
+        // 1. Payload size guard — reject oversized bodies before parsing.
+        const declared = Number(request.headers.get("content-length") ?? "0");
+        if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+          return new Response("Pesan terlalu besar.", { status: 413 });
+        }
+        const raw = await request.text();
+        if (raw.length > MAX_BODY_BYTES) return new Response("Pesan terlalu besar.", { status: 413 });
+
+        // 2. Malformed payload rejection — never throws, never creates state.
+        let body: Body;
+        try {
+          body = JSON.parse(raw) as Body;
+        } catch {
+          return new Response("Permintaan tidak valid.", { status: 400 });
+        }
+
         const messages = Array.isArray(body.messages) ? (body.messages as UIMessage[]) : null;
         const sessionId = typeof body.sessionId === "string" ? body.sessionId.slice(0, 64) : "";
         // Attribution is optional and untrusted: validate, never fail the chat on it.
         const attribution = attributionSchema.safeParse(body.attribution);
-        if (!messages) return new Response("Bad request", { status: 400 });
-        if (messages.length > 60) return new Response("Conversation too long", { status: 400 });
+        if (!messages || messages.length === 0) {
+          return new Response("Permintaan tidak valid.", { status: 400 });
+        }
+        if (messages.length > MAX_MESSAGES) {
+          return new Response(
+            "Percakapan sudah panjang. Tim KERJAKU akan lanjut lewat WhatsApp ya kak.",
+            { status: 400 },
+          );
+        }
+        if (!messages.every((m) => m && typeof m === "object" && Array.isArray(m.parts))) {
+          return new Response("Permintaan tidak valid.", { status: 400 });
+        }
 
-        if (!isAiConfigured()) return new Response("AI not configured", { status: 500 });
+        // 3. Abuse protection — generous enough for a real, long consultation.
+        const ip = clientIp(request);
+        const perIp = rateLimit({ key: `consultant:ip:${ip}`, limit: 45, windowMs: 5 * 60_000 });
+        if (!perIp.ok) return tooMany(perIp.retryAfterSeconds);
+        if (sessionId) {
+          const perSession = rateLimit({
+            key: `consultant:session:${sessionId}`,
+            limit: 30,
+            windowMs: 5 * 60_000,
+          });
+          if (!perSession.ok) return tooMany(perSession.retryAfterSeconds);
+        }
+
+        if (!isAiConfigured()) {
+          return new Response("AI Consultant sedang tidak tersedia. Silakan coba kembali.", {
+            status: 503,
+          });
+        }
+
 
         // Captured when the model qualifies the lead, so we can always show the brief in chat.
         let qualified: z.infer<typeof qualifySchema> | null = null;
@@ -486,7 +541,7 @@ KONTEKS WAKTU SISTEM (WIB): ${new Intl.DateTimeFormat("id-ID", {
             timeZone: "Asia/Jakarta",
           }).format(new Date())}`,
           messages: await convertToModelMessages(messages),
-          stopWhen: stepCountIs(50),
+          stopWhen: stepCountIs(8),
           tools: {
             qualify_conversation: tool({
               description:

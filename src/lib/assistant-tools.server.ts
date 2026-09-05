@@ -1,9 +1,10 @@
 /**
  * Action tools for the Business Operating Assistant — server-only.
  *
- * Same AI core, same Business OS, same permissions: every tool runs through the
- * caller's Supabase client (RLS applies) and refuses to write unless the model
- * passes `confirmed: true`, which it may only do after the user says yes.
+ * Same AI core, same Business OS, same permissions. Sensitive writes are never
+ * executed by the model: a write tool only PROPOSES an action, the server
+ * persists it as a single-use pending action, and it executes only after the
+ * authorized user explicitly confirms that exact action in the app.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { tool } from "ai";
@@ -11,23 +12,14 @@ import { z } from "zod";
 
 import type { Database } from "@/integrations/supabase/types";
 import { canWorkLeads, type WorkspaceRole } from "@/lib/admin/roles";
+import { createPendingAction, type AssistantActionType } from "@/lib/assistant-actions.server";
 
 type Client = SupabaseClient<Database>;
 
-const NEEDS_CONFIRM = {
-  status: "needs_confirmation" as const,
-  message:
-    "Belum dieksekusi. Tampilkan ringkasan aksi ini ke user dan minta konfirmasi eksplisit dulu, lalu panggil ulang tool dengan confirmed: true.",
-};
-
 const FORBIDDEN = {
   status: "forbidden" as const,
-  message: "Role kamu tidak punya izin untuk mengubah data ini.",
+  message: "Anda tidak memiliki izin untuk tindakan ini.",
 };
-
-function isoInDays(days: number): string {
-  return new Date(Date.now() + days * 86_400_000).toISOString();
-}
 
 async function findLeadRow(supabase: Client, query: string) {
   const term = query.replace(/[%,()]/g, " ").trim();
@@ -45,9 +37,38 @@ export function buildAssistantTools(options: {
   userId: string;
   role: WorkspaceRole | null;
   userEmail?: string | null;
+  threadId?: string | null;
+  origin?: "web" | "telegram";
 }) {
-  const { supabase, userId, role, userEmail } = options;
+  const { supabase, userId, role, threadId, origin } = options;
   const mayWrite = canWorkLeads(role);
+
+  async function propose(
+    actionType: AssistantActionType,
+    summary: string,
+    payload: Record<string, unknown>,
+  ) {
+    if (!mayWrite) return FORBIDDEN;
+    const created = await createPendingAction(supabase, {
+      actionType,
+      summary,
+      payload,
+      userId,
+      threadId: threadId ?? null,
+      origin: origin ?? "web",
+    });
+    if ("error" in created) return { status: "error" as const, message: created.error };
+    return {
+      status: "awaiting_confirmation" as const,
+      actionId: created.id,
+      summary,
+      expiresAt: created.expiresAt,
+      message:
+        origin === "telegram"
+          ? "Aksi ini menunggu konfirmasi. Buka /admin/assistant di dashboard dan tekan Konfirmasi untuk menjalankannya."
+          : "Aksi ini belum dijalankan. Tampilkan ringkasannya, lalu minta user menekan tombol Konfirmasi pada kartu aksi.",
+    };
+  }
 
   return {
     acquisition_report: tool({
@@ -110,7 +131,7 @@ export function buildAssistantTools(options: {
 
     create_followup_task: tool({
       description:
-        "Buat task follow-up / reminder internal di Business OS (muncul di automation tasks). Gunakan untuk 'buatkan task follow up' atau 'ingatkan saya'.",
+        "USULKAN pembuatan task follow-up / reminder internal di Business OS. Tool ini TIDAK mengeksekusi apa pun: server hanya menyiapkan usulan yang harus dikonfirmasi user lewat tombol konfirmasi.",
       inputSchema: z.object({
         title: z.string(),
         detail: z.string().optional(),
@@ -121,30 +142,14 @@ export function buildAssistantTools(options: {
         kind: z
           .enum(["follow_up", "reminder", "payment_reminder", "proposal_follow_up"])
           .optional(),
-        confirmed: z.boolean().describe("true hanya setelah user menyetujui aksi ini"),
       }),
-      execute: async (input) => {
-        if (!mayWrite) return FORBIDDEN;
-        if (!input.confirmed) return { ...NEEDS_CONFIRM, preview: input };
-        const { error } = await supabase.from("automation_tasks").insert({
-          rule_key: "assistant_manual",
-          kind: input.kind ?? "follow_up",
-          title: input.title.slice(0, 200),
-          detail: input.detail?.slice(0, 2000) ?? null,
-          status: "pending",
-          priority: input.priority ?? "normal",
-          due_at: isoInDays(Math.max(0, input.dueInDays)),
-          assignee: input.assignee ?? null,
-          lead_id: input.leadId ?? null,
-          meta: { source: "assistant", created_by: userId } as never,
-        });
-        if (error) return { status: "error" as const, message: error.message };
-        return { status: "done" as const, message: "Task tersimpan di Business OS." };
-      },
+      execute: async (input) =>
+        propose("create_followup_task", `Buat task follow-up "${input.title}"`, input),
     }),
 
     create_project_task: tool({
-      description: "Buat task operasional pada sebuah project (kanban project delivery).",
+      description:
+        "USULKAN pembuatan task operasional pada sebuah project (kanban project delivery). Tidak dieksekusi sampai user menekan tombol konfirmasi.",
       inputSchema: z.object({
         projectId: z.string(),
         title: z.string(),
@@ -152,56 +157,28 @@ export function buildAssistantTools(options: {
         assignee: z.string().optional(),
         priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
         dueDate: z.string().optional().describe("Format YYYY-MM-DD"),
-        confirmed: z.boolean(),
       }),
-      execute: async (input) => {
-        if (!mayWrite) return FORBIDDEN;
-        if (!input.confirmed) return { ...NEEDS_CONFIRM, preview: input };
-        const { error } = await supabase.from("project_tasks").insert({
-          project_id: input.projectId,
-          title: input.title.slice(0, 200),
-          description: input.description ?? null,
-          assignee: input.assignee ?? null,
-          priority: input.priority ?? "normal",
-          status: "todo",
-          due_date: input.dueDate ?? null,
-          created_by: userId,
-        });
-        if (error) return { status: "error" as const, message: error.message };
-        return { status: "done" as const, message: "Task project dibuat." };
-      },
+      execute: async (input) =>
+        propose("create_project_task", `Buat task project "${input.title}"`, input),
     }),
 
     update_lead_status: tool({
       description:
-        "Ubah status lead di CRM (misal ke contacted, qualified, nurturing, closed). Selalu konfirmasi dulu.",
+        "USULKAN perubahan status lead di CRM. Tidak dieksekusi sampai user menekan tombol konfirmasi.",
       inputSchema: z.object({
         leadId: z.string(),
         status: z
           .string()
           .describe("Status baru, mis. new, contacted, qualified, nurturing, closed"),
         note: z.string().optional(),
-        confirmed: z.boolean(),
       }),
-      execute: async (input) => {
-        if (!mayWrite) return FORBIDDEN;
-        if (!input.confirmed) return { ...NEEDS_CONFIRM, preview: input };
-        const { error } = await supabase
-          .from("consultations")
-          .update({
-            status: input.status,
-            status_updated_at: new Date().toISOString(),
-            ...(input.note ? { admin_notes: input.note } : {}),
-          })
-          .eq("id", input.leadId);
-        if (error) return { status: "error" as const, message: error.message };
-        return { status: "done" as const, message: `Status lead diubah ke ${input.status}.` };
-      },
+      execute: async (input) =>
+        propose("update_lead_status", `Ubah status lead menjadi "${input.status}"`, input),
     }),
 
     save_sales_activity: tool({
       description:
-        "Simpan catatan sales / draft pesan WhatsApp atau email / rekomendasi perbaikan proposal ke riwayat AI lead, supaya bisa dipakai tim. Gunakan setelah user setuju.",
+        "USULKAN penyimpanan catatan sales / draft pesan WhatsApp atau email / rekomendasi proposal ke riwayat AI lead. Tidak dieksekusi sampai user menekan tombol konfirmasi.",
       inputSchema: z.object({
         leadId: z.string(),
         action: z
@@ -209,23 +186,9 @@ export function buildAssistantTools(options: {
           .describe("Jenis aktivitas yang disimpan"),
         label: z.string().optional(),
         content: z.string().describe("Isi catatan atau draft pesan lengkap"),
-        confirmed: z.boolean(),
       }),
-      execute: async (input) => {
-        if (!mayWrite) return FORBIDDEN;
-        if (!input.confirmed) return { ...NEEDS_CONFIRM, preview: input };
-        const { error } = await supabase.from("lead_ai_activities").insert({
-          lead_id: input.leadId,
-          action: input.action,
-          label: input.label ?? null,
-          content: input.content.slice(0, 8000),
-          meta: { source: "assistant" } as never,
-          created_by: userId,
-          created_by_email: userEmail ?? null,
-        });
-        if (error) return { status: "error" as const, message: error.message };
-        return { status: "done" as const, message: "Tersimpan di riwayat sales lead." };
-      },
+      execute: async (input) =>
+        propose("save_sales_activity", `Simpan aktivitas sales (${input.action}) ke lead`, input),
     }),
   };
 }
@@ -233,10 +196,10 @@ export function buildAssistantTools(options: {
 export const ASSISTANT_ACTION_GUIDE = [
   "MODE AKSI (kamu eksekutor, bukan cuma penasihat):",
   "- Kurangi beban keputusan owner. Hal yang tidak mengubah data (draft WhatsApp/email, catatan meeting, urutan langkah) langsung KERJAKAN dan tampilkan hasilnya — jangan bertanya 'mau saya buatkan draft?'.",
-  "- Aksi yang mengubah data (buat task, reminder, update status, simpan aktivitas): tulis ringkasan aksi + minta konfirmasi eksplisit sekali, lalu panggil tool dengan confirmed: true. Jangan pernah confirmed: true sebelum user menyetujui di pesan sebelumnya.",
-  "- Tawarkan hanya SATU next action yang paling relevan per jawaban. Dilarang menutup setiap jawaban dengan pertanyaan tawaran yang sama berulang-ulang.",
+  "- Aksi yang mengubah data (buat task, reminder, update status, simpan aktivitas) TIDAK bisa kamu eksekusi sendiri. Panggil tool-nya untuk mengusulkan aksi, lalu tampilkan ringkasan aksi dan minta user menekan tombol Konfirmasi pada kartu aksi.",
+  "- Jangan pernah mengklaim aksi sudah dijalankan sebelum server mengonfirmasinya. Status 'awaiting_confirmation' berarti BELUM dijalankan.",
   "- Butuh lead_id? panggil find_lead dulu; jangan menebak id.",
-  "- Setelah tool berhasil, konfirmasi singkat apa yang sudah dibuat lalu langsung sebut langkah berikutnya.",
   "- Jika tool menolak karena izin, jelaskan dengan sopan bahwa role user tidak punya akses tulis.",
+  "- Tawarkan hanya SATU next action yang paling relevan per jawaban.",
   "- Jika tidak ada aksi yang perlu, tutup dengan rekomendasi strategis — bukan pertanyaan.",
 ].join("\n");

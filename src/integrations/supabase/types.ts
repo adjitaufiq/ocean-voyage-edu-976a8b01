@@ -2374,6 +2374,8 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      run_ops_hook: { Args: { _path: string }; Returns: number }
+      set_ops_cron_secret: { Args: { _value: string }; Returns: undefined }
       team_member_name: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
