@@ -39,7 +39,7 @@ export type AuditRow = {
   city: string | null;
   industry: string | null;
   website: string | null;
-  claims: Record<string, unknown>;
+  claims: Record<string, string | null>;
   checks: ValidationCheck[];
   qualityGate: QualityGateResult | null;
 };
@@ -80,7 +80,12 @@ function mapAudit(row: Record<string, unknown>): AuditRow {
     city: (claims["city"] as string | null) ?? null,
     industry: (claims["industry"] as string | null) ?? null,
     website: (claims["website"] as string | null) ?? null,
-    claims,
+    claims: Object.fromEntries(
+      Object.entries(claims).map(([key, value]) => [
+        key,
+        value === null || value === undefined || value === "" ? null : String(value),
+      ]),
+    ),
     checks: parseValidationChecks(findings["checks"]),
     qualityGate: parseQualityGate(findings["quality_gate"]),
   };
