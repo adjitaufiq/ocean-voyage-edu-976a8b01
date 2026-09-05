@@ -10,7 +10,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import { canManage, canWorkLeads, type WorkspaceRole } from "@/lib/admin/roles";
+import { canManageBusiness, canWorkLeads, type WorkspaceRole } from "@/lib/admin/roles";
 
 type Client = SupabaseClient<Database>;
 
@@ -232,7 +232,7 @@ export async function confirmPendingAction(
     await supabase.from("assistant_pending_actions").update({ status: "cancelled" }).eq("id", row.id);
     return { ok: false, message: "Detail aksi berubah. Silakan ulangi tindakan." };
   }
-  if (row.action_type === "update_lead_status" && !canManage(input.role) && !canWorkLeads(input.role)) {
+  if (row.action_type === "update_lead_status" && !canManageBusiness(input.role) && !canWorkLeads(input.role)) {
     return { ok: false, message: "Anda tidak memiliki izin untuk tindakan ini." };
   }
 
