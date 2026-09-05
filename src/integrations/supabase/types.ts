@@ -198,6 +198,7 @@ export type Database = {
           created_by: string | null
           id: string
           importance: number
+          provenance: string
           source_thread_id: string | null
           title: string
           updated_at: string
@@ -209,6 +210,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           importance?: number
+          provenance?: string
           source_thread_id?: string | null
           title: string
           updated_at?: string
@@ -220,6 +222,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           importance?: number
+          provenance?: string
           source_thread_id?: string | null
           title?: string
           updated_at?: string
@@ -310,6 +313,63 @@ export type Database = {
           source?: string
           status?: string
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      assistant_pending_actions: {
+        Row: {
+          action_type: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          executed_at: string | null
+          expires_at: string
+          id: string
+          origin: string
+          payload: Json
+          payload_hash: string
+          requested_by: string
+          result: string | null
+          status: string
+          summary: string
+          thread_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          executed_at?: string | null
+          expires_at?: string
+          id?: string
+          origin?: string
+          payload?: Json
+          payload_hash: string
+          requested_by: string
+          result?: string | null
+          status?: string
+          summary: string
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          executed_at?: string | null
+          expires_at?: string
+          id?: string
+          origin?: string
+          payload?: Json
+          payload_hash?: string
+          requested_by?: string
+          result?: string | null
+          status?: string
+          summary?: string
+          thread_id?: string | null
           updated_at?: string
         }
         Relationships: []
