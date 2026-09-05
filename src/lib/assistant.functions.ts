@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { MEMORY_CATEGORIES } from "@/lib/assistant/memory";
+import { MEMORY_CATEGORIES, MEMORY_PROVENANCES } from "@/lib/assistant/memory";
 
 const idInput = z.object({ id: z.string().uuid() });
 
@@ -90,6 +90,7 @@ export const saveAssistantMemory = createServerFn({ method: "POST" })
         title: z.string().min(2).max(200),
         content: z.string().min(2).max(4000),
         importance: z.number().int().min(1).max(5).optional(),
+        provenance: z.enum(MEMORY_PROVENANCES).optional(),
       })
       .parse(data),
   )
@@ -97,7 +98,12 @@ export const saveAssistantMemory = createServerFn({ method: "POST" })
     const { assertLeadWork } = await import("./admin.server");
     await assertLeadWork(context.supabase, context.userId);
     const { saveMemory } = await import("./assistant.server");
-    return saveMemory(context.supabase, data, context.userId);
+    // A human typing into the memory form is an owner-confirmed fact by default.
+    return saveMemory(
+      context.supabase,
+      { ...data, provenance: data.provenance ?? "user_confirmed_fact" },
+      context.userId,
+    );
   });
 
 export const deleteAssistantMemory = createServerFn({ method: "POST" })
@@ -120,4 +126,49 @@ export const clearAssistantMemories = createServerFn({ method: "POST" })
     await assertManage(context.supabase, context.userId);
     const { clearMemories } = await import("./assistant.server");
     return clearMemories(context.supabase, data.category);
+  });
+
+/* ---------------------- Pending sensitive AI actions ---------------------- */
+
+export const listAssistantPendingActions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertWorkspace } = await import("./admin.server");
+    await assertWorkspace(context.supabase, context.userId);
+    const { listPendingActions } = await import("./assistant-actions.server");
+    const rows = await listPendingActions(context.supabase, context.userId);
+    // Only confirmation-relevant fields cross the boundary; payload stays server-side.
+    return rows.map((row) => ({
+      id: row.id,
+      action_type: row.action_type,
+      summary: row.summary,
+      origin: row.origin,
+      expires_at: row.expires_at,
+      created_at: row.created_at,
+    }));
+  });
+
+export const confirmAssistantAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => idInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertWorkspace } = await import("./admin.server");
+    const role = await assertWorkspace(context.supabase, context.userId);
+    const { confirmPendingAction } = await import("./assistant-actions.server");
+    return confirmPendingAction(context.supabase, {
+      id: data.id,
+      userId: context.userId,
+      role,
+      userEmail: (context.claims as { email?: string } | null)?.email ?? null,
+    });
+  });
+
+export const cancelAssistantAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => idInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertWorkspace } = await import("./admin.server");
+    await assertWorkspace(context.supabase, context.userId);
+    const { cancelPendingAction } = await import("./assistant-actions.server");
+    return cancelPendingAction(context.supabase, data.id, context.userId);
   });
