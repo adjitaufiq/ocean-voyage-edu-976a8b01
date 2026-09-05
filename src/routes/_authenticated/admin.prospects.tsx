@@ -838,6 +838,8 @@ function ProspectsPage() {
           }
           onReverify={() => selected && runReverify({ id: selected.id, scope: "one" })}
           reverifying={reverifying}
+          onValidate={() => selected && runValidation({ id: selected.id, scope: "one" })}
+          validating={validating}
           onSaveDraft={(approve) =>
             selected &&
             void run(
@@ -1432,6 +1434,8 @@ function ProspectDetail({
   onRescore,
   onReverify,
   reverifying,
+  onValidate,
+  validating,
   onSaveDraft,
   onOutreach,
   onDnc,
@@ -1443,6 +1447,7 @@ function ProspectDetail({
 }: {
   selected?: ListRow & Record<string, unknown>;
   detail?: {
+    prospect?: Record<string, unknown>;
     activities?: {
       id: string;
       action: string;
@@ -1468,6 +1473,8 @@ function ProspectDetail({
   onRescore: () => void;
   onReverify: () => void;
   reverifying: boolean;
+  onValidate: () => void;
+  validating: boolean;
   onSaveDraft: (approve: boolean) => void;
   onOutreach: (event: "sent" | "reply") => void;
   onDnc: () => void;
@@ -1627,6 +1634,17 @@ function ProspectDetail({
                 <Sparkles className="h-3.5 w-3.5" /> Generate intelligence
               </button>
             </SectionCard>
+            <ValidationPanel
+              stage={String(selected.validation_stage ?? "raw")}
+              score={Number(selected.validation_score ?? 0)}
+              notes={(selected.validation_notes as string | null) ?? null}
+              rejectedReason={(selected.rejected_reason as string | null) ?? null}
+              validatedAt={(selected.validated_at as string | null) ?? null}
+              checksRaw={detail?.prospect?.["validation_checks"]}
+              gateRaw={detail?.prospect?.["quality_gate"]}
+              onValidate={onValidate}
+              validating={validating}
+            />
             <SectionCard title="ICP score" description={`${selected.fit_score} poin`}>
               <ul className="space-y-1 text-xs text-muted-foreground">
                 {breakdown.map((factor) => (
