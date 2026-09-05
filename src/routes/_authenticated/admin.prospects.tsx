@@ -45,6 +45,16 @@ import {
   salesPriority,
   VERIFICATION_LABELS,
   verificationClass,
+  AUDIT_ACCURACY_THRESHOLD,
+  AUDIT_VERDICTS,
+  AUDIT_VERDICT_LABELS,
+  parseQualityGate,
+  parseValidationChecks,
+  validationCheckClass,
+  VALIDATION_STAGE_LABELS,
+  validationStageClass,
+  type AuditVerdict,
+  type ValidationStage,
   CONTACT_SOURCE_TYPES,
   CONTACT_SOURCE_LABELS,
   PROVENANCE_LABELS,
@@ -73,6 +83,10 @@ import {
   setPipelineStageFn,
   updateProspectFn,
   reverifyProspectsFn,
+  validateProspectsFn,
+  listAuditsFn,
+  sampleAuditFn,
+  submitAuditFn,
 } from "@/lib/prospecting.functions";
 import { cn } from "@/lib/utils";
 
@@ -199,9 +213,14 @@ function ProspectsPage() {
   const noteFn = useServerFn(addNoteFn);
   const updateFn = useServerFn(updateProspectFn);
   const reverifyFn = useServerFn(reverifyProspectsFn);
+  const validateFn = useServerFn(validateProspectsFn);
+  const auditsFn = useServerFn(listAuditsFn);
+  const sampleFn = useServerFn(sampleAuditFn);
+  const verdictFn = useServerFn(submitAuditFn);
   const [reverifying, setReverifying] = useState(false);
+  const [validating, setValidating] = useState(false);
 
-  const [tab, setTab] = useState<"queue" | "campaigns" | "prospects">("queue");
+  const [tab, setTab] = useState<"queue" | "campaigns" | "prospects" | "audit">("queue");
   const [status, setStatus] = useState("all");
   const [tier, setTier] = useState("all");
   const [search, setSearch] = useState("");
@@ -241,6 +260,7 @@ function ProspectsPage() {
     void queryClient.invalidateQueries({ queryKey: ["admin", "prospects"] });
     void queryClient.invalidateQueries({ queryKey: ["admin", "prospect"] });
     void queryClient.invalidateQueries({ queryKey: ["admin", "prospect-campaigns"] });
+    void queryClient.invalidateQueries({ queryKey: ["admin", "prospect-audits"] });
   };
   const run = <T,>(promise: Promise<T>, okMessage: string) =>
     promise
@@ -265,6 +285,21 @@ function ProspectsPage() {
         toast.error(error instanceof Error ? error.message : "Gagal memproses reverifikasi.");
       })
       .finally(() => setReverifying(false));
+  };
+
+  const runValidation = (payload: { id?: string; scope: "one" | "all" }) => {
+    setValidating(true);
+    validateFn({ data: payload })
+      .then((result) => {
+        toast.success(
+          `Validasi selesai: ${result.scanned} diperiksa, ${result.verified} verified, ${result.salesReady} sales ready, ${result.rejected} ditolak.`,
+        );
+        invalidate();
+      })
+      .catch((error: unknown) => {
+        toast.error(error instanceof Error ? error.message : "Gagal menjalankan validasi.");
+      })
+      .finally(() => setValidating(false));
   };
 
   const createMutation = useMutation({
@@ -397,6 +432,15 @@ function ProspectsPage() {
         </button>
         <button
           type="button"
+          disabled={validating}
+          onClick={() => runValidation({ scope: "all" })}
+          className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50 disabled:opacity-60"
+        >
+          <ShieldCheck className={`h-4 w-4 ${validating ? "animate-pulse" : ""}`} /> Jalankan
+          validasi
+        </button>
+        <button
+          type="button"
           onClick={() => setShowCampaignForm((value) => !value)}
           className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50"
         >
@@ -425,7 +469,7 @@ function ProspectsPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2 border-b border-border/40 pb-3">
-        {(["queue", "campaigns", "prospects"] as const).map((item) => (
+        {(["queue", "campaigns", "prospects", "audit"] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -441,7 +485,9 @@ function ProspectsPage() {
               ? "Daily sales queue"
               : item === "campaigns"
                 ? "Campaigns"
-                : "All prospects"}
+                : item === "prospects"
+                  ? "All prospects"
+                  : "Audit"}
           </button>
         ))}
       </div>
