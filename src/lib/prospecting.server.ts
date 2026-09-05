@@ -24,7 +24,7 @@ import {
 type Client = SupabaseClient<Database>;
 
 export const PROSPECT_LIST_COLUMNS =
-  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, business_profile, industry_fit, opportunity_reason, recommended_solution, sales_approach, potential_need, business_problem, buying_signal, decision_maker, sales_priority, research_summary, last_contact_at, verified, phone_source, phone_source_url, email_source, email_source_url, website_source, website_source_url, social_source, social_source_url, google_maps_url, verified_at";
+  "id, created_at, updated_at, business_name, industry, city, website, website_domain, contact_name, contact_title, contact_email, contact_whatsapp, contact_phone, social_media, source, source_detail, status, status_updated_at, fit_score, fit_tier, do_not_contact, outreach_channel, contacted_at, replied_at, next_follow_up_at, follow_up_count, lead_id, converted_at, owner_name, campaign_id, business_summary, business_profile, industry_fit, opportunity_reason, recommended_solution, sales_approach, potential_need, business_problem, buying_signal, decision_maker, sales_priority, research_summary, last_contact_at, verified, phone_source, phone_source_url, email_source, email_source_url, website_source, website_source_url, social_source, social_source_url, google_maps_url, verified_at, validation_stage, validation_score, validation_notes, validated_at, quality_gate_passed, rejected_reason, duplicate_of";
 
 export type ProspectListRow = {
   id: string;
@@ -81,6 +81,13 @@ export type ProspectListRow = {
   social_source_url: string | null;
   google_maps_url: string | null;
   verified_at: string | null;
+  validation_stage: string;
+  validation_score: number;
+  validation_notes: string | null;
+  validated_at: string | null;
+  quality_gate_passed: boolean;
+  rejected_reason: string | null;
+  duplicate_of: string | null;
 };
 
 /* --------------------------------- ICP ------------------------------------ */
