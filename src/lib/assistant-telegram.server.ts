@@ -92,8 +92,9 @@ async function extractMemories(
     const { text } = await generateText({
       model,
       system:
-        "Ekstrak fakta bisnis jangka panjang dari percakapan berikut untuk disimpan sebagai memory asisten bisnis. " +
-        'Balas HANYA JSON: {"memories":[{"category":"business|sales|project|operational","title":"...","content":"...","importance":1-5}]}. ' +
+        "Ekstrak informasi jangka panjang dari percakapan berikut untuk disimpan sebagai memory asisten bisnis. " +
+        'Balas HANYA JSON: {"memories":[{"category":"business|sales|project|operational","provenance":"user_confirmed_fact|user_preference|assistant_recommendation|hypothesis","title":"...","content":"...","importance":1-5}]}. ' +
+        "provenance WAJIB: user_confirmed_fact hanya bila owner menyatakan fakta itu sendiri; user_preference untuk preferensi; assistant_recommendation untuk saran asisten; hypothesis untuk dugaan. Kesimpulan AI DILARANG ditandai sebagai fakta. " +
         "Kategori: business = info perusahaan, layanan, paket, strategi harga, keputusan bisnis. sales = lead penting, diskusi pelanggan, strategi sales. project = diskusi project, preferensi klien, keputusan, kendala. operational = workflow tim, aturan automation, rekomendasi yang diberikan. " +
         'Simpan maksimal 3 memory, hanya yang benar-benar layak diingat lama. Jika tidak ada, balas {"memories":[]}.',
       prompt: `PERTANYAAN USER:\n${input.question}\n\nJAWABAN ASISTEN:\n${input.answer}`,
@@ -101,6 +102,7 @@ async function extractMemories(
     const parsed = JSON.parse(text.replace(/```json|```/g, "").trim()) as {
       memories?: Array<{
         category?: string;
+        provenance?: string;
         title?: string;
         content?: string;
         importance?: number;
@@ -115,6 +117,8 @@ async function extractMemories(
           title: item.title,
           content: item.content,
           importance: item.importance,
+          // AI extraction can never mint a database-level fact.
+          provenance: clampAiProvenance(item.provenance),
           sourceThreadId: input.threadId,
         },
         input.userId,
@@ -290,7 +294,13 @@ export async function handleTelegramUpdate(update: unknown): Promise<void> {
     const { text: answer } = await generateText({
       model,
       system,
-      tools: buildAssistantTools({ supabase: supabaseAdmin, userId, role: "owner" }),
+      tools: buildAssistantTools({
+        supabase: supabaseAdmin,
+        userId,
+        role: "owner",
+        threadId,
+        origin: "telegram",
+      }),
       stopWhen: stepCountIs(50),
       messages: [
         ...history.slice(-16).map((row) => ({
