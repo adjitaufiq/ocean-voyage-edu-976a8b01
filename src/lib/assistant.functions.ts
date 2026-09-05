@@ -136,7 +136,16 @@ export const listAssistantPendingActions = createServerFn({ method: "GET" })
     const { assertWorkspace } = await import("./admin.server");
     await assertWorkspace(context.supabase, context.userId);
     const { listPendingActions } = await import("./assistant-actions.server");
-    return listPendingActions(context.supabase, context.userId);
+    const rows = await listPendingActions(context.supabase, context.userId);
+    // Only confirmation-relevant fields cross the boundary; payload stays server-side.
+    return rows.map((row) => ({
+      id: row.id,
+      action_type: row.action_type,
+      summary: row.summary,
+      origin: row.origin,
+      expires_at: row.expires_at,
+      created_at: row.created_at,
+    }));
   });
 
 export const confirmAssistantAction = createServerFn({ method: "POST" })
