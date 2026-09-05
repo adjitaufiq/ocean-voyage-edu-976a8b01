@@ -86,3 +86,37 @@ pengiriman massal otomatis, dan permintaan berhenti dihormati lewat DO_NOT_CONTA
 - Website dicek apakah benar-benar merespons, URL social divalidasi sebagai profil bisnis, lalu contact quality score dan ICP score dihitung ulang serta status SALES READY diperbarui.
 - Setiap perubahan tercatat di Activity CRM prospek, sehingga audit sumber data tetap bisa ditelusuri.
 - Jalankan reverifikasi minimal sekali per minggu untuk prospek berstatus contact ready yang belum dihubungi.
+
+## Validation & Audit System
+
+Hasil AI discovery **tidak pernah** langsung masuk Daily Sales Queue. Setiap prospek melewati
+tahap: `RAW` → `VALIDATING` → `VERIFIED` → `SALES READY`, atau `REJECTED`.
+
+Enam pengecekan wajib pada tahap validasi:
+
+| Check | Lolos bila |
+| --- | --- |
+| Business existence | Nama bisnis + industri/kota terisi dan tidak generik |
+| Google Maps | `google_maps_url` tersedia atau sumber kontak berasal dari Google Business/Maps |
+| Contact source | Telepon atau email memiliki source type + source URL yang terbukti |
+| Website | Domain benar-benar merespons saat dicek |
+| Social match | URL social adalah profil bisnis nyata yang cocok dengan prospek |
+| Duplicate | Tidak ada prospek lain dengan domain, email, atau nomor ternormalisasi sama |
+
+Skor validasi berbobot dihitung dari keenam check. Sebelum berpindah ke `SALES READY`,
+prospek harus lolos **AI Quality Gate** yang menilai konsistensi klaim AI dengan bukti; hasilnya
+disimpan di `quality_gate` dan `quality_gate_passed`. Prospek yang gagal ditandai `REJECTED`
+beserta `rejected_reason`. Seluruh transisi tercatat di Activity CRM.
+
+**Daily Sales Queue terkunci**: hanya prospek `validation_stage = sales_ready` yang boleh masuk.
+
+### Random Audit Dashboard
+
+- Owner mengambil sampel acak ~10% prospek tervalidasi lewat tab **Audit**.
+- Sampel membekukan klaim AI saat itu (`ai_claims`) beserta temuan validasi.
+- Verdict reviewer: `accurate` / `partial` (bobot 0.5) / `inaccurate`.
+- Prospek yang dinilai `inaccurate` otomatis ditarik kembali ke tahap validasi dan kehilangan
+  status sales ready.
+- Akurasi per kampanye dihitung ulang setiap verdict. Bila akurasi < 70%, kampanye ditandai
+  `needs_review` dengan alasan, dan batch discovery-nya harus diperiksa sebelum dilanjutkan.
+- Riwayat audit tersimpan permanen di `prospect_audits` (tidak boleh dihapus).
