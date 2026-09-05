@@ -133,6 +133,13 @@ type ListRow = {
   buying_signal?: string | null;
   decision_maker?: string | null;
   sales_priority?: string | null;
+  validation_stage?: string | null;
+  validation_score?: number | null;
+  validation_notes?: string | null;
+  validated_at?: string | null;
+  quality_gate_passed?: boolean | null;
+  rejected_reason?: string | null;
+
   recommended_solution?: string | null;
   sales_approach?: string | null;
   research_summary?: string | null;
