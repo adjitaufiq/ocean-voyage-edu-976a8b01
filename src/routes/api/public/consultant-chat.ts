@@ -22,6 +22,10 @@ import {
 
 type Body = { messages?: unknown; sessionId?: unknown; attribution?: unknown };
 
+/** Abuse guards for this public AI surface. Sized for a real consultation, not a bot. */
+const MAX_BODY_BYTES = 128_000;
+const MAX_MESSAGES = 40;
+
 const SYSTEM = `Kamu adalah "Team KERJAKU Consultant" — konsultan digital yang ramah, tajam, dan berpengalaman.
 KERJAKU adalah digital solution & business automation agency (Indonesia): website profesional,
 custom business system (CRM/ERP ringan/database), dashboard & BI, workflow automation
@@ -537,7 +541,7 @@ KONTEKS WAKTU SISTEM (WIB): ${new Intl.DateTimeFormat("id-ID", {
             timeZone: "Asia/Jakarta",
           }).format(new Date())}`,
           messages: await convertToModelMessages(messages),
-          stopWhen: stepCountIs(50),
+          stopWhen: stepCountIs(8),
           tools: {
             qualify_conversation: tool({
               description:
