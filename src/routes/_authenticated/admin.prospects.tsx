@@ -16,6 +16,7 @@ import {
   RefreshCcw,
   Search,
   Send,
+  ShieldCheck,
   Sparkles,
   Target,
   Trash2,
@@ -688,6 +689,17 @@ function ProspectsPage() {
           }
           onDelete={(id) => void run(deleteCampaign({ data: { id } }), "Kampanye dihapus.")}
         />
+      ) : tab === "audit" ? (
+        <AuditPanel
+          load={(input) => auditsFn({ data: input })}
+          onSample={() =>
+            void run(sampleFn({ data: {} }), "Sampling audit baru dibuat.")
+          }
+          onVerdict={(id, verdict, notes) =>
+            void run(verdictFn({ data: { id, verdict, notes } }), "Penilaian audit tersimpan.")
+          }
+          onOpenProspect={(id) => setOpenId(id)}
+        />
       ) : (
         <GlassCard className="p-4">
           {tab === "queue" ? (
@@ -925,6 +937,15 @@ function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
           DNC
         </span>
       ) : null}
+      <span
+        className={cn(
+          "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+          validationStageClass(String(row.validation_stage ?? "raw")),
+        )}
+        title="Tahap validasi"
+      >
+        {VALIDATION_STAGE_LABELS[(row.validation_stage ?? "raw") as ValidationStage] ?? "RAW"}
+      </span>
       <span
         className={cn(
           "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
