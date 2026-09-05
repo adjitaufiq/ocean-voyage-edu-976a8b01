@@ -1860,3 +1860,294 @@ function Info({ label, value }: { label: string; value?: string | null }) {
     </div>
   );
 }
+
+/** Six-check validation result + AI quality gate for a single prospect. */
+function ValidationPanel({
+  stage,
+  score,
+  notes,
+  rejectedReason,
+  validatedAt,
+  checksRaw,
+  gateRaw,
+  onValidate,
+  validating,
+}: {
+  stage: string;
+  score: number;
+  notes: string | null;
+  rejectedReason: string | null;
+  validatedAt: string | null;
+  checksRaw: unknown;
+  gateRaw: unknown;
+  onValidate: () => void;
+  validating: boolean;
+}) {
+  const checks = parseValidationChecks(checksRaw);
+  const gate = parseQualityGate(gateRaw);
+  return (
+    <SectionCard
+      title="Validasi prospek"
+      description={
+        validatedAt
+          ? `Terakhir divalidasi ${new Date(validatedAt).toLocaleString("id-ID")}`
+          : "Prospek belum pernah divalidasi."
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={cn(
+            "rounded-full border px-2.5 py-1 text-[0.65rem] font-medium",
+            validationStageClass(stage),
+          )}
+        >
+          {VALIDATION_STAGE_LABELS[stage as ValidationStage] ?? "RAW"}
+        </span>
+        <span className="text-xs text-muted-foreground">Skor validasi {score}/100</span>
+      </div>
+
+      {checks.length ? (
+        <ul className="mt-3 space-y-1.5">
+          {checks.map((check) => (
+            <li key={check.key} className="flex items-start gap-2 text-xs">
+              <span
+                className={cn(
+                  "mt-0.5 shrink-0 rounded-full border px-1.5 py-0.5 text-[0.6rem] font-medium uppercase",
+                  validationCheckClass(check.state),
+                )}
+              >
+                {check.state}
+              </span>
+              <span className="min-w-0">
+                <span className="text-foreground">{check.label}</span>
+                <span className="block text-muted-foreground">{check.detail}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Belum ada hasil pengecekan. Jalankan validasi untuk memeriksa keberadaan bisnis, Google
+          Maps, sumber kontak, website, social media, dan duplikat.
+        </p>
+      )}
+
+      {gate ? (
+        <div className="mt-3 rounded-xl border border-border/40 p-3 text-xs">
+          <p className="font-medium text-foreground">
+            AI quality gate: {gate.passed ? "LULUS" : "TIDAK LULUS"} ({gate.score}/100)
+          </p>
+          {gate.reasons.length ? (
+            <p className="mt-1 text-muted-foreground">Alasan: {gate.reasons.join("; ")}</p>
+          ) : null}
+          {gate.risks.length ? (
+            <p className="mt-1 text-muted-foreground">Risiko: {gate.risks.join("; ")}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {rejectedReason ? (
+        <p className="mt-3 text-xs text-destructive">Ditolak: {rejectedReason}</p>
+      ) : notes ? (
+        <p className="mt-3 text-xs text-muted-foreground">{notes}</p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onValidate}
+        disabled={validating}
+        className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-60"
+      >
+        <ShieldCheck className={cn("h-3.5 w-3.5", validating && "animate-pulse")} /> Jalankan
+        validasi
+      </button>
+    </SectionCard>
+  );
+}
+
+type AuditOverviewData = {
+  audits: {
+    id: string;
+    prospect_id: string;
+    ai_stage: string | null;
+    reviewer_verdict: string | null;
+    reviewer_notes: string | null;
+    reviewed_by_email: string | null;
+    reviewed_at: string | null;
+    created_at: string;
+    businessName: string;
+    city: string | null;
+    industry: string | null;
+    website: string | null;
+    checks: { key: string; label: string; state: string; detail: string }[];
+    qualityGate: { passed: boolean; score: number } | null;
+  }[];
+  pending: number;
+  reviewed: number;
+  accuracy: number | null;
+  campaigns: { id: string; name: string; accuracy: number | null; needsReview: boolean; reviewReason: string | null }[];
+};
+
+/** Random Audit Dashboard — owner reviews a 10% sample of validated prospects. */
+function AuditPanel({
+  load,
+  onSample,
+  onVerdict,
+  onOpenProspect,
+}: {
+  load: (input: { pendingOnly?: boolean }) => Promise<unknown>;
+  onSample: () => void;
+  onVerdict: (id: string, verdict: AuditVerdict, notes: string | null) => void;
+  onOpenProspect: (id: string) => void;
+}) {
+  const [pendingOnly, setPendingOnly] = useState(true);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const audits = useQuery({
+    queryKey: ["admin", "prospect-audits", pendingOnly],
+    queryFn: () => load({ pendingOnly }) as Promise<AuditOverviewData>,
+  });
+  const data = audits.data;
+
+  return (
+    <div className="space-y-4">
+      <GlassCard className="p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold">Random audit</h2>
+            <p className="text-xs text-muted-foreground">
+              Sampling acak 10% prospek tervalidasi. Owner menilai akurasi klaim AI; akurasi rendah
+              menandai kampanye untuk direview.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={pendingOnly}
+              onChange={(e) => setPendingOnly(e.target.checked)}
+            />
+            Hanya belum direview
+          </label>
+          <button
+            type="button"
+            onClick={onSample}
+            className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50"
+          >
+            <Sparkles className="h-4 w-4" /> Ambil sampel baru
+          </button>
+        </div>
+
+        {data ? (
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+            <MetricTile label="Belum direview" value={data.pending} />
+            <MetricTile label="Sudah direview" value={data.reviewed} />
+            <MetricTile
+              label="Akurasi AI"
+              value={data.accuracy === null ? "—" : `${data.accuracy}%`}
+              tone={data.accuracy !== null && data.accuracy < AUDIT_ACCURACY_THRESHOLD ? "hot" : "primary"}
+            />
+          </div>
+        ) : null}
+      </GlassCard>
+
+      {data?.campaigns.some((campaign) => campaign.needsReview) ? (
+        <SectionCard
+          title="Kampanye perlu review"
+          description={`Akurasi validasi di bawah ${AUDIT_ACCURACY_THRESHOLD}%.`}
+        >
+          <ul className="space-y-2 text-xs">
+            {data.campaigns
+              .filter((campaign) => campaign.needsReview)
+              .map((campaign) => (
+                <li key={campaign.id} className="rounded-xl border border-destructive/30 px-3 py-2">
+                  <span className="text-foreground">{campaign.name}</span>
+                  <span className="block text-muted-foreground">
+                    {campaign.reviewReason ?? `Akurasi ${campaign.accuracy ?? 0}%`}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </SectionCard>
+      ) : null}
+
+      <GlassCard className="p-4">
+        {audits.isLoading ? (
+          <p className="text-sm text-muted-foreground">Memuat audit…</p>
+        ) : !data?.audits.length ? (
+          <p className="text-sm text-muted-foreground">
+            Belum ada sampel audit. Klik “Ambil sampel baru” setelah menjalankan validasi.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {data.audits.map((audit) => (
+              <div key={audit.id} className="rounded-2xl border border-border/40 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenProspect(audit.prospect_id)}
+                    className="min-w-0 flex-1 text-left text-sm font-medium hover:text-primary"
+                  >
+                    {audit.businessName}
+                  </button>
+                  <span
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+                      validationStageClass(audit.ai_stage ?? "raw"),
+                    )}
+                  >
+                    {VALIDATION_STAGE_LABELS[(audit.ai_stage ?? "raw") as ValidationStage] ?? "RAW"}
+                  </span>
+                  {audit.qualityGate ? (
+                    <span className="rounded-full border border-border/50 px-2 py-0.5 text-[0.65rem] text-muted-foreground">
+                      Gate {audit.qualityGate.passed ? "lulus" : "gagal"} · {audit.qualityGate.score}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {[audit.industry, audit.city, audit.website].filter(Boolean).join(" • ") ||
+                    "Tanpa detail"}
+                </p>
+                {audit.checks.length ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {audit.checks
+                      .map((check) => `${check.label}: ${check.state.toUpperCase()}`)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+
+                {audit.reviewer_verdict ? (
+                  <p className="mt-2 text-xs text-primary">
+                    {AUDIT_VERDICT_LABELS[audit.reviewer_verdict as AuditVerdict] ??
+                      audit.reviewer_verdict}
+                    {audit.reviewer_notes ? ` — ${audit.reviewer_notes}` : ""}
+                    {audit.reviewed_by_email ? ` (${audit.reviewed_by_email})` : ""}
+                  </p>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    <input
+                      className={inputClass}
+                      placeholder="Catatan reviewer (opsional)"
+                      value={notes[audit.id] ?? ""}
+                      onChange={(e) => setNotes({ ...notes, [audit.id]: e.target.value })}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {AUDIT_VERDICTS.map((verdict) => (
+                        <button
+                          key={verdict}
+                          type="button"
+                          onClick={() => onVerdict(audit.id, verdict, notes[audit.id] ?? null)}
+                          className="rounded-xl border border-border/50 px-3 py-1.5 text-xs transition hover:border-primary/50"
+                        >
+                          {AUDIT_VERDICT_LABELS[verdict]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
+    </div>
+  );
+}
