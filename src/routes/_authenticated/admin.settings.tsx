@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Fingerprint, Trash2, UserPlus } from "lucide-react";
+import { Fingerprint, KeyRound, Trash2, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Chip, SectionCard } from "@/components/admin/ui";
+import { syncOpsCronSecret } from "@/lib/ops.functions";
 import {
   deleteWorkspaceMember,
   getAdminAccess,
@@ -89,6 +90,46 @@ function BiometricCard() {
             Matikan di perangkat ini
           </button>
         ) : null}
+      </div>
+    </SectionCard>
+  );
+}
+
+function SchedulerKeyCard() {
+  const syncFn = useServerFn(syncOpsCronSecret);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <SectionCard
+      title="Kunci penjadwal otomatis"
+      description="Diperlukan agar brief harian dan pemindaian otomatis bisa berjalan sendiri dengan aman."
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border/50">
+          <KeyRound className="h-5 w-5 text-primary" />
+        </span>
+        <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+          Jalankan sekali setelah kunci diperbarui. Nilainya tidak pernah ditampilkan di layar.
+        </p>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const result = await syncFn();
+              if (result.ok) toast.success(result.message);
+              else toast.error(result.message);
+            } catch {
+              toast.error("Kunci scheduler gagal disinkronkan.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="rounded-xl border border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground disabled:opacity-60"
+        >
+          {busy ? "Menyinkronkan…" : "Sinkronkan kunci"}
+        </button>
       </div>
     </SectionCard>
   );
@@ -248,6 +289,8 @@ function SettingsPage() {
       </SectionCard>
 
       {currentRole === "owner" ? <BiometricCard /> : null}
+
+      {canManageBusiness(currentRole) ? <SchedulerKeyCard /> : null}
 
 
 
