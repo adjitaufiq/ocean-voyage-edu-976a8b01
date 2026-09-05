@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin.functions";
 import {
   ROLE_DESCRIPTIONS,
+  canManageBusiness,
   ROLE_LABELS,
   WORKSPACE_ROLES,
   isWorkspaceRole,
