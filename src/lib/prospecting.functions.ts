@@ -6,7 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { OUTREACH_CHANNELS, PROSPECT_STATUSES } from "@/lib/admin/prospecting";
+import { AUDIT_VERDICTS, OUTREACH_CHANNELS, PROSPECT_STATUSES } from "@/lib/admin/prospecting";
 
 function actorEmail(claims: unknown): string | null {
   return claims && typeof claims === "object"
