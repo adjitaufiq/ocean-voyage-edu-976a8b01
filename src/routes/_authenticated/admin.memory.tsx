@@ -16,7 +16,9 @@ import {
   MEMORY_CATEGORIES,
   MEMORY_CATEGORY_HINTS,
   MEMORY_CATEGORY_LABELS,
+  MEMORY_PROVENANCE_LABELS,
   memoryCategoryClass,
+  memoryProvenanceClass,
   type MemoryCategory,
 } from "@/lib/assistant/memory";
 import { cn } from "@/lib/utils";
