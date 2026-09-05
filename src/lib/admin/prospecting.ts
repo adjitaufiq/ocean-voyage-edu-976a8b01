@@ -845,8 +845,11 @@ export function isQueueEligible(prospect: {
   opportunity_reason?: string | null;
   research_summary?: string | null;
   business_summary?: string | null;
+  validation_stage?: string | null;
 } & ContactableProspect): boolean {
   if (prospect.do_not_contact) return false;
+  // AI discovery output is never sellable until validation says SALES READY.
+  if (String(prospect.validation_stage ?? "raw") !== "sales_ready") return false;
   const terminal = ["converted", "deal", "lost", "rejected", "do_not_contact"];
   if (terminal.includes(String(prospect.status ?? ""))) return false;
   if (!(prospect.source ?? "").trim()) return false;
@@ -856,6 +859,7 @@ export function isQueueEligible(prospect: {
   if (!quality.hasProvenSource || !quality.fullyAttributed) return false;
   return quality.score >= 75;
 }
+
 
 
 /** Human-readable reasons a prospect is not yet allowed into the Daily Sales Queue. */
