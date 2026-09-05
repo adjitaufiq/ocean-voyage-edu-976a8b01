@@ -39,7 +39,7 @@ export type AuditRow = {
   city: string | null;
   industry: string | null;
   website: string | null;
-  claims: Record<string, unknown>;
+  claims: Record<string, string | null>;
   checks: ValidationCheck[];
   qualityGate: QualityGateResult | null;
 };
