@@ -2,19 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 
 /**
  * Telegram daily brief endpoint for scheduled callers (pg_cron at 01:30 UTC = 08:30 WIB)
- * and for manual testing. Public prefix, so the caller must present the project's
- * publishable key. Delivery only ever goes to authorized Telegram chat IDs.
+ * and for authorized manual testing. Authenticated with a dedicated server-only
+ * CRON_SECRET. Delivery only ever goes to authorized Telegram chat IDs.
  */
 async function run(request: Request, triggerSource: "cron" | "manual") {
-  const expected = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
-  const provided =
-    request.headers.get("apikey") ??
-    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
-    "";
-
-  if (!expected || provided !== expected) {
-    return Response.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const { verifyOpsRequest } = await import("@/lib/security/ops-auth.server");
+  const auth = verifyOpsRequest(request);
+  if (!auth.ok) return auth.response;
 
   const { sendDailyBrief } = await import("@/lib/assistant-daily.server");
   const result = await sendDailyBrief(triggerSource);
