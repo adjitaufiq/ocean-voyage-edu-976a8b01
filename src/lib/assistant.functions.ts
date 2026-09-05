@@ -143,8 +143,8 @@ export const confirmAssistantAction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => idInput.parse(data))
   .handler(async ({ data, context }) => {
-    const { getWorkspaceRole } = await import("./admin.server");
-    const role = await getWorkspaceRole(context.supabase, context.userId);
+    const { assertWorkspace } = await import("./admin.server");
+    const role = await assertWorkspace(context.supabase, context.userId);
     const { confirmPendingAction } = await import("./assistant-actions.server");
     return confirmPendingAction(context.supabase, {
       id: data.id,
