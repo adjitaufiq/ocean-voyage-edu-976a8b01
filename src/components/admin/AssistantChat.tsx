@@ -1,6 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -18,6 +18,7 @@ import {
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import { PendingActionsPanel } from "@/components/admin/PendingActionsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import type { AssistantStoredMessage } from "@/lib/assistant/memory";
 
@@ -48,6 +49,7 @@ export function AssistantChat({
   onExchange?: () => void;
 }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [actionsKey, setActionsKey] = useState(0);
 
   const { messages, sendMessage, status, error } = useChat({
     id: threadId,
@@ -61,7 +63,10 @@ export function AssistantChat({
         return token ? { Authorization: `Bearer ${token}` } : {};
       },
     }),
-    onFinish: () => onExchange?.(),
+    onFinish: () => {
+      onExchange?.();
+      setActionsKey((value) => value + 1);
+    },
     onError: (err) => toast.error(err.message || "AI assistant sedang tidak tersedia."),
   });
 
@@ -145,6 +150,8 @@ export function AssistantChat({
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
+
+      <PendingActionsPanel refreshKey={actionsKey} />
 
       <PromptInput className="mt-4" onSubmit={submit}>
         <PromptInputTextarea
