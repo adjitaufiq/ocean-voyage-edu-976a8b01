@@ -75,7 +75,13 @@ export const Route = createFileRoute("/api/assistant-chat")({
         const result = streamText({
           model,
           system,
-          tools: buildAssistantTools({ supabase: auth.supabase, userId: auth.userId, role }),
+          tools: buildAssistantTools({
+            supabase: auth.supabase,
+            userId: auth.userId,
+            role,
+            threadId,
+            origin: "web",
+          }),
           stopWhen: stepCountIs(50),
           messages: await convertToModelMessages(messages),
         });
@@ -102,8 +108,9 @@ export const Route = createFileRoute("/api/assistant-chat")({
               const { text } = await generateText({
                 model,
                 system:
-                  "Ekstrak fakta bisnis jangka panjang dari percakapan berikut untuk disimpan sebagai memory asisten bisnis. " +
-                  'Balas HANYA JSON: {"memories":[{"category":"business|sales|project|operational","title":"...","content":"...","importance":1-5}]}. ' +
+                  "Ekstrak informasi jangka panjang dari percakapan berikut untuk disimpan sebagai memory asisten bisnis. " +
+                  'Balas HANYA JSON: {"memories":[{"category":"business|sales|project|operational","provenance":"user_confirmed_fact|user_preference|assistant_recommendation|hypothesis","title":"...","content":"...","importance":1-5}]}. ' +
+                  "provenance WAJIB: user_confirmed_fact hanya bila user menyatakan/mengonfirmasi fakta itu sendiri; user_preference untuk preferensi user; assistant_recommendation untuk saran asisten; hypothesis untuk dugaan yang belum diverifikasi. Kesimpulan AI DILARANG ditandai sebagai fakta. " +
                   "Kategori: business = info perusahaan, layanan, paket, strategi harga, keputusan bisnis. sales = lead penting, diskusi pelanggan, strategi sales. project = diskusi project, preferensi klien, keputusan, kendala. operational = workflow tim, aturan automation, rekomendasi yang diberikan. " +
                   'Simpan maksimal 3 memory, hanya yang benar-benar layak diingat lama (keputusan, preferensi, strategi, rekomendasi). Jika tidak ada, balas {"memories":[]}.',
                 prompt: `PERTANYAAN USER:\n${question}\n\nJAWABAN ASISTEN:\n${answer}`,
@@ -112,12 +119,15 @@ export const Route = createFileRoute("/api/assistant-chat")({
               const parsed = JSON.parse(text.replace(/```json|```/g, "").trim()) as {
                 memories?: Array<{
                   category?: string;
+                  provenance?: string;
                   title?: string;
                   content?: string;
                   importance?: number;
                 }>;
               };
-              const { isMemoryCategory } = await import("@/lib/assistant/memory");
+              const { isMemoryCategory, clampAiProvenance } = await import(
+                "@/lib/assistant/memory"
+              );
               for (const item of (parsed.memories ?? []).slice(0, 3)) {
                 if (!item.title || !item.content || !isMemoryCategory(item.category)) continue;
                 await assistant.saveMemory(
@@ -127,6 +137,8 @@ export const Route = createFileRoute("/api/assistant-chat")({
                     title: item.title,
                     content: item.content,
                     importance: item.importance,
+                    // AI extraction can never mint a database-level fact.
+                    provenance: clampAiProvenance(item.provenance),
                     sourceThreadId: threadId,
                   },
                   auth.userId,

@@ -9,9 +9,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
   MEMORY_CATEGORIES,
+  MEMORY_PROVENANCE_LABELS,
+  MEMORY_TRUST_RANK,
   isMemoryCategory,
+  isMemoryProvenance,
   type AssistantMemory,
   type MemoryCategory,
+  type MemoryProvenance,
 } from "@/lib/assistant/memory";
 
 type Client = SupabaseClient<Database>;
@@ -27,7 +31,9 @@ export async function listMemories(
 ): Promise<AssistantMemory[]> {
   let query = supabase
     .from("assistant_memories")
-    .select("id, category, title, content, importance, source_thread_id, created_at, updated_at")
+    .select(
+      "id, category, title, content, importance, provenance, source_thread_id, created_at, updated_at",
+    )
     .order("importance", { ascending: false })
     .order("updated_at", { ascending: false })
     .limit(200);
@@ -37,6 +43,8 @@ export async function listMemories(
   return (data ?? []).map((row) => ({
     ...row,
     category: isMemoryCategory(row.category) ? row.category : "business",
+    // Anything without an explicit trusted provenance is treated as AI output.
+    provenance: isMemoryProvenance(row.provenance) ? row.provenance : "assistant_recommendation",
   })) as AssistantMemory[];
 }
 
@@ -48,6 +56,7 @@ export async function saveMemory(
     title: string;
     content: string;
     importance?: number;
+    provenance?: MemoryProvenance;
     sourceThreadId?: string | null;
   },
   userId: string,
@@ -57,6 +66,7 @@ export async function saveMemory(
     title: input.title.slice(0, 200),
     content: input.content.slice(0, 4000),
     importance: Math.min(5, Math.max(1, input.importance ?? 3)),
+    provenance: input.provenance ?? "assistant_recommendation",
     source_thread_id: input.sourceThreadId ?? null,
     created_by: userId,
   };
@@ -357,13 +367,26 @@ export async function buildMemoryContext(supabase: Client, threadId: string): Pr
       .limit(8),
   ]);
 
-  const blocks: string[] = [];
+  const blocks: string[] = [
+    "\n[ATURAN KEPERCAYAAN MEMORY]\n" +
+      "- Snapshot Business OS (data sistem saat ini) SELALU menang atas memory apa pun.\n" +
+      "- Memory bertanda 'Rekomendasi AI' atau 'Dugaan AI' BUKAN fakta bisnis. Jangan pernah menyajikannya sebagai data terverifikasi.\n" +
+      "- Jika memory bertentangan dengan snapshot sistem, ikuti snapshot dan sebutkan bahwa catatan lama sudah usang.",
+  ];
+  // Highest-trust memories first, so trusted state outranks inference in context.
+  const ordered = [...memories].sort(
+    (a, b) => MEMORY_TRUST_RANK[b.provenance] - MEMORY_TRUST_RANK[a.provenance],
+  );
   for (const category of MEMORY_CATEGORIES) {
-    const rows = memories.filter((m) => m.category === category);
+    const rows = ordered.filter((m) => m.category === category);
     if (rows.length === 0) continue;
     blocks.push(
       `\n[${category.toUpperCase()} MEMORY]\n` +
-        rows.map((m) => `- ${m.title}: ${m.content}`).join("\n"),
+        rows
+          .map(
+            (m) => `- (${MEMORY_PROVENANCE_LABELS[m.provenance]}) ${m.title}: ${m.content}`,
+          )
+          .join("\n"),
     );
   }
 
