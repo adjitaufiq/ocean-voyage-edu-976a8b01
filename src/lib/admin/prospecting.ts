@@ -871,13 +871,23 @@ export function queueBlockers(
     opportunity_reason?: string | null;
     research_summary?: string | null;
     business_summary?: string | null;
+    validation_stage?: string | null;
   } & ContactableProspect,
 ): string[] {
   const blockers: string[] = [];
   if (prospect.do_not_contact) blockers.push("Ditandai DO NOT CONTACT");
+  const stage = String(prospect.validation_stage ?? "raw");
+  if (stage !== "sales_ready") {
+    blockers.push(
+      stage === "rejected"
+        ? "Ditolak pada tahap validasi"
+        : `Belum lolos validasi (tahap ${VALIDATION_STAGE_LABELS[stage as ValidationStage] ?? "RAW"})`,
+    );
+  }
   const terminal = ["converted", "deal", "lost", "rejected", "do_not_contact"];
   if (terminal.includes(String(prospect.status ?? ""))) blockers.push("Status sudah selesai/terminal");
   if (!(prospect.source ?? "").trim()) blockers.push("Sumber data belum dicatat");
+
   const reason = (
     prospect.opportunity_reason ??
     prospect.business_summary ??

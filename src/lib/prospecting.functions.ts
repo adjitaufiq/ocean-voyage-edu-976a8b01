@@ -6,7 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { OUTREACH_CHANNELS, PROSPECT_STATUSES } from "@/lib/admin/prospecting";
+import { AUDIT_VERDICTS, OUTREACH_CHANNELS, PROSPECT_STATUSES } from "@/lib/admin/prospecting";
 
 function actorEmail(claims: unknown): string | null {
   return claims && typeof claims === "object"
@@ -386,7 +386,90 @@ export const reverifyProspectsFn = createServerFn({ method: "POST" })
     );
   });
 
+/** Validation ladder: run the six checks + AI quality gate. */
+export const validateProspectsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid().optional(),
+        scope: z.enum(["one", "all"]).default("one"),
+        limit: z.number().int().min(1).max(100).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { validateProspects } = await import("./prospecting-validation.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return validateProspects(
+      context.supabase,
+      data.scope === "all" ? { scope: "all", limit: data.limit } : { ids: data.id ? [data.id] : [] },
+      { userId: context.userId, email: actorEmail(context.claims) },
+    );
+  });
+
+export const listAuditsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid().nullable().optional(),
+        pendingOnly: z.boolean().optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertWorkspace } = await import("./admin.server");
+    const { fetchAudits } = await import("./prospecting-audit.server");
+    await assertWorkspace(context.supabase, context.userId);
+    return fetchAudits(context.supabase, data);
+  });
+
+export const sampleAuditFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid().nullable().optional(),
+        size: z.number().int().min(1).max(50).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { sampleAudits } = await import("./prospecting-audit.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return sampleAudits(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
+export const submitAuditFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        verdict: z.enum(AUDIT_VERDICTS),
+        notes: z.string().max(2000).nullable().optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertManage } = await import("./admin.server");
+    const { submitAuditVerdict } = await import("./prospecting-audit.server");
+    await assertManage(context.supabase, context.userId);
+    return submitAuditVerdict(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
 export const saveIcpConfigFn = createServerFn({ method: "POST" })
+
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
     z
