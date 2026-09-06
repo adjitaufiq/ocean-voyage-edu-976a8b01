@@ -2182,3 +2182,223 @@ function AuditPanel({
     </div>
   );
 }
+
+/* ---------------------------- Candidate inbox ----------------------------- */
+
+type CandidateInboxProps = {
+  campaigns: CampaignRow[];
+  load: (input: { status?: string; campaignId?: string; search?: string }) => Promise<{
+    candidates: CandidateRow[];
+    summary: Record<string, number>;
+  }>;
+  onDiscover: (campaignId: string, count: number) => Promise<unknown>;
+  onReject: (id: string) => Promise<unknown>;
+  onRestore: (id: string) => Promise<unknown>;
+};
+
+function CandidateInbox({
+  campaigns,
+  load,
+  onDiscover,
+  onReject,
+  onRestore,
+}: CandidateInboxProps) {
+  const [status, setStatus] = useState("discovered");
+  const [campaignId, setCampaignId] = useState("");
+  const [search, setSearch] = useState("");
+  const [count, setCount] = useState(10);
+  const [busy, setBusy] = useState(false);
+
+  const query = useQuery({
+    queryKey: ["admin", "prospect-candidates", status, campaignId, search],
+    queryFn: () =>
+      load({
+        status,
+        campaignId: campaignId || undefined,
+        search: search || undefined,
+      }),
+  });
+
+  const rows = query.data?.candidates ?? [];
+  const summary = query.data?.summary ?? {};
+
+  const guard = (action: () => Promise<unknown>) => {
+    setBusy(true);
+    void action().finally(() => setBusy(false));
+  };
+
+  return (
+    <div className="space-y-4">
+      <SectionCard
+        title="Candidate inbox"
+        description="Kandidat adalah hipotesis AI: hanya nama bisnis dan alasan potensi. Data kontak tidak pernah datang dari AI — kandidat harus diverifikasi dulu sebelum jadi prospek."
+      >
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {(["discovered", "enriching", "verified", "promoted", "rejected"] as const).map(
+            (key) => (
+              <MetricTile
+                key={key}
+                label={CANDIDATE_STATUS_LABELS[key]}
+                value={summary[key] ?? 0}
+              />
+            ),
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="space-y-1 text-sm">
+            <span className="text-xs text-muted-foreground">Kampanye</span>
+            <select
+              className={inputClass}
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+            >
+              <option value="">Semua kampanye</option>
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs text-muted-foreground">Status</span>
+            <select
+              className={inputClass}
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="all">Semua status</option>
+              {(["discovered", "enriching", "verified", "promoted", "rejected"] as const).map(
+                (key) => (
+                  <option key={key} value={key}>
+                    {CANDIDATE_STATUS_LABELS[key]}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs text-muted-foreground">Cari nama bisnis</span>
+            <input
+              className={inputClass}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nama bisnis"
+            />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-xs text-muted-foreground">Jumlah kandidat</span>
+            <input
+              type="number"
+              min={1}
+              max={25}
+              className={inputClass}
+              value={count}
+              onChange={(e) => setCount(Number(e.target.value) || 10)}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={busy || !campaignId}
+            onClick={() => guard(() => onDiscover(campaignId, count))}
+            className="rounded-xl bg-primary/20 px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary/30 disabled:opacity-50"
+          >
+            {busy ? "Memproses…" : "Cari kandidat baru"}
+          </button>
+        </div>
+        {!campaignId ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Pilih satu kampanye dulu untuk menjalankan pencarian kandidat.
+          </p>
+        ) : null}
+      </SectionCard>
+
+      <GlassCard className="p-4">
+        {query.isLoading ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Memuat kandidat…</p>
+        ) : rows.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Belum ada kandidat pada filter ini.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {rows.map((row) => (
+              <div key={row.id} className="rounded-2xl border border-border/40 bg-muted/10 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{row.business_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {[row.industry, row.city, row.country].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[11px]",
+                        candidateStatusClass(row.candidate_status),
+                      )}
+                    >
+                      {CANDIDATE_STATUS_LABELS[row.candidate_status]}
+                    </span>
+                    <span className="rounded-full border border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground">
+                      ICP {row.icp_score}
+                    </span>
+                    {row.candidate_status === "rejected" ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => guard(() => onRestore(row.id))}
+                        className="rounded-lg border border-border/50 px-3 py-1 text-xs transition hover:bg-muted/30 disabled:opacity-50"
+                      >
+                        Pulihkan
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => guard(() => onReject(row.id))}
+                        className="rounded-lg border border-border/50 px-3 py-1 text-xs transition hover:bg-muted/30 disabled:opacity-50"
+                      >
+                        Tolak
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <dl className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
+                  {row.why_match_icp ? (
+                    <div>
+                      <dt className="text-foreground/80">Kenapa cocok</dt>
+                      <dd>{row.why_match_icp}</dd>
+                    </div>
+                  ) : null}
+                  {row.potential_problem_hypothesis ? (
+                    <div>
+                      <dt className="text-foreground/80">Dugaan masalah</dt>
+                      <dd>{row.potential_problem_hypothesis}</dd>
+                    </div>
+                  ) : null}
+                  {row.buying_signal_hypothesis ? (
+                    <div>
+                      <dt className="text-foreground/80">Dugaan sinyal beli</dt>
+                      <dd>{row.buying_signal_hypothesis}</dd>
+                    </div>
+                  ) : null}
+                  {row.suggested_solution ? (
+                    <div>
+                      <dt className="text-foreground/80">Solusi pembuka</dt>
+                      <dd>{row.suggested_solution}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+                {row.rejected_reason ? (
+                  <p className="mt-2 text-xs text-rose-200">Alasan tolak: {row.rejected_reason}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
+    </div>
+  );
+}
