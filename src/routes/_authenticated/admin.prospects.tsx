@@ -245,6 +245,9 @@ function ProspectsPage() {
   const discoverCandidates = useServerFn(discoverCandidatesFn);
   const rejectCandidate = useServerFn(rejectCandidateFn);
   const restoreCandidate = useServerFn(restoreCandidateFn);
+  const requestCandidateReview = useServerFn(requestCandidateReviewFn);
+  const approveCandidate = useServerFn(approveCandidateFn);
+  const candidateEventsFn = useServerFn(getCandidateEventsFn);
   const [reverifying, setReverifying] = useState(false);
   const [validating, setValidating] = useState(false);
 
