@@ -92,11 +92,18 @@ import {
   discoverCandidatesFn,
   rejectCandidateFn,
   restoreCandidateFn,
+  requestCandidateReviewFn,
+  approveCandidateFn,
+  getCandidateEventsFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
   candidateStatusClass,
+  canTransition,
+  ICP_REVIEW_THRESHOLD,
+  ACTOR_KIND_LABELS,
   type CandidateRow,
+  type CandidateEventRow,
 } from "@/lib/admin/prospect-candidates";
 import { cn } from "@/lib/utils";
 
