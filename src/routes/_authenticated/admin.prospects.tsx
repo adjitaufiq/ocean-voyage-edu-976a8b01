@@ -728,6 +728,13 @@ function ProspectsPage() {
           }
           onReject={(id) => run(rejectCandidate({ data: { id } }), "Kandidat ditolak.")}
           onRestore={(id) => run(restoreCandidate({ data: { id } }), "Kandidat dipulihkan.")}
+          onRequestReview={(id) =>
+            run(requestCandidateReview({ data: { id } }), "Kandidat masuk antrean tinjauan.")
+          }
+          onApprove={(id, note) =>
+            run(approveCandidate({ data: { id, note } }), "Kandidat disetujui.")
+          }
+          loadEvents={(id) => candidateEventsFn({ data: { id } })}
         />
       ) : tab === "campaigns" ? (
         <CampaignList
