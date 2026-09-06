@@ -91,8 +91,63 @@ export type CandidateRow = {
   trust_score: number;
   rejected_reason: string | null;
   promoted_prospect_id: string | null;
+  icp_reason: string | null;
+  approved_by_email: string | null;
+  approved_at: string | null;
+  approval_note: string | null;
+  review_requested_at: string | null;
   created_at: string;
 };
+
+/**
+ * RULE 1 — human approval gate.
+ * Scoring alone never promotes a candidate. Allowed transitions only.
+ */
+export const CANDIDATE_TRANSITIONS: Record<CandidateStatus, CandidateStatus[]> = {
+  discovered: ["enriching", "pending_review", "rejected"],
+  enriching: ["verified", "pending_review", "rejected"],
+  verified: ["pending_review", "rejected"],
+  pending_review: ["approved", "rejected", "discovered"],
+  approved: ["promoted", "rejected"],
+  rejected: ["discovered"],
+  promoted: [],
+};
+
+export function canTransition(from: CandidateStatus, to: CandidateStatus): boolean {
+  return (CANDIDATE_TRANSITIONS[from] ?? []).includes(to);
+}
+
+/** RULE 2 — field ownership. Enforced in the storage layer, not just docs. */
+export const FIELD_OWNERSHIP = {
+  ai: [
+    "why_match_icp",
+    "potential_problem_hypothesis",
+    "buying_signal_hypothesis",
+    "suggested_solution",
+    "discovery_reason",
+  ],
+  external: ["phone", "email", "address", "website", "business_existence"],
+  human: ["approval", "sales_decision", "outcome"],
+} as const;
+
+export type FieldOwner = keyof typeof FIELD_OWNERSHIP;
+
+export const FIELD_OWNER_LABELS: Record<FieldOwner, string> = {
+  ai: "AI (dugaan & rekomendasi)",
+  external: "Sumber eksternal (fakta)",
+  human: "Manusia (keputusan)",
+};
+
+export function fieldOwner(field: string): FieldOwner | null {
+  for (const owner of Object.keys(FIELD_OWNERSHIP) as FieldOwner[]) {
+    if ((FIELD_OWNERSHIP[owner] as readonly string[]).includes(field)) return owner;
+  }
+  return null;
+}
+
+/** RULE 3 — ICP qualification threshold before a candidate may enter review. */
+export const ICP_REVIEW_THRESHOLD = 60;
+
 
 /** Fact fields an AI answer may never provide on a candidate. */
 export const AI_FORBIDDEN_CANDIDATE_FIELDS = [
