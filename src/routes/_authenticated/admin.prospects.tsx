@@ -706,7 +706,20 @@ function ProspectsPage() {
         </SectionCard>
       ) : null}
 
-      {tab === "campaigns" ? (
+      {tab === "candidates" ? (
+        <CandidateInbox
+          campaigns={campaignRows}
+          load={(input) => candidatesFn({ data: input })}
+          onDiscover={(campaignId, count) =>
+            run(
+              discoverCandidates({ data: { campaignId, count } }),
+              "Discovery kandidat selesai.",
+            )
+          }
+          onReject={(id) => run(rejectCandidate({ data: { id } }), "Kandidat ditolak.")}
+          onRestore={(id) => run(restoreCandidate({ data: { id } }), "Kandidat dipulihkan.")}
+        />
+      ) : tab === "campaigns" ? (
         <CampaignList
           campaigns={campaignRows}
           onDiscover={(id) =>
