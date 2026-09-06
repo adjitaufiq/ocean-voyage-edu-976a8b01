@@ -1,3 +1,5 @@
 - [x] Complete Sales Acquisition Engine V2 integration
 - [x] Complete Sales Acquisition Engine V3 contact verification, quality scoring, qualification, and queue rules
 - [x] Run final typecheck, tests, production build, and browser QA
+- [x] Security & AI safety hardening (scheduled-endpoint auth, public AI limits, two-phase write confirmation, memory provenance) + focused tests
+- [ ] Owner action: click "Sinkronkan kunci" in Settings once so the daily Telegram brief can run
