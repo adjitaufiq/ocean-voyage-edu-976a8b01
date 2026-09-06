@@ -74,14 +74,14 @@ describe("pending action payload hashing", () => {
 });
 
 describe("memory provenance", () => {
-  it("never lets AI output claim fact-level trust", () => {
-    expect(clampAiProvenance("database_fact")).not.toBe("database_fact");
-    expect(clampAiProvenance("user_confirmed_fact")).not.toBe("user_confirmed_fact");
+  it("never lets AI output claim database-level truth", () => {
+    expect(clampAiProvenance("database_fact")).toBe("hypothesis");
     expect(isTrustedFact(clampAiProvenance("database_fact"))).toBe(false);
   });
 
   it("keeps valid AI-assignable values and falls back safely", () => {
     expect(clampAiProvenance("hypothesis")).toBe("hypothesis");
-    expect(clampAiProvenance("nonsense")).toBe("assistant_recommendation");
+    expect(clampAiProvenance("assistant_recommendation")).toBe("assistant_recommendation");
+    expect(clampAiProvenance("nonsense")).toBe("hypothesis");
   });
 });
