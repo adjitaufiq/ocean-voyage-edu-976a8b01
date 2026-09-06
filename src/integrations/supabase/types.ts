@@ -2498,8 +2498,6 @@ export type Database = {
       normalize_business_name: { Args: { _raw: string }; Returns: string }
       run_ops_hook: { Args: { _path: string }; Returns: number }
       set_ops_cron_secret: { Args: { _value: string }; Returns: undefined }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       team_member_name: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
