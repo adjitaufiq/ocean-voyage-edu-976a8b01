@@ -493,7 +493,7 @@ function ProspectsPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2 border-b border-border/40 pb-3">
-        {(["queue", "campaigns", "prospects", "audit"] as const).map((item) => (
+        {(["queue", "candidates", "campaigns", "prospects", "audit"] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -507,11 +507,13 @@ function ProspectsPage() {
           >
             {item === "queue"
               ? "Daily sales queue"
-              : item === "campaigns"
-                ? "Campaigns"
-                : item === "prospects"
-                  ? "All prospects"
-                  : "Audit"}
+              : item === "candidates"
+                ? "Candidate inbox"
+                : item === "campaigns"
+                  ? "Campaigns"
+                  : item === "prospects"
+                    ? "All prospects"
+                    : "Audit"}
           </button>
         ))}
       </div>
