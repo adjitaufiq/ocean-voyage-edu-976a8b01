@@ -2257,16 +2257,10 @@ function CandidateInbox({
         title="Candidate inbox"
         description="Kandidat adalah hipotesis AI: hanya nama bisnis dan alasan potensi. Data kontak tidak pernah datang dari AI — kandidat harus diverifikasi dulu sebelum jadi prospek."
       >
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {(["discovered", "enriching", "verified", "promoted", "rejected"] as const).map(
-            (key) => (
-              <MetricTile
-                key={key}
-                label={CANDIDATE_STATUS_LABELS[key]}
-                value={summary[key] ?? 0}
-              />
-            ),
-          )}
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {CANDIDATE_STATUS_FILTERS.map((key) => (
+            <MetricTile key={key} label={CANDIDATE_STATUS_LABELS[key]} value={summary[key] ?? 0} />
+          ))}
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
