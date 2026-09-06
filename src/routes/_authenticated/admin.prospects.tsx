@@ -88,7 +88,16 @@ import {
   listAuditsFn,
   sampleAuditFn,
   submitAuditFn,
+  getCandidatesFn,
+  discoverCandidatesFn,
+  rejectCandidateFn,
+  restoreCandidateFn,
 } from "@/lib/prospecting.functions";
+import {
+  CANDIDATE_STATUS_LABELS,
+  candidateStatusClass,
+  type CandidateRow,
+} from "@/lib/admin/prospect-candidates";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/prospects")({
