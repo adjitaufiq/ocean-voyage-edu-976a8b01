@@ -2287,13 +2287,11 @@ function CandidateInbox({
               onChange={(e) => setStatus(e.target.value)}
             >
               <option value="all">Semua status</option>
-              {(["discovered", "enriching", "verified", "promoted", "rejected"] as const).map(
-                (key) => (
-                  <option key={key} value={key}>
-                    {CANDIDATE_STATUS_LABELS[key]}
-                  </option>
-                ),
-              )}
+              {CANDIDATE_STATUS_FILTERS.map((key) => (
+                <option key={key} value={key}>
+                  {CANDIDATE_STATUS_LABELS[key]}
+                </option>
+              ))}
             </select>
           </label>
           <label className="space-y-1 text-sm">
