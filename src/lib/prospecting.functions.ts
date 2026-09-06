@@ -536,6 +536,50 @@ export const discoverCandidatesFn = createServerFn({ method: "POST" })
     });
   });
 
+export const requestCandidateReviewFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({ id: z.string().uuid(), reason: z.string().max(500).nullable().optional() })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { requestCandidateReview } = await import("./prospecting-candidates.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return requestCandidateReview(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
+export const approveCandidateFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({ id: z.string().uuid(), note: z.string().max(500).nullable().optional() })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { approveCandidate } = await import("./prospecting-candidates.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return approveCandidate(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
+export const getCandidateEventsFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { fetchCandidateEvents } = await import("./prospecting-candidates.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return fetchCandidateEvents(context.supabase, data.id);
+  });
+
 export const rejectCandidateFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
@@ -547,7 +591,10 @@ export const rejectCandidateFn = createServerFn({ method: "POST" })
     const { assertLeadWork } = await import("./admin.server");
     const { rejectCandidate } = await import("./prospecting-candidates.server");
     await assertLeadWork(context.supabase, context.userId);
-    return rejectCandidate(context.supabase, data);
+    return rejectCandidate(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
   });
 
 export const restoreCandidateFn = createServerFn({ method: "POST" })
@@ -557,7 +604,10 @@ export const restoreCandidateFn = createServerFn({ method: "POST" })
     const { assertLeadWork } = await import("./admin.server");
     const { restoreCandidate } = await import("./prospecting-candidates.server");
     await assertLeadWork(context.supabase, context.userId);
-    return restoreCandidate(context.supabase, data.id);
+    return restoreCandidate(context.supabase, data.id, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
   });
 
 export const createCandidateFn = createServerFn({ method: "POST" })

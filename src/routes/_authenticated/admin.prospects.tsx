@@ -92,11 +92,18 @@ import {
   discoverCandidatesFn,
   rejectCandidateFn,
   restoreCandidateFn,
+  requestCandidateReviewFn,
+  approveCandidateFn,
+  getCandidateEventsFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
   candidateStatusClass,
+  canTransition,
+  ICP_REVIEW_THRESHOLD,
+  ACTOR_KIND_LABELS,
   type CandidateRow,
+  type CandidateEventRow,
 } from "@/lib/admin/prospect-candidates";
 import { cn } from "@/lib/utils";
 
@@ -238,6 +245,9 @@ function ProspectsPage() {
   const discoverCandidates = useServerFn(discoverCandidatesFn);
   const rejectCandidate = useServerFn(rejectCandidateFn);
   const restoreCandidate = useServerFn(restoreCandidateFn);
+  const requestCandidateReview = useServerFn(requestCandidateReviewFn);
+  const approveCandidate = useServerFn(approveCandidateFn);
+  const candidateEventsFn = useServerFn(getCandidateEventsFn);
   const [reverifying, setReverifying] = useState(false);
   const [validating, setValidating] = useState(false);
 
@@ -718,6 +728,13 @@ function ProspectsPage() {
           }
           onReject={(id) => run(rejectCandidate({ data: { id } }), "Kandidat ditolak.")}
           onRestore={(id) => run(restoreCandidate({ data: { id } }), "Kandidat dipulihkan.")}
+          onRequestReview={(id) =>
+            run(requestCandidateReview({ data: { id } }), "Kandidat masuk antrean tinjauan.")
+          }
+          onApprove={(id, note) =>
+            run(approveCandidate({ data: { id, note } }), "Kandidat disetujui.")
+          }
+          loadEvents={(id) => candidateEventsFn({ data: { id } })}
         />
       ) : tab === "campaigns" ? (
         <CampaignList
@@ -2185,6 +2202,55 @@ function AuditPanel({
 
 /* ---------------------------- Candidate inbox ----------------------------- */
 
+const CANDIDATE_STATUS_FILTERS = [
+  "discovered",
+  "enriching",
+  "verified",
+  "pending_review",
+  "approved",
+  "promoted",
+  "rejected",
+] as const;
+
+function CandidateHistory({
+  id,
+  loadEvents,
+}: {
+  id: string;
+  loadEvents: (id: string) => Promise<CandidateEventRow[]>;
+}) {
+  const query = useQuery({
+    queryKey: ["admin", "prospect-candidate-events", id],
+    queryFn: () => loadEvents(id),
+  });
+  const events = query.data ?? [];
+
+  if (query.isLoading)
+    return <p className="mt-3 text-xs text-muted-foreground">Memuat riwayat…</p>;
+  if (events.length === 0)
+    return <p className="mt-3 text-xs text-muted-foreground">Belum ada riwayat perubahan.</p>;
+
+  return (
+    <ul className="mt-3 space-y-2 border-t border-border/40 pt-3 text-xs text-muted-foreground">
+      {events.map((event) => (
+        <li key={event.id} className="flex flex-wrap gap-x-2">
+          <span className="text-foreground/80">{event.event}</span>
+          <span>· {ACTOR_KIND_LABELS[event.actor_kind]}</span>
+          {event.actor_label ? <span>· {event.actor_label}</span> : null}
+          <span>· {new Date(event.created_at).toLocaleString("id-ID")}</span>
+          {event.field ? (
+            <span>
+              · {event.field}: {event.old_value ?? "—"} → {event.new_value ?? "—"}
+            </span>
+          ) : null}
+          {event.data_source ? <span>· sumber {event.data_source}</span> : null}
+          {event.reason ? <span className="w-full text-foreground/60">{event.reason}</span> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type CandidateInboxProps = {
   campaigns: CampaignRow[];
   load: (input: { status?: string; campaignId?: string; search?: string }) => Promise<{
@@ -2194,6 +2260,9 @@ type CandidateInboxProps = {
   onDiscover: (campaignId: string, count: number) => Promise<unknown>;
   onReject: (id: string) => Promise<unknown>;
   onRestore: (id: string) => Promise<unknown>;
+  onRequestReview: (id: string) => Promise<unknown>;
+  onApprove: (id: string, note: string | null) => Promise<unknown>;
+  loadEvents: (id: string) => Promise<CandidateEventRow[]>;
 };
 
 function CandidateInbox({
@@ -2202,12 +2271,16 @@ function CandidateInbox({
   onDiscover,
   onReject,
   onRestore,
+  onRequestReview,
+  onApprove,
+  loadEvents,
 }: CandidateInboxProps) {
   const [status, setStatus] = useState("discovered");
   const [campaignId, setCampaignId] = useState("");
   const [search, setSearch] = useState("");
   const [count, setCount] = useState(10);
   const [busy, setBusy] = useState(false);
+  const [historyFor, setHistoryFor] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["admin", "prospect-candidates", status, campaignId, search],
@@ -2233,16 +2306,10 @@ function CandidateInbox({
         title="Candidate inbox"
         description="Kandidat adalah hipotesis AI: hanya nama bisnis dan alasan potensi. Data kontak tidak pernah datang dari AI — kandidat harus diverifikasi dulu sebelum jadi prospek."
       >
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {(["discovered", "enriching", "verified", "promoted", "rejected"] as const).map(
-            (key) => (
-              <MetricTile
-                key={key}
-                label={CANDIDATE_STATUS_LABELS[key]}
-                value={summary[key] ?? 0}
-              />
-            ),
-          )}
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {CANDIDATE_STATUS_FILTERS.map((key) => (
+            <MetricTile key={key} label={CANDIDATE_STATUS_LABELS[key]} value={summary[key] ?? 0} />
+          ))}
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
@@ -2269,13 +2336,11 @@ function CandidateInbox({
               onChange={(e) => setStatus(e.target.value)}
             >
               <option value="all">Semua status</option>
-              {(["discovered", "enriching", "verified", "promoted", "rejected"] as const).map(
-                (key) => (
-                  <option key={key} value={key}>
-                    {CANDIDATE_STATUS_LABELS[key]}
-                  </option>
-                ),
-              )}
+              {CANDIDATE_STATUS_FILTERS.map((key) => (
+                <option key={key} value={key}>
+                  {CANDIDATE_STATUS_LABELS[key]}
+                </option>
+              ))}
             </select>
           </label>
           <label className="space-y-1 text-sm">
@@ -2344,6 +2409,41 @@ function CandidateInbox({
                     <span className="rounded-full border border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground">
                       ICP {row.icp_score}
                     </span>
+                    {canTransition(row.candidate_status, "pending_review") ? (
+                      <button
+                        type="button"
+                        disabled={busy || row.icp_score < ICP_REVIEW_THRESHOLD}
+                        title={
+                          row.icp_score < ICP_REVIEW_THRESHOLD
+                            ? `Skor ICP minimal ${ICP_REVIEW_THRESHOLD} sebelum bisa diajukan.`
+                            : undefined
+                        }
+                        onClick={() => guard(() => onRequestReview(row.id))}
+                        className="rounded-lg border border-amber-300/40 px-3 py-1 text-xs text-amber-100 transition hover:bg-amber-300/10 disabled:opacity-50"
+                      >
+                        Ajukan tinjauan
+                      </button>
+                    ) : null}
+                    {canTransition(row.candidate_status, "approved") ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          const note = window.prompt("Catatan persetujuan (opsional)") ?? null;
+                          guard(() => onApprove(row.id, note));
+                        }}
+                        className="rounded-lg border border-emerald-300/40 px-3 py-1 text-xs text-emerald-100 transition hover:bg-emerald-300/10 disabled:opacity-50"
+                      >
+                        Setujui
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setHistoryFor(historyFor === row.id ? null : row.id)}
+                      className="rounded-lg border border-border/50 px-3 py-1 text-xs transition hover:bg-muted/30"
+                    >
+                      {historyFor === row.id ? "Tutup riwayat" : "Riwayat"}
+                    </button>
                     {row.candidate_status === "rejected" ? (
                       <button
                         type="button"
@@ -2390,9 +2490,25 @@ function CandidateInbox({
                       <dd>{row.suggested_solution}</dd>
                     </div>
                   ) : null}
+                  {row.icp_reason ? (
+                    <div>
+                      <dt className="text-foreground/80">Alasan skor ICP</dt>
+                      <dd>{row.icp_reason}</dd>
+                    </div>
+                  ) : null}
                 </dl>
+                {row.approved_at ? (
+                  <p className="mt-2 text-xs text-emerald-200">
+                    Disetujui {row.approved_by_email ?? "tim"} ·{" "}
+                    {new Date(row.approved_at).toLocaleString("id-ID")}
+                    {row.approval_note ? ` · ${row.approval_note}` : ""}
+                  </p>
+                ) : null}
                 {row.rejected_reason ? (
                   <p className="mt-2 text-xs text-rose-200">Alasan tolak: {row.rejected_reason}</p>
+                ) : null}
+                {historyFor === row.id ? (
+                  <CandidateHistory id={row.id} loadEvents={loadEvents} />
                 ) : null}
               </div>
             ))}
