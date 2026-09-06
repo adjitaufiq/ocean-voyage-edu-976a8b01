@@ -380,6 +380,15 @@ export async function discoverCandidates(
       skipped += 1;
       continue;
     }
+    await logCandidateEvent(supabase, {
+      candidateId: (inserted as { id: string }).id,
+      event: "discovered",
+      actorKind: "ai",
+      actorLabel: "AI Discovery Agent",
+      dataSource: "ai_discovery",
+      reason: icpReason,
+      meta: { icp_score: icpScore, campaign_id: campaign.id },
+    });
     saved.push({
       id: (inserted as { id: string }).id,
       name: (inserted as { business_name: string }).business_name,
@@ -415,9 +424,155 @@ export async function discoverCandidates(
 
 /* ------------------------------ Candidate ops ----------------------------- */
 
+/* ----------------------- RULE 4 — audit traceability ---------------------- */
+
+export async function logCandidateEvent(
+  supabase: Client,
+  input: {
+    candidateId: string;
+    event: string;
+    field?: string | null;
+    oldValue?: string | null;
+    newValue?: string | null;
+    actorKind: ActorKind;
+    actorLabel?: string | null;
+    actorId?: string | null;
+    dataSource?: string | null;
+    dataSourceUrl?: string | null;
+    reason?: string | null;
+    meta?: Record<string, unknown>;
+  },
+): Promise<void> {
+  await supabase.from("prospect_candidate_events").insert({
+    candidate_id: input.candidateId,
+    event: input.event,
+    field: input.field ?? null,
+    old_value: input.oldValue ?? null,
+    new_value: input.newValue ?? null,
+    actor_kind: input.actorKind,
+    actor_label: input.actorLabel ?? null,
+    actor_id: input.actorId ?? null,
+    data_source: input.dataSource ?? null,
+    data_source_url: input.dataSourceUrl ?? null,
+    reason: input.reason ?? null,
+    meta: (input.meta ?? {}) as never,
+  } as never);
+}
+
+export async function fetchCandidateEvents(
+  supabase: Client,
+  candidateId: string,
+): Promise<CandidateEventRow[]> {
+  const { data, error } = await supabase
+    .from("prospect_candidate_events")
+    .select(
+      "id, candidate_id, event, field, old_value, new_value, actor_kind, actor_label, data_source, data_source_url, reason, created_at",
+    )
+    .eq("candidate_id", candidateId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as CandidateEventRow[];
+}
+
+async function currentStatus(supabase: Client, id: string): Promise<CandidateStatus> {
+  const { data, error } = await supabase
+    .from("prospect_candidates")
+    .select("candidate_status")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) throw new Error(error?.message ?? "Kandidat tidak ditemukan.");
+  return (data as { candidate_status: CandidateStatus }).candidate_status;
+}
+
+/* ------------------- RULE 1 — human approval gate (server) ---------------- */
+
+/** Move a candidate into the human review queue. Scoring never does this alone. */
+export async function requestCandidateReview(
+  supabase: Client,
+  input: { id: string; reason?: string | null },
+  actor: { userId: string; email?: string | null },
+): Promise<{ ok: true }> {
+  const from = await currentStatus(supabase, input.id);
+  if (!canTransition(from, "pending_review"))
+    throw new Error("Status kandidat tidak bisa dipindah ke tinjauan.");
+
+  const { data: row } = await supabase
+    .from("prospect_candidates")
+    .select("icp_score")
+    .eq("id", input.id)
+    .maybeSingle();
+  const icpScore = Number((row as { icp_score?: number } | null)?.icp_score ?? 0);
+  if (icpScore < ICP_REVIEW_THRESHOLD)
+    throw new Error(
+      `Skor ICP ${icpScore} di bawah ambang ${ICP_REVIEW_THRESHOLD}. Perbaiki kualifikasi dulu.`,
+    );
+
+  const { error } = await supabase
+    .from("prospect_candidates")
+    .update({
+      candidate_status: "pending_review",
+      review_requested_at: new Date().toISOString(),
+    } as never)
+    .eq("id", input.id);
+  if (error) throw new Error(error.message);
+
+  await logCandidateEvent(supabase, {
+    candidateId: input.id,
+    event: "review_requested",
+    field: "candidate_status",
+    oldValue: from,
+    newValue: "pending_review",
+    actorKind: "human",
+    actorLabel: actor.email ?? null,
+    actorId: actor.userId,
+    dataSource: "internal",
+    reason: input.reason ?? "Diajukan untuk tinjauan manusia.",
+  });
+  return { ok: true };
+}
+
+/** Human approval. Only an approved candidate may later become a prospect. */
+export async function approveCandidate(
+  supabase: Client,
+  input: { id: string; note?: string | null },
+  actor: { userId: string; email?: string | null },
+): Promise<{ ok: true }> {
+  const from = await currentStatus(supabase, input.id);
+  if (!canTransition(from, "approved"))
+    throw new Error("Kandidat harus berstatus menunggu tinjauan sebelum disetujui.");
+
+  const { error } = await supabase
+    .from("prospect_candidates")
+    .update({
+      candidate_status: "approved",
+      approved_by: actor.userId,
+      approved_by_email: actor.email ?? null,
+      approved_at: new Date().toISOString(),
+      approval_note: input.note?.slice(0, 500) ?? null,
+    } as never)
+    .eq("id", input.id);
+  if (error) throw new Error(error.message);
+
+  await logCandidateEvent(supabase, {
+    candidateId: input.id,
+    event: "approved",
+    field: "candidate_status",
+    oldValue: from,
+    newValue: "approved",
+    actorKind: "human",
+    actorLabel: actor.email ?? null,
+    actorId: actor.userId,
+    dataSource: "internal",
+    reason: input.note ?? "Disetujui manusia.",
+  });
+  return { ok: true };
+}
+
 export async function rejectCandidate(
   supabase: Client,
   input: { id: string; reason?: string | null },
+  actor?: { userId: string; email?: string | null },
 ): Promise<{ ok: true }> {
   const { error } = await supabase
     .from("prospect_candidates")
@@ -427,15 +582,41 @@ export async function rejectCandidate(
     } as never)
     .eq("id", input.id);
   if (error) throw new Error(error.message);
+  await logCandidateEvent(supabase, {
+    candidateId: input.id,
+    event: "rejected",
+    field: "candidate_status",
+    newValue: "rejected",
+    actorKind: "human",
+    actorLabel: actor?.email ?? null,
+    actorId: actor?.userId ?? null,
+    dataSource: "internal",
+    reason: input.reason ?? "Ditolak manual",
+  });
   return { ok: true };
 }
 
-export async function restoreCandidate(supabase: Client, id: string): Promise<{ ok: true }> {
+export async function restoreCandidate(
+  supabase: Client,
+  id: string,
+  actor?: { userId: string; email?: string | null },
+): Promise<{ ok: true }> {
   const { error } = await supabase
     .from("prospect_candidates")
     .update({ candidate_status: "discovered", rejected_reason: null } as never)
     .eq("id", id);
   if (error) throw new Error(error.message);
+  await logCandidateEvent(supabase, {
+    candidateId: id,
+    event: "restored",
+    field: "candidate_status",
+    newValue: "discovered",
+    actorKind: "human",
+    actorLabel: actor?.email ?? null,
+    actorId: actor?.userId ?? null,
+    dataSource: "internal",
+    reason: "Dipulihkan ke daftar kandidat.",
+  });
   return { ok: true };
 }
 
@@ -465,5 +646,14 @@ export async function createManualCandidate(
     .select("id")
     .single();
   if (error) throw new Error(error.message);
-  return { id: (data as { id: string }).id };
+  const id = (data as { id: string }).id;
+  await logCandidateEvent(supabase, {
+    candidateId: id,
+    event: "created_manual",
+    actorKind: "human",
+    actorId: actor.userId,
+    dataSource: "manual",
+    reason: "Kandidat ditambahkan manual.",
+  });
+  return { id };
 }
