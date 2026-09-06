@@ -234,10 +234,16 @@ function ProspectsPage() {
   const auditsFn = useServerFn(listAuditsFn);
   const sampleFn = useServerFn(sampleAuditFn);
   const verdictFn = useServerFn(submitAuditFn);
+  const candidatesFn = useServerFn(getCandidatesFn);
+  const discoverCandidates = useServerFn(discoverCandidatesFn);
+  const rejectCandidate = useServerFn(rejectCandidateFn);
+  const restoreCandidate = useServerFn(restoreCandidateFn);
   const [reverifying, setReverifying] = useState(false);
   const [validating, setValidating] = useState(false);
 
-  const [tab, setTab] = useState<"queue" | "campaigns" | "prospects" | "audit">("queue");
+  const [tab, setTab] = useState<
+    "queue" | "candidates" | "campaigns" | "prospects" | "audit"
+  >("queue");
   const [status, setStatus] = useState("all");
   const [tier, setTier] = useState("all");
   const [search, setSearch] = useState("");
