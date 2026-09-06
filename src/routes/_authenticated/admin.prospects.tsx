@@ -2360,6 +2360,41 @@ function CandidateInbox({
                     <span className="rounded-full border border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground">
                       ICP {row.icp_score}
                     </span>
+                    {canTransition(row.candidate_status, "pending_review") ? (
+                      <button
+                        type="button"
+                        disabled={busy || row.icp_score < ICP_REVIEW_THRESHOLD}
+                        title={
+                          row.icp_score < ICP_REVIEW_THRESHOLD
+                            ? `Skor ICP minimal ${ICP_REVIEW_THRESHOLD} sebelum bisa diajukan.`
+                            : undefined
+                        }
+                        onClick={() => guard(() => onRequestReview(row.id))}
+                        className="rounded-lg border border-amber-300/40 px-3 py-1 text-xs text-amber-100 transition hover:bg-amber-300/10 disabled:opacity-50"
+                      >
+                        Ajukan tinjauan
+                      </button>
+                    ) : null}
+                    {canTransition(row.candidate_status, "approved") ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          const note = window.prompt("Catatan persetujuan (opsional)") ?? null;
+                          guard(() => onApprove(row.id, note));
+                        }}
+                        className="rounded-lg border border-emerald-300/40 px-3 py-1 text-xs text-emerald-100 transition hover:bg-emerald-300/10 disabled:opacity-50"
+                      >
+                        Setujui
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setHistoryFor(historyFor === row.id ? null : row.id)}
+                      className="rounded-lg border border-border/50 px-3 py-1 text-xs transition hover:bg-muted/30"
+                    >
+                      {historyFor === row.id ? "Tutup riwayat" : "Riwayat"}
+                    </button>
                     {row.candidate_status === "rejected" ? (
                       <button
                         type="button"
