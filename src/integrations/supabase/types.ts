@@ -1750,6 +1750,7 @@ export type Database = {
           created_by: string | null
           custom_solutions: Json
           daily_target: number
+          enrichment_budget_daily: number
           id: string
           industry: string
           keywords: Json
@@ -1758,6 +1759,7 @@ export type Database = {
           name: string
           needs_review: boolean
           notes: string | null
+          pipeline_version: string
           primary_solution: string | null
           review_reason: string | null
           solution: string
@@ -1772,6 +1774,7 @@ export type Database = {
           created_by?: string | null
           custom_solutions?: Json
           daily_target?: number
+          enrichment_budget_daily?: number
           id?: string
           industry: string
           keywords?: Json
@@ -1780,6 +1783,7 @@ export type Database = {
           name: string
           needs_review?: boolean
           notes?: string | null
+          pipeline_version?: string
           primary_solution?: string | null
           review_reason?: string | null
           solution: string
@@ -1794,6 +1798,7 @@ export type Database = {
           created_by?: string | null
           custom_solutions?: Json
           daily_target?: number
+          enrichment_budget_daily?: number
           id?: string
           industry?: string
           keywords?: Json
@@ -1802,6 +1807,7 @@ export type Database = {
           name?: string
           needs_review?: boolean
           notes?: string | null
+          pipeline_version?: string
           primary_solution?: string | null
           review_reason?: string | null
           solution?: string
@@ -1812,6 +1818,118 @@ export type Database = {
           validation_accuracy?: number | null
         }
         Relationships: []
+      }
+      prospect_candidates: {
+        Row: {
+          business_name: string
+          business_name_normalized: string | null
+          buying_signal_hypothesis: string | null
+          campaign_id: string | null
+          candidate_status: string
+          city: string | null
+          country: string
+          created_at: string
+          created_by: string | null
+          discovery_method: string
+          discovery_query: string | null
+          discovery_reason: string | null
+          discovery_source: string | null
+          duplicate_of: string | null
+          duplicate_status: string
+          icp_score: number
+          id: string
+          industry: string | null
+          potential_problem_hypothesis: string | null
+          promoted_prospect_id: string | null
+          raw_payload: Json
+          rejected_reason: string | null
+          suggested_solution: string | null
+          trust_breakdown: Json
+          trust_score: number
+          updated_at: string
+          why_match_icp: string | null
+        }
+        Insert: {
+          business_name: string
+          business_name_normalized?: string | null
+          buying_signal_hypothesis?: string | null
+          campaign_id?: string | null
+          candidate_status?: string
+          city?: string | null
+          country?: string
+          created_at?: string
+          created_by?: string | null
+          discovery_method?: string
+          discovery_query?: string | null
+          discovery_reason?: string | null
+          discovery_source?: string | null
+          duplicate_of?: string | null
+          duplicate_status?: string
+          icp_score?: number
+          id?: string
+          industry?: string | null
+          potential_problem_hypothesis?: string | null
+          promoted_prospect_id?: string | null
+          raw_payload?: Json
+          rejected_reason?: string | null
+          suggested_solution?: string | null
+          trust_breakdown?: Json
+          trust_score?: number
+          updated_at?: string
+          why_match_icp?: string | null
+        }
+        Update: {
+          business_name?: string
+          business_name_normalized?: string | null
+          buying_signal_hypothesis?: string | null
+          campaign_id?: string | null
+          candidate_status?: string
+          city?: string | null
+          country?: string
+          created_at?: string
+          created_by?: string | null
+          discovery_method?: string
+          discovery_query?: string | null
+          discovery_reason?: string | null
+          discovery_source?: string | null
+          duplicate_of?: string | null
+          duplicate_status?: string
+          icp_score?: number
+          id?: string
+          industry?: string | null
+          potential_problem_hypothesis?: string | null
+          promoted_prospect_id?: string | null
+          raw_payload?: Json
+          rejected_reason?: string | null
+          suggested_solution?: string | null
+          trust_breakdown?: Json
+          trust_score?: number
+          updated_at?: string
+          why_match_icp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_candidates_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_candidates_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "prospect_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_candidates_promoted_prospect_id_fkey"
+            columns: ["promoted_prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       prospect_icp_config: {
         Row: {
@@ -1935,6 +2053,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           business_name: string
+          business_name_normalized: string | null
           business_problem: string | null
           business_profile: string | null
           business_summary: string | null
@@ -2013,6 +2132,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           business_name: string
+          business_name_normalized?: string | null
           business_problem?: string | null
           business_profile?: string | null
           business_summary?: string | null
@@ -2091,6 +2211,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           business_name?: string
+          business_name_normalized?: string | null
           business_problem?: string | null
           business_profile?: string | null
           business_summary?: string | null
@@ -2374,8 +2495,11 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      normalize_business_name: { Args: { _raw: string }; Returns: string }
       run_ops_hook: { Args: { _path: string }; Returns: number }
       set_ops_cron_secret: { Args: { _value: string }; Returns: undefined }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       team_member_name: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
