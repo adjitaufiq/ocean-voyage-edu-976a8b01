@@ -2202,6 +2202,55 @@ function AuditPanel({
 
 /* ---------------------------- Candidate inbox ----------------------------- */
 
+const CANDIDATE_STATUS_FILTERS = [
+  "discovered",
+  "enriching",
+  "verified",
+  "pending_review",
+  "approved",
+  "promoted",
+  "rejected",
+] as const;
+
+function CandidateHistory({
+  id,
+  loadEvents,
+}: {
+  id: string;
+  loadEvents: (id: string) => Promise<CandidateEventRow[]>;
+}) {
+  const query = useQuery({
+    queryKey: ["admin", "prospect-candidate-events", id],
+    queryFn: () => loadEvents(id),
+  });
+  const events = query.data ?? [];
+
+  if (query.isLoading)
+    return <p className="mt-3 text-xs text-muted-foreground">Memuat riwayat…</p>;
+  if (events.length === 0)
+    return <p className="mt-3 text-xs text-muted-foreground">Belum ada riwayat perubahan.</p>;
+
+  return (
+    <ul className="mt-3 space-y-2 border-t border-border/40 pt-3 text-xs text-muted-foreground">
+      {events.map((event) => (
+        <li key={event.id} className="flex flex-wrap gap-x-2">
+          <span className="text-foreground/80">{event.event}</span>
+          <span>· {ACTOR_KIND_LABELS[event.actor_kind]}</span>
+          {event.actor_label ? <span>· {event.actor_label}</span> : null}
+          <span>· {new Date(event.created_at).toLocaleString("id-ID")}</span>
+          {event.field ? (
+            <span>
+              · {event.field}: {event.old_value ?? "—"} → {event.new_value ?? "—"}
+            </span>
+          ) : null}
+          {event.data_source ? <span>· sumber {event.data_source}</span> : null}
+          {event.reason ? <span className="w-full text-foreground/60">{event.reason}</span> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type CandidateInboxProps = {
   campaigns: CampaignRow[];
   load: (input: { status?: string; campaignId?: string; search?: string }) => Promise<{
