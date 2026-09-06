@@ -2211,6 +2211,9 @@ type CandidateInboxProps = {
   onDiscover: (campaignId: string, count: number) => Promise<unknown>;
   onReject: (id: string) => Promise<unknown>;
   onRestore: (id: string) => Promise<unknown>;
+  onRequestReview: (id: string) => Promise<unknown>;
+  onApprove: (id: string, note: string | null) => Promise<unknown>;
+  loadEvents: (id: string) => Promise<CandidateEventRow[]>;
 };
 
 function CandidateInbox({
@@ -2219,12 +2222,16 @@ function CandidateInbox({
   onDiscover,
   onReject,
   onRestore,
+  onRequestReview,
+  onApprove,
+  loadEvents,
 }: CandidateInboxProps) {
   const [status, setStatus] = useState("discovered");
   const [campaignId, setCampaignId] = useState("");
   const [search, setSearch] = useState("");
   const [count, setCount] = useState(10);
   const [busy, setBusy] = useState(false);
+  const [historyFor, setHistoryFor] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["admin", "prospect-candidates", status, campaignId, search],
