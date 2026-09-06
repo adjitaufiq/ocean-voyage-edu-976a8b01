@@ -17,8 +17,13 @@ import {
   type CampaignRow,
 } from "@/lib/admin/prospecting";
 import {
+  canTransition,
+  candidateIcpReason,
   candidateIcpScore,
+  ICP_REVIEW_THRESHOLD,
   normalizeBusinessKey,
+  type ActorKind,
+  type CandidateEventRow,
   type CandidateRow,
   type CandidateStatus,
 } from "@/lib/admin/prospect-candidates";
@@ -27,7 +32,7 @@ import { fetchIcpConfig } from "@/lib/prospecting.server";
 type Client = SupabaseClient<Database>;
 
 const CANDIDATE_COLUMNS =
-  "id, campaign_id, business_name, industry, city, country, why_match_icp, potential_problem_hypothesis, buying_signal_hypothesis, suggested_solution, discovery_reason, discovery_method, discovery_query, discovery_source, candidate_status, duplicate_status, duplicate_of, icp_score, trust_score, rejected_reason, promoted_prospect_id, created_at";
+  "id, campaign_id, business_name, industry, city, country, why_match_icp, potential_problem_hypothesis, buying_signal_hypothesis, suggested_solution, discovery_reason, discovery_method, discovery_query, discovery_source, candidate_status, duplicate_status, duplicate_of, icp_score, trust_score, rejected_reason, promoted_prospect_id, icp_reason, approved_by_email, approved_at, approval_note, review_requested_at, created_at";
 
 function asRow(row: Record<string, unknown>): CandidateRow {
   return {
@@ -52,6 +57,11 @@ function asRow(row: Record<string, unknown>): CandidateRow {
     trust_score: Number(row["trust_score"] ?? 0),
     rejected_reason: (row["rejected_reason"] as string | null) ?? null,
     promoted_prospect_id: (row["promoted_prospect_id"] as string | null) ?? null,
+    icp_reason: (row["icp_reason"] as string | null) ?? null,
+    approved_by_email: (row["approved_by_email"] as string | null) ?? null,
+    approved_at: (row["approved_at"] as string | null) ?? null,
+    approval_note: (row["approval_note"] as string | null) ?? null,
+    review_requested_at: (row["review_requested_at"] as string | null) ?? null,
     created_at: String(row["created_at"]),
   };
 }
@@ -86,6 +96,8 @@ export type CandidateSummary = {
   discovered: number;
   enriching: number;
   verified: number;
+  pending_review: number;
+  approved: number;
   rejected: number;
   promoted: number;
 };
@@ -100,6 +112,8 @@ export async function buildCandidateSummary(supabase: Client): Promise<Candidate
     discovered: 0,
     enriching: 0,
     verified: 0,
+    pending_review: 0,
+    approved: 0,
     rejected: 0,
     promoted: 0,
   };
@@ -336,6 +350,12 @@ export async function discoverCandidates(
       painKeywords: icp?.painKeywords ?? [],
     });
 
+    const icpReason = candidateIcpReason(candidateShape as never, {
+      industries: icp?.industries ?? [],
+      cities: icp?.cities ?? [],
+      painKeywords: icp?.painKeywords ?? [],
+    });
+
     const { data: inserted, error: insertError } = await supabase
       .from("prospect_candidates")
       .insert({
@@ -350,6 +370,7 @@ export async function discoverCandidates(
         raw_payload: item as never,
         candidate_status: "discovered",
         icp_score: icpScore,
+        icp_reason: icpReason,
         created_by: actor.userId,
       } as never)
       .select("id, business_name")
