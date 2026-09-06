@@ -2441,9 +2441,25 @@ function CandidateInbox({
                       <dd>{row.suggested_solution}</dd>
                     </div>
                   ) : null}
+                  {row.icp_reason ? (
+                    <div>
+                      <dt className="text-foreground/80">Alasan skor ICP</dt>
+                      <dd>{row.icp_reason}</dd>
+                    </div>
+                  ) : null}
                 </dl>
+                {row.approved_at ? (
+                  <p className="mt-2 text-xs text-emerald-200">
+                    Disetujui {row.approved_by_email ?? "tim"} ·{" "}
+                    {new Date(row.approved_at).toLocaleString("id-ID")}
+                    {row.approval_note ? ` · ${row.approval_note}` : ""}
+                  </p>
+                ) : null}
                 {row.rejected_reason ? (
                   <p className="mt-2 text-xs text-rose-200">Alasan tolak: {row.rejected_reason}</p>
+                ) : null}
+                {historyFor === row.id ? (
+                  <CandidateHistory id={row.id} loadEvents={loadEvents} />
                 ) : null}
               </div>
             ))}
