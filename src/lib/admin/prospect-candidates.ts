@@ -219,3 +219,64 @@ export function normalizeBusinessKey(raw: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
+
+/**
+ * RULE 3 — explainable ICP priority. "Business exists" is not "sales priority",
+ * so the reason string always states which ICP signals matched.
+ */
+export function candidateIcpReason(
+  candidate: Pick<CandidateRow, "industry" | "city" | "why_match_icp" | "potential_problem_hypothesis" | "buying_signal_hypothesis">,
+  icp?: { industries?: string[]; cities?: string[]; painKeywords?: string[] },
+): string {
+  const reasons: string[] = [];
+  const industry = (candidate.industry ?? "").toLowerCase();
+  const city = (candidate.city ?? "").toLowerCase();
+
+  const industryHit = (icp?.industries ?? []).find((item) => industry.includes(item.toLowerCase()));
+  if (industryHit) reasons.push(`industri cocok ICP (${industryHit})`);
+  else if (industry) reasons.push(`industri "${candidate.industry}" di luar daftar ICP`);
+
+  const cityHit = (icp?.cities ?? []).find((item) => city.includes(item.toLowerCase()));
+  if (cityHit) reasons.push(`lokasi prioritas (${cityHit})`);
+  else if (city) reasons.push(`lokasi "${candidate.city}" bukan prioritas`);
+
+  const text = [
+    candidate.why_match_icp,
+    candidate.potential_problem_hypothesis,
+    candidate.buying_signal_hypothesis,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const painHit = (icp?.painKeywords ?? []).find((item) => item && text.includes(item.toLowerCase()));
+  if (painHit) reasons.push(`sinyal masalah relevan ("${painHit}")`);
+  if (!candidate.buying_signal_hypothesis) reasons.push("belum ada dugaan sinyal beli");
+
+  return reasons.length ? reasons.join("; ") : "Belum cukup sinyal ICP untuk menilai prioritas.";
+}
+
+/** RULE 4 — audit traceability: who changed what, when, from which source, why. */
+export const ACTOR_KINDS = ["ai", "external", "human", "system"] as const;
+export type ActorKind = (typeof ACTOR_KINDS)[number];
+
+export const ACTOR_KIND_LABELS: Record<ActorKind, string> = {
+  ai: "AI",
+  external: "Sumber eksternal",
+  human: "Manusia",
+  system: "Sistem",
+};
+
+export type CandidateEventRow = {
+  id: string;
+  candidate_id: string;
+  event: string;
+  field: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  actor_kind: ActorKind;
+  actor_label: string | null;
+  data_source: string | null;
+  data_source_url: string | null;
+  reason: string | null;
+  created_at: string;
+};
