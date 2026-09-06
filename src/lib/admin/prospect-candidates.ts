@@ -11,6 +11,8 @@ export const CANDIDATE_STATUSES = [
   "discovered",
   "enriching",
   "verified",
+  "pending_review",
+  "approved",
   "rejected",
   "promoted",
 ] as const;
@@ -20,6 +22,8 @@ export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
   discovered: "Kandidat baru",
   enriching: "Sedang diverifikasi",
   verified: "Terverifikasi",
+  pending_review: "Menunggu tinjauan",
+  approved: "Disetujui",
   rejected: "Ditolak",
   promoted: "Sudah jadi prospek",
 };
@@ -28,6 +32,10 @@ export function candidateStatusClass(status: CandidateStatus): string {
   switch (status) {
     case "verified":
       return "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
+    case "pending_review":
+      return "border-amber-400/40 bg-amber-400/10 text-amber-200";
+    case "approved":
+      return "border-emerald-500/40 bg-emerald-500/15 text-emerald-100";
     case "enriching":
       return "border-sky-400/40 bg-sky-400/10 text-sky-200";
     case "promoted":
@@ -38,6 +46,7 @@ export function candidateStatusClass(status: CandidateStatus): string {
       return "border-border/50 bg-muted/20 text-muted-foreground";
   }
 }
+
 
 export const DUPLICATE_STATUSES = ["unchecked", "unique", "suspected", "duplicate"] as const;
 export type DuplicateStatus = (typeof DUPLICATE_STATUSES)[number];
@@ -82,8 +91,63 @@ export type CandidateRow = {
   trust_score: number;
   rejected_reason: string | null;
   promoted_prospect_id: string | null;
+  icp_reason: string | null;
+  approved_by_email: string | null;
+  approved_at: string | null;
+  approval_note: string | null;
+  review_requested_at: string | null;
   created_at: string;
 };
+
+/**
+ * RULE 1 — human approval gate.
+ * Scoring alone never promotes a candidate. Allowed transitions only.
+ */
+export const CANDIDATE_TRANSITIONS: Record<CandidateStatus, CandidateStatus[]> = {
+  discovered: ["enriching", "pending_review", "rejected"],
+  enriching: ["verified", "pending_review", "rejected"],
+  verified: ["pending_review", "rejected"],
+  pending_review: ["approved", "rejected", "discovered"],
+  approved: ["promoted", "rejected"],
+  rejected: ["discovered"],
+  promoted: [],
+};
+
+export function canTransition(from: CandidateStatus, to: CandidateStatus): boolean {
+  return (CANDIDATE_TRANSITIONS[from] ?? []).includes(to);
+}
+
+/** RULE 2 — field ownership. Enforced in the storage layer, not just docs. */
+export const FIELD_OWNERSHIP = {
+  ai: [
+    "why_match_icp",
+    "potential_problem_hypothesis",
+    "buying_signal_hypothesis",
+    "suggested_solution",
+    "discovery_reason",
+  ],
+  external: ["phone", "email", "address", "website", "business_existence"],
+  human: ["approval", "sales_decision", "outcome"],
+} as const;
+
+export type FieldOwner = keyof typeof FIELD_OWNERSHIP;
+
+export const FIELD_OWNER_LABELS: Record<FieldOwner, string> = {
+  ai: "AI (dugaan & rekomendasi)",
+  external: "Sumber eksternal (fakta)",
+  human: "Manusia (keputusan)",
+};
+
+export function fieldOwner(field: string): FieldOwner | null {
+  for (const owner of Object.keys(FIELD_OWNERSHIP) as FieldOwner[]) {
+    if ((FIELD_OWNERSHIP[owner] as readonly string[]).includes(field)) return owner;
+  }
+  return null;
+}
+
+/** RULE 3 — ICP qualification threshold before a candidate may enter review. */
+export const ICP_REVIEW_THRESHOLD = 60;
+
 
 /** Fact fields an AI answer may never provide on a candidate. */
 export const AI_FORBIDDEN_CANDIDATE_FIELDS = [
@@ -155,3 +219,64 @@ export function normalizeBusinessKey(raw: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
+
+/**
+ * RULE 3 — explainable ICP priority. "Business exists" is not "sales priority",
+ * so the reason string always states which ICP signals matched.
+ */
+export function candidateIcpReason(
+  candidate: Pick<CandidateRow, "industry" | "city" | "why_match_icp" | "potential_problem_hypothesis" | "buying_signal_hypothesis">,
+  icp?: { industries?: string[]; cities?: string[]; painKeywords?: string[] },
+): string {
+  const reasons: string[] = [];
+  const industry = (candidate.industry ?? "").toLowerCase();
+  const city = (candidate.city ?? "").toLowerCase();
+
+  const industryHit = (icp?.industries ?? []).find((item) => industry.includes(item.toLowerCase()));
+  if (industryHit) reasons.push(`industri cocok ICP (${industryHit})`);
+  else if (industry) reasons.push(`industri "${candidate.industry}" di luar daftar ICP`);
+
+  const cityHit = (icp?.cities ?? []).find((item) => city.includes(item.toLowerCase()));
+  if (cityHit) reasons.push(`lokasi prioritas (${cityHit})`);
+  else if (city) reasons.push(`lokasi "${candidate.city}" bukan prioritas`);
+
+  const text = [
+    candidate.why_match_icp,
+    candidate.potential_problem_hypothesis,
+    candidate.buying_signal_hypothesis,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const painHit = (icp?.painKeywords ?? []).find((item) => item && text.includes(item.toLowerCase()));
+  if (painHit) reasons.push(`sinyal masalah relevan ("${painHit}")`);
+  if (!candidate.buying_signal_hypothesis) reasons.push("belum ada dugaan sinyal beli");
+
+  return reasons.length ? reasons.join("; ") : "Belum cukup sinyal ICP untuk menilai prioritas.";
+}
+
+/** RULE 4 — audit traceability: who changed what, when, from which source, why. */
+export const ACTOR_KINDS = ["ai", "external", "human", "system"] as const;
+export type ActorKind = (typeof ACTOR_KINDS)[number];
+
+export const ACTOR_KIND_LABELS: Record<ActorKind, string> = {
+  ai: "AI",
+  external: "Sumber eksternal",
+  human: "Manusia",
+  system: "Sistem",
+};
+
+export type CandidateEventRow = {
+  id: string;
+  candidate_id: string;
+  event: string;
+  field: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  actor_kind: ActorKind;
+  actor_label: string | null;
+  data_source: string | null;
+  data_source_url: string | null;
+  reason: string | null;
+  created_at: string;
+};

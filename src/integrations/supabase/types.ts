@@ -1819,8 +1819,71 @@ export type Database = {
         }
         Relationships: []
       }
+      prospect_candidate_events: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          actor_label: string | null
+          candidate_id: string
+          created_at: string
+          data_source: string | null
+          data_source_url: string | null
+          event: string
+          field: string | null
+          id: string
+          meta: Json
+          new_value: string | null
+          old_value: string | null
+          reason: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind?: string
+          actor_label?: string | null
+          candidate_id: string
+          created_at?: string
+          data_source?: string | null
+          data_source_url?: string | null
+          event: string
+          field?: string | null
+          id?: string
+          meta?: Json
+          new_value?: string | null
+          old_value?: string | null
+          reason?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          actor_label?: string | null
+          candidate_id?: string
+          created_at?: string
+          data_source?: string | null
+          data_source_url?: string | null
+          event?: string
+          field?: string | null
+          id?: string
+          meta?: Json
+          new_value?: string | null
+          old_value?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_candidate_events_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospect_candidates: {
         Row: {
+          approval_note: string | null
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_email: string | null
           business_name: string
           business_name_normalized: string | null
           buying_signal_hypothesis: string | null
@@ -1836,6 +1899,7 @@ export type Database = {
           discovery_source: string | null
           duplicate_of: string | null
           duplicate_status: string
+          icp_reason: string | null
           icp_score: number
           id: string
           industry: string | null
@@ -1843,6 +1907,7 @@ export type Database = {
           promoted_prospect_id: string | null
           raw_payload: Json
           rejected_reason: string | null
+          review_requested_at: string | null
           suggested_solution: string | null
           trust_breakdown: Json
           trust_score: number
@@ -1850,6 +1915,10 @@ export type Database = {
           why_match_icp: string | null
         }
         Insert: {
+          approval_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_email?: string | null
           business_name: string
           business_name_normalized?: string | null
           buying_signal_hypothesis?: string | null
@@ -1865,6 +1934,7 @@ export type Database = {
           discovery_source?: string | null
           duplicate_of?: string | null
           duplicate_status?: string
+          icp_reason?: string | null
           icp_score?: number
           id?: string
           industry?: string | null
@@ -1872,6 +1942,7 @@ export type Database = {
           promoted_prospect_id?: string | null
           raw_payload?: Json
           rejected_reason?: string | null
+          review_requested_at?: string | null
           suggested_solution?: string | null
           trust_breakdown?: Json
           trust_score?: number
@@ -1879,6 +1950,10 @@ export type Database = {
           why_match_icp?: string | null
         }
         Update: {
+          approval_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_email?: string | null
           business_name?: string
           business_name_normalized?: string | null
           buying_signal_hypothesis?: string | null
@@ -1894,6 +1969,7 @@ export type Database = {
           discovery_source?: string | null
           duplicate_of?: string | null
           duplicate_status?: string
+          icp_reason?: string | null
           icp_score?: number
           id?: string
           industry?: string | null
@@ -1901,6 +1977,7 @@ export type Database = {
           promoted_prospect_id?: string | null
           raw_payload?: Json
           rejected_reason?: string | null
+          review_requested_at?: string | null
           suggested_solution?: string | null
           trust_breakdown?: Json
           trust_score?: number

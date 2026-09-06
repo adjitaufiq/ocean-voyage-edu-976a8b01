@@ -17,8 +17,13 @@ import {
   type CampaignRow,
 } from "@/lib/admin/prospecting";
 import {
+  canTransition,
+  candidateIcpReason,
   candidateIcpScore,
+  ICP_REVIEW_THRESHOLD,
   normalizeBusinessKey,
+  type ActorKind,
+  type CandidateEventRow,
   type CandidateRow,
   type CandidateStatus,
 } from "@/lib/admin/prospect-candidates";
@@ -27,7 +32,7 @@ import { fetchIcpConfig } from "@/lib/prospecting.server";
 type Client = SupabaseClient<Database>;
 
 const CANDIDATE_COLUMNS =
-  "id, campaign_id, business_name, industry, city, country, why_match_icp, potential_problem_hypothesis, buying_signal_hypothesis, suggested_solution, discovery_reason, discovery_method, discovery_query, discovery_source, candidate_status, duplicate_status, duplicate_of, icp_score, trust_score, rejected_reason, promoted_prospect_id, created_at";
+  "id, campaign_id, business_name, industry, city, country, why_match_icp, potential_problem_hypothesis, buying_signal_hypothesis, suggested_solution, discovery_reason, discovery_method, discovery_query, discovery_source, candidate_status, duplicate_status, duplicate_of, icp_score, trust_score, rejected_reason, promoted_prospect_id, icp_reason, approved_by_email, approved_at, approval_note, review_requested_at, created_at";
 
 function asRow(row: Record<string, unknown>): CandidateRow {
   return {
@@ -52,6 +57,11 @@ function asRow(row: Record<string, unknown>): CandidateRow {
     trust_score: Number(row["trust_score"] ?? 0),
     rejected_reason: (row["rejected_reason"] as string | null) ?? null,
     promoted_prospect_id: (row["promoted_prospect_id"] as string | null) ?? null,
+    icp_reason: (row["icp_reason"] as string | null) ?? null,
+    approved_by_email: (row["approved_by_email"] as string | null) ?? null,
+    approved_at: (row["approved_at"] as string | null) ?? null,
+    approval_note: (row["approval_note"] as string | null) ?? null,
+    review_requested_at: (row["review_requested_at"] as string | null) ?? null,
     created_at: String(row["created_at"]),
   };
 }
@@ -86,6 +96,8 @@ export type CandidateSummary = {
   discovered: number;
   enriching: number;
   verified: number;
+  pending_review: number;
+  approved: number;
   rejected: number;
   promoted: number;
 };
@@ -100,6 +112,8 @@ export async function buildCandidateSummary(supabase: Client): Promise<Candidate
     discovered: 0,
     enriching: 0,
     verified: 0,
+    pending_review: 0,
+    approved: 0,
     rejected: 0,
     promoted: 0,
   };
@@ -336,6 +350,12 @@ export async function discoverCandidates(
       painKeywords: icp?.painKeywords ?? [],
     });
 
+    const icpReason = candidateIcpReason(candidateShape as never, {
+      industries: icp?.industries ?? [],
+      cities: icp?.cities ?? [],
+      painKeywords: icp?.painKeywords ?? [],
+    });
+
     const { data: inserted, error: insertError } = await supabase
       .from("prospect_candidates")
       .insert({
@@ -350,6 +370,7 @@ export async function discoverCandidates(
         raw_payload: item as never,
         candidate_status: "discovered",
         icp_score: icpScore,
+        icp_reason: icpReason,
         created_by: actor.userId,
       } as never)
       .select("id, business_name")
@@ -359,6 +380,15 @@ export async function discoverCandidates(
       skipped += 1;
       continue;
     }
+    await logCandidateEvent(supabase, {
+      candidateId: (inserted as { id: string }).id,
+      event: "discovered",
+      actorKind: "ai",
+      actorLabel: "AI Discovery Agent",
+      dataSource: "ai_discovery",
+      reason: icpReason,
+      meta: { icp_score: icpScore, campaign_id: campaign.id },
+    });
     saved.push({
       id: (inserted as { id: string }).id,
       name: (inserted as { business_name: string }).business_name,
@@ -394,9 +424,155 @@ export async function discoverCandidates(
 
 /* ------------------------------ Candidate ops ----------------------------- */
 
+/* ----------------------- RULE 4 — audit traceability ---------------------- */
+
+export async function logCandidateEvent(
+  supabase: Client,
+  input: {
+    candidateId: string;
+    event: string;
+    field?: string | null;
+    oldValue?: string | null;
+    newValue?: string | null;
+    actorKind: ActorKind;
+    actorLabel?: string | null;
+    actorId?: string | null;
+    dataSource?: string | null;
+    dataSourceUrl?: string | null;
+    reason?: string | null;
+    meta?: Record<string, unknown>;
+  },
+): Promise<void> {
+  await supabase.from("prospect_candidate_events").insert({
+    candidate_id: input.candidateId,
+    event: input.event,
+    field: input.field ?? null,
+    old_value: input.oldValue ?? null,
+    new_value: input.newValue ?? null,
+    actor_kind: input.actorKind,
+    actor_label: input.actorLabel ?? null,
+    actor_id: input.actorId ?? null,
+    data_source: input.dataSource ?? null,
+    data_source_url: input.dataSourceUrl ?? null,
+    reason: input.reason ?? null,
+    meta: (input.meta ?? {}) as never,
+  } as never);
+}
+
+export async function fetchCandidateEvents(
+  supabase: Client,
+  candidateId: string,
+): Promise<CandidateEventRow[]> {
+  const { data, error } = await supabase
+    .from("prospect_candidate_events")
+    .select(
+      "id, candidate_id, event, field, old_value, new_value, actor_kind, actor_label, data_source, data_source_url, reason, created_at",
+    )
+    .eq("candidate_id", candidateId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as CandidateEventRow[];
+}
+
+async function currentStatus(supabase: Client, id: string): Promise<CandidateStatus> {
+  const { data, error } = await supabase
+    .from("prospect_candidates")
+    .select("candidate_status")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) throw new Error(error?.message ?? "Kandidat tidak ditemukan.");
+  return (data as { candidate_status: CandidateStatus }).candidate_status;
+}
+
+/* ------------------- RULE 1 — human approval gate (server) ---------------- */
+
+/** Move a candidate into the human review queue. Scoring never does this alone. */
+export async function requestCandidateReview(
+  supabase: Client,
+  input: { id: string; reason?: string | null },
+  actor: { userId: string; email?: string | null },
+): Promise<{ ok: true }> {
+  const from = await currentStatus(supabase, input.id);
+  if (!canTransition(from, "pending_review"))
+    throw new Error("Status kandidat tidak bisa dipindah ke tinjauan.");
+
+  const { data: row } = await supabase
+    .from("prospect_candidates")
+    .select("icp_score")
+    .eq("id", input.id)
+    .maybeSingle();
+  const icpScore = Number((row as { icp_score?: number } | null)?.icp_score ?? 0);
+  if (icpScore < ICP_REVIEW_THRESHOLD)
+    throw new Error(
+      `Skor ICP ${icpScore} di bawah ambang ${ICP_REVIEW_THRESHOLD}. Perbaiki kualifikasi dulu.`,
+    );
+
+  const { error } = await supabase
+    .from("prospect_candidates")
+    .update({
+      candidate_status: "pending_review",
+      review_requested_at: new Date().toISOString(),
+    } as never)
+    .eq("id", input.id);
+  if (error) throw new Error(error.message);
+
+  await logCandidateEvent(supabase, {
+    candidateId: input.id,
+    event: "review_requested",
+    field: "candidate_status",
+    oldValue: from,
+    newValue: "pending_review",
+    actorKind: "human",
+    actorLabel: actor.email ?? null,
+    actorId: actor.userId,
+    dataSource: "internal",
+    reason: input.reason ?? "Diajukan untuk tinjauan manusia.",
+  });
+  return { ok: true };
+}
+
+/** Human approval. Only an approved candidate may later become a prospect. */
+export async function approveCandidate(
+  supabase: Client,
+  input: { id: string; note?: string | null },
+  actor: { userId: string; email?: string | null },
+): Promise<{ ok: true }> {
+  const from = await currentStatus(supabase, input.id);
+  if (!canTransition(from, "approved"))
+    throw new Error("Kandidat harus berstatus menunggu tinjauan sebelum disetujui.");
+
+  const { error } = await supabase
+    .from("prospect_candidates")
+    .update({
+      candidate_status: "approved",
+      approved_by: actor.userId,
+      approved_by_email: actor.email ?? null,
+      approved_at: new Date().toISOString(),
+      approval_note: input.note?.slice(0, 500) ?? null,
+    } as never)
+    .eq("id", input.id);
+  if (error) throw new Error(error.message);
+
+  await logCandidateEvent(supabase, {
+    candidateId: input.id,
+    event: "approved",
+    field: "candidate_status",
+    oldValue: from,
+    newValue: "approved",
+    actorKind: "human",
+    actorLabel: actor.email ?? null,
+    actorId: actor.userId,
+    dataSource: "internal",
+    reason: input.note ?? "Disetujui manusia.",
+  });
+  return { ok: true };
+}
+
 export async function rejectCandidate(
   supabase: Client,
   input: { id: string; reason?: string | null },
+  actor?: { userId: string; email?: string | null },
 ): Promise<{ ok: true }> {
   const { error } = await supabase
     .from("prospect_candidates")
@@ -406,15 +582,41 @@ export async function rejectCandidate(
     } as never)
     .eq("id", input.id);
   if (error) throw new Error(error.message);
+  await logCandidateEvent(supabase, {
+    candidateId: input.id,
+    event: "rejected",
+    field: "candidate_status",
+    newValue: "rejected",
+    actorKind: "human",
+    actorLabel: actor?.email ?? null,
+    actorId: actor?.userId ?? null,
+    dataSource: "internal",
+    reason: input.reason ?? "Ditolak manual",
+  });
   return { ok: true };
 }
 
-export async function restoreCandidate(supabase: Client, id: string): Promise<{ ok: true }> {
+export async function restoreCandidate(
+  supabase: Client,
+  id: string,
+  actor?: { userId: string; email?: string | null },
+): Promise<{ ok: true }> {
   const { error } = await supabase
     .from("prospect_candidates")
     .update({ candidate_status: "discovered", rejected_reason: null } as never)
     .eq("id", id);
   if (error) throw new Error(error.message);
+  await logCandidateEvent(supabase, {
+    candidateId: id,
+    event: "restored",
+    field: "candidate_status",
+    newValue: "discovered",
+    actorKind: "human",
+    actorLabel: actor?.email ?? null,
+    actorId: actor?.userId ?? null,
+    dataSource: "internal",
+    reason: "Dipulihkan ke daftar kandidat.",
+  });
   return { ok: true };
 }
 
@@ -444,5 +646,14 @@ export async function createManualCandidate(
     .select("id")
     .single();
   if (error) throw new Error(error.message);
-  return { id: (data as { id: string }).id };
+  const id = (data as { id: string }).id;
+  await logCandidateEvent(supabase, {
+    candidateId: id,
+    event: "created_manual",
+    actorKind: "human",
+    actorId: actor.userId,
+    dataSource: "manual",
+    reason: "Kandidat ditambahkan manual.",
+  });
+  return { id };
 }
