@@ -488,3 +488,94 @@ export const saveIcpConfigFn = createServerFn({ method: "POST" })
     const current = await fetchIcpConfig(context.supabase);
     return saveIcpConfig(context.supabase, { ...current, ...data }, context.userId);
   });
+
+/* ------------------------ Candidate layer (V4) ---------------------------- */
+
+export const getCandidatesFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        status: z.string().max(40).optional(),
+        campaignId: z.string().uuid().optional(),
+        search: z.string().max(200).optional(),
+        limit: z.number().int().min(1).max(500).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { fetchCandidates, buildCandidateSummary } = await import(
+      "./prospecting-candidates.server"
+    );
+    await assertLeadWork(context.supabase, context.userId);
+    const [candidates, summary] = await Promise.all([
+      fetchCandidates(context.supabase, data),
+      buildCandidateSummary(context.supabase),
+    ]);
+    return { candidates, summary };
+  });
+
+export const discoverCandidatesFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        count: z.number().int().min(1).max(25).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { discoverCandidates } = await import("./prospecting-candidates.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return discoverCandidates(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
+export const rejectCandidateFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({ id: z.string().uuid(), reason: z.string().max(500).nullable().optional() })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { rejectCandidate } = await import("./prospecting-candidates.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return rejectCandidate(context.supabase, data);
+  });
+
+export const restoreCandidateFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { restoreCandidate } = await import("./prospecting-candidates.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return restoreCandidate(context.supabase, data.id);
+  });
+
+export const createCandidateFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        businessName: z.string().min(2).max(200),
+        industry: z.string().max(120).nullable().optional(),
+        city: z.string().max(120).nullable().optional(),
+        campaignId: z.string().uuid().nullable().optional(),
+        whyMatchIcp: z.string().max(2000).nullable().optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { createManualCandidate } = await import("./prospecting-candidates.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return createManualCandidate(context.supabase, data, { userId: context.userId });
+  });
