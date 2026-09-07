@@ -90,6 +90,19 @@ describe("apify client", () => {
   });
 });
 
+describe("waterfall gate", () => {
+  it("stops the pipeline when confidence is below the threshold", () => {
+    const weak = normalizeMapsItem({ title: "Kopi Ombak" }); // name-only hit
+    const moderate = normalizeMapsItem({ title: "Kopi Ombak", phone: "+628111" });
+    const strong = normalizeMapsItem({ title: "Kopi Ombak", placeId: "p1" });
+
+    expect(MAPS_CONFIDENCE_THRESHOLD).toBe(50);
+    expect(mapsMatchConfidence(weak)).toBeLessThan(MAPS_CONFIDENCE_THRESHOLD); // → stop, no website/social scraper
+    expect(mapsMatchConfidence(moderate)).toBeGreaterThanOrEqual(MAPS_CONFIDENCE_THRESHOLD);
+    expect(mapsMatchConfidence(strong)).toBe(90);
+  });
+});
+
 describe("evidence normalizers", () => {
   it("4. detects the same business returned twice (duplicate)", () => {
     const a = normalizeMapsItem({ title: "PT Ombak Digital", placeId: "same" });
