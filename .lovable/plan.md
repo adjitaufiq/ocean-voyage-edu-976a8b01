@@ -1,55 +1,45 @@
-# KERJAKU — Sales Intelligence Platform (additive upgrade)
+# Refactor alur penjualan + lapisan kandidat
 
-Semua yang ada sekarang tetap jalan. Tidak ada tabel yang dihapus, tidak ada alur lama yang dibongkar. Alur baru dinyalakan lewat sakelar (feature flag) di Pengaturan, jadi bisa dicoba tanpa mengganggu pekerjaan harian.
+Sebagian besar rangka sudah ada (lapisan Kandidat, verifikasi Apify, validasi, ICP, pipeline). Yang belum: kunci anti-duplikat yang tegas, penyimpanan kontak pada kandidat, penyisipan massal, dan status sesuai penamaan baru. Semua perubahan bersifat menambah — tidak ada tabel atau alur lama yang dihapus.
 
-## Alur baru
+## 1. Perubahan database (satu migrasi tambahan)
+
+Pada `prospect_candidates`:
+- Kolom baru: `website`, `contact_data` (jsonb, diisi hanya oleh sumber eksternal), `dedupe_key` (teks, terisi otomatis dari nama ternormalisasi + kota).
+- Indeks unik parsial pada `dedupe_key` agar penemuan ulang tidak menumpuk data kembar; indeks bantu pada `candidate_status` dan `campaign_id`.
+- Status tambahan sebagai alias penamaan baru: `raw`, `processing`, `verified_candidate`, `duplicate`. Status lama (`discovered`, `enriching`, `verified`, `pending_review`, `approved`, `rejected`, `promoted`, `enrichment_failed`) tetap sah, jadi data lama tidak rusak.
+- Trigger pengisi `dedupe_key` saat simpan.
+
+Tidak ada `DROP`, tidak ada perubahan tipe, tidak ada perubahan aturan akses tabel lama.
+
+## 2. Berkas yang berubah
+
+- `src/lib/admin/prospect-candidates.ts` — status baru + label, peta perpindahan status, pemetaan alias status lama→baru.
+- `src/lib/prospecting-candidates.server.ts` — penemuan AI menyimpan sekaligus (bulk insert) alih-alih satu per satu, menyaring kembar lewat `dedupe_key`, mencatat riwayat secara massal, dan menandai kandidat kembar sebagai `duplicate` alih-alih membuangnya diam-diam.
+- `src/lib/prospecting-apify.server.ts` — menulis hasil verifikasi ke `contact_data` + `website` pada kandidat, dan memperketat syarat promosi (bisnis terbukti ada, bukti eksternal ada, cek kembar lolos, ambang kepercayaan lolos, sudah disetujui manusia).
+- `src/routes/_authenticated/admin.prospects.tsx` — filter dan label status baru pada tab Candidate inbox.
+- `docs/CANDIDATE-GOVERNANCE.md` — daur hidup diperbarui.
+
+## 3. Alur lama vs baru
 
 ```text
-AI menemukan kandidat  ->  Kandidat (belum boleh dihubungi)
-        -> Pengecekan data nyata (Google Maps, website, sosial via Apify)
-        -> Deteksi perusahaan kembar
-        -> Skor kepercayaan
-        -> Naik jadi Prospect (yang sekarang) -> Sales -> Hasil (menang/kalah)
-        -> Pelajaran untuk menyetel pencarian berikutnya
+Lama : AI Discovery -> prospects -> validasi -> sales
+Baru : AI Discovery -> prospect_candidates (raw)
+        -> verifikasi data eksternal (Google Maps dulu, waterfall)
+        -> deteksi kembar
+        -> validasi
+        -> penilaian kepercayaan
+        -> prospects -> Sales Queue
 ```
 
-## Yang dibangun (7 tahap, urut)
+Antrean penjualan tetap hanya membaca tabel `prospects` dengan tahap `sales_ready` — kandidat mentah, kembar, atau ditolak tidak pernah muncul di sana. Perilaku ini sudah berlaku dan akan diuji ulang.
 
-**1. Lapisan Kandidat**
-Tabel baru `prospect_candidates`. AI Discovery diubah: hanya boleh menghasilkan nama usaha, industri, kota, alasan cocok, dugaan masalah, dugaan sinyal beli, solusi yang disarankan. Nomor telepon, email, alamat, link Maps, dan sosial media wajib kosong. Kandidat tidak masuk daftar prospect dan tidak bisa dihubungi.
+## 4. Risiko
 
-**2. Pengambilan fakta eksternal (Apify)**
-Tabel `prospect_enrichments` menyimpan tiap pengambilan data: sumber, URL sumber, jawaban mentah, field yang terbukti, tingkat keyakinan. Tiga pekerjaan: Google Maps (nama resmi, alamat, telepon, website, kategori, rating, jumlah ulasan, place id), cek website (hidup/tidak, SSL, halaman kontak, email), cek sosial (Instagram/LinkedIn ada atau tidak, follower). Data AI tidak pernah ditimpa — fakta eksternal disimpan terpisah lalu dipakai sebagai kebenaran.
+- Indeks unik `dedupe_key` bisa menolak baris jika data lama sudah punya kembar. Ditangani dengan indeks unik parsial (hanya baris berstatus aktif) dan pengisian nilai bertahap sebelum indeks dibuat.
+- Penyisipan massal mengembalikan galat per-batch, bukan per-baris; ringkasan hasil penemuan akan menyebut jumlah tersimpan/dilewati agar tetap jelas.
+- Status baru berdampingan dengan status lama; layar bisa terasa punya dua penamaan. Diatasi dengan label yang menyatu di UI.
 
-**3. Aturan kepemilikan data**
-AI: hanya insight, dugaan, rekomendasi. Sumber eksternal: telepon, email, alamat, website, keberadaan sosial. Manusia: persetujuan akhir dan hasil penjualan. Ditegakkan di lapisan penyimpanan, bukan sekadar aturan tertulis.
+## 5. Cara membatalkan
 
-**4. Deteksi perusahaan kembar**
-Aktifkan pencocokan teks di database, tambah kolom nama ternormalisasi ("PT ABC Indonesia" -> "abc indonesia"), tabel `entity_match_candidates` berisi pasangan mirip + skor kemiripan nama/telepon/alamat. Tidak pernah digabung otomatis — selalu ditinjau manusia.
-
-**5. Skor kepercayaan**
-Satu angka `trust_score`: kecocokan ICP 30%, kualitas validasi 20%, AI quality gate 15%, verifikasi eksternal 35%. Jika verifikasi eksternal gagal, skor dibatasi maksimal 40. Rinciannya disimpan supaya bisa dijelaskan ("terbukti dari Google Maps dan website").
-Kandidat baru boleh naik jadi prospect kalau: usaha terbukti ada, ada minimal satu sumber eksternal, lolos cek kembar, ICP lolos ambang, trust score lolos ambang.
-
-**6. Pekerjaan latar belakang**
-Tabel `background_jobs` (antrean, status, percobaan, kunci) + penjadwal. Discovery, pengambilan data Apify, verifikasi, deteksi kembar, dan penilaian massal berjalan di latar dengan batas jumlah per putaran, kunci anti-tabrakan, dan rem otomatis saat penyedia bermasalah. Tidak ada lagi tombol yang menggantung menunggu AI.
-
-**7. Umpan balik hasil penjualan**
-Tabel `prospect_outcomes` (menang, kalah, tidak dibalas, salah sasaran, alasan, nilai deal, lama siklus). Dipakai untuk laporan pola ICP yang benar-benar menghasilkan deal dan rekomendasi penyetelan pencarian. Tidak ada pelatihan ulang otomatis — hanya rekomendasi.
-
-## Tampilan
-
-Halaman Prospects jadi lima tab:
-Candidate Inbox (temuan AI) · Verification Queue (menunggu bukti) · Verified Prospects (siap dijual, tampilan sekarang) · Intelligence (insight + bukti) · Sales Outcome (hasil & pelajaran).
-Tab lama tetap ada di dalam Verified Prospects agar pekerjaan sekarang tidak terganggu.
-
-## Catatan teknis
-
-- Migrasi murni menambah: `prospect_candidates`, `prospect_enrichments`, `entity_match_candidates`, `background_jobs`, `prospect_outcomes`, kolom `trust_score`/`trust_breakdown`/`business_name_normalized`/`candidate_id` pada `prospects`, ekstensi `pg_trgm`. GRANT + RLS mengikuti pola `has_workspace_access` / `can_work_leads` yang sudah dipakai.
-- Apify dipanggil lewat connector Lovable dari server route/server function; kunci tetap di server.
-- Feature flag `outbound_pipeline_v4` disimpan di `prospect_icp_config`, dikendalikan dari Pengaturan.
-- Tidak menyentuh: PR1 atribusi, PR2 SEO, desain homepage, harga, konten publik, RLS yang sudah ada, portal klien, billing.
-
-## Yang saya butuhkan dari Anda
-
-Koneksi Apify (akan saya minta lewat tombol koneksi saat tahap 2). Tanpa itu, tahap 1 dan 3–7 tetap bisa jalan, tapi pengambilan fakta eksternal hanya bisa dari pengecekan website langsung.
+Setiap langkah berdiri sendiri: hapus indeks dan kolom baru (`website`, `contact_data`, `dedupe_key`) lalu kembalikan daftar status ke bentuk lama — data dan alur lama tetap utuh karena tidak ada yang dihapus atau diubah tipenya. Di sisi kode, perubahan hanya menambah cabang baru sehingga bisa dikembalikan per berkas.
