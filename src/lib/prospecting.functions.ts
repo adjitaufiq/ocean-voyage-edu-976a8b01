@@ -629,3 +629,41 @@ export const createCandidateFn = createServerFn({ method: "POST" })
     await assertLeadWork(context.supabase, context.userId);
     return createManualCandidate(context.supabase, data, { userId: context.userId });
   });
+
+/* --------------------- External verification (Apify) ---------------------- */
+
+export const enrichCandidateFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { enrichCandidateWithApify } = await import("./prospecting-apify.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return enrichCandidateWithApify(context.supabase, data.id, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
+export const validateExternalEvidenceFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { validateExternalEvidence } = await import("./prospecting-apify.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return validateExternalEvidence(context.supabase, data.id);
+  });
+
+export const promoteCandidateFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { promoteCandidateToProspect } = await import("./prospecting-apify.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return promoteCandidateToProspect(context.supabase, data.id, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
