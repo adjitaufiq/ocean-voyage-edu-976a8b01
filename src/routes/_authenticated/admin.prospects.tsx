@@ -2545,6 +2545,43 @@ function CandidateInbox({
                 {row.rejected_reason ? (
                   <p className="mt-2 text-xs text-rose-200">Alasan tolak: {row.rejected_reason}</p>
                 ) : null}
+                {row.duplicate_status === "duplicate" ? (
+                  <p className="mt-2 text-xs text-amber-200">
+                    Duplikat{row.duplicate_confidence ? ` (keyakinan ${row.duplicate_confidence}%)` : ""}
+                    {row.duplicate_reason ? ` — ${row.duplicate_reason}` : ""}
+                    {row.duplicate_detected_at
+                      ? ` · terdeteksi ${new Date(row.duplicate_detected_at).toLocaleString("id-ID")}`
+                      : ""}
+                  </p>
+                ) : null}
+                {Object.keys(row.contact_data ?? {}).length ? (
+                  <div className="mt-3 space-y-1 rounded-lg border border-border/40 bg-background/30 p-3 text-xs">
+                    <p className="font-medium text-foreground/80">Data kontak & asal datanya</p>
+                    {Object.entries(row.contact_data).map(([channel, entry]) => (
+                      <p key={channel} className="text-muted-foreground">
+                        <span className="text-foreground/80">
+                          {CONTACT_CHANNEL_LABELS[channel] ?? channel}:
+                        </span>{" "}
+                        {entry.value} · sumber {entry.source}
+                        {entry.source_url ? (
+                          <>
+                            {" "}
+                            ·{" "}
+                            <a
+                              href={entry.source_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary underline"
+                            >
+                              Lihat sumber
+                            </a>
+                          </>
+                        ) : null}{" "}
+                        · {new Date(entry.verified_at).toLocaleDateString("id-ID")}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
                 {historyFor === row.id ? (
                   <CandidateHistory id={row.id} loadEvents={loadEvents} />
                 ) : null}
