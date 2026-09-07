@@ -667,3 +667,66 @@ export const promoteCandidateFn = createServerFn({ method: "POST" })
       email: actorEmail(context.claims),
     });
   });
+
+/* ------------------------ Trust score + entity resolution ------------------ */
+
+export const recomputeTrustFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({ scope: z.enum(["one", "all"]), id: z.string().uuid().optional() })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { recomputeTrust } = await import("./prospecting-trust.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return recomputeTrust(context.supabase, data);
+  });
+
+export const runEntityResolutionFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { runEntityResolution } = await import("./prospecting-trust.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return runEntityResolution(context.supabase, { userId: context.userId });
+  });
+
+export const getEntityMatchesFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        status: z
+          .enum(["open", "flagged", "needs_review", "confirmed_duplicate", "not_duplicate", "ignored"])
+          .optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { fetchEntityMatches } = await import("./prospecting-trust.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return fetchEntityMatches(context.supabase, data);
+  });
+
+export const reviewEntityMatchFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["confirmed_duplicate", "not_duplicate", "ignored"]),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { reviewEntityMatch } = await import("./prospecting-trust.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return reviewEntityMatch(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
