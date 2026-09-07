@@ -1191,6 +1191,51 @@ export type Database = {
           },
         ]
       }
+      entity_match_candidates: {
+        Row: {
+          created_at: string
+          entity_kind: string
+          id: string
+          match_reason: Json
+          prospect_a: string
+          prospect_b: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_email: string | null
+          similarity_score: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entity_kind?: string
+          id?: string
+          match_reason?: Json
+          prospect_a: string
+          prospect_b: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_email?: string | null
+          similarity_score?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entity_kind?: string
+          id?: string
+          match_reason?: Json
+          prospect_a?: string
+          prospect_b?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_email?: string | null
+          similarity_score?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -1975,6 +2020,7 @@ export type Database = {
           suggested_solution: string | null
           trust_breakdown: Json
           trust_score: number
+          trust_tier: string
           updated_at: string
           website: string | null
           why_match_icp: string | null
@@ -2016,6 +2062,7 @@ export type Database = {
           suggested_solution?: string | null
           trust_breakdown?: Json
           trust_score?: number
+          trust_tier?: string
           updated_at?: string
           website?: string | null
           why_match_icp?: string | null
@@ -2057,6 +2104,7 @@ export type Database = {
           suggested_solution?: string | null
           trust_breakdown?: Json
           trust_score?: number
+          trust_tier?: string
           updated_at?: string
           website?: string | null
           why_match_icp?: string | null
@@ -2344,6 +2392,10 @@ export type Database = {
           source_detail: string | null
           status: string
           status_updated_at: string
+          trust_breakdown: Json
+          trust_computed_at: string | null
+          trust_score: number
+          trust_tier: string
           updated_at: string
           validated_at: string | null
           validation_checks: Json
@@ -2423,6 +2475,10 @@ export type Database = {
           source_detail?: string | null
           status?: string
           status_updated_at?: string
+          trust_breakdown?: Json
+          trust_computed_at?: string | null
+          trust_score?: number
+          trust_tier?: string
           updated_at?: string
           validated_at?: string | null
           validation_checks?: Json
@@ -2502,6 +2558,10 @@ export type Database = {
           source_detail?: string | null
           status?: string
           status_updated_at?: string
+          trust_breakdown?: Json
+          trust_computed_at?: string | null
+          trust_score?: number
+          trust_tier?: string
           updated_at?: string
           validated_at?: string | null
           validation_checks?: Json
