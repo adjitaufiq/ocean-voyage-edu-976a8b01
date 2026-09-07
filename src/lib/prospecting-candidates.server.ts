@@ -301,14 +301,29 @@ export async function discoverCandidates(
   }
 
   const [{ data: existingProspects }, { data: existingCandidates }] = await Promise.all([
-    supabase.from("prospects").select("business_name").limit(150),
-    supabase.from("prospect_candidates").select("business_name").limit(300),
+    supabase.from("prospects").select("business_name, city, country").limit(300),
+    supabase.from("prospect_candidates").select("id, business_name, city, country, dedupe_key").limit(1000),
   ]);
   const exclude = [
     ...(existingProspects ?? []).map((item) => String((item as { business_name: string }).business_name)),
     ...(existingCandidates ?? []).map((item) => String((item as { business_name: string }).business_name)),
   ];
-  const excludeKeys = new Set(exclude.map(normalizeBusinessKey));
+  // Region-scoped dedupe: same name in another city/country is NOT a duplicate.
+  const knownKeys = new Map<string, string | null>();
+  for (const item of existingProspects ?? []) {
+    const row = item as { business_name: string; city: string | null; country: string | null };
+    knownKeys.set(buildDedupeKey(row.business_name, row.city, row.country), null);
+  }
+  for (const item of existingCandidates ?? []) {
+    const row = item as {
+      id: string;
+      business_name: string;
+      city: string | null;
+      country: string | null;
+      dedupe_key: string | null;
+    };
+    knownKeys.set(row.dedupe_key ?? buildDedupeKey(row.business_name, row.city, row.country), row.id);
+  }
 
   let parsed: AiCandidate[] = [];
   try {
