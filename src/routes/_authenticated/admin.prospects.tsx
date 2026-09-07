@@ -94,6 +94,8 @@ import {
   restoreCandidateFn,
   requestCandidateReviewFn,
   approveCandidateFn,
+  enrichCandidateFn,
+  promoteCandidateFn,
   getCandidateEventsFn,
 } from "@/lib/prospecting.functions";
 import {
@@ -248,6 +250,8 @@ function ProspectsPage() {
   const requestCandidateReview = useServerFn(requestCandidateReviewFn);
   const approveCandidate = useServerFn(approveCandidateFn);
   const candidateEventsFn = useServerFn(getCandidateEventsFn);
+  const enrichCandidate = useServerFn(enrichCandidateFn);
+  const promoteCandidate = useServerFn(promoteCandidateFn);
   const [reverifying, setReverifying] = useState(false);
   const [validating, setValidating] = useState(false);
 
@@ -734,6 +738,13 @@ function ProspectsPage() {
           onApprove={(id, note) =>
             run(approveCandidate({ data: { id, note } }), "Kandidat disetujui.")
           }
+          onEnrich={(id) =>
+            run(
+              enrichCandidate({ data: { id } }),
+              "Verifikasi data eksternal selesai.",
+            )
+          }
+          onPromote={(id) => run(promoteCandidate({ data: { id } }), "Kandidat diproses.")}
           loadEvents={(id) => candidateEventsFn({ data: { id } })}
         />
       ) : tab === "campaigns" ? (
@@ -2206,6 +2217,7 @@ const CANDIDATE_STATUS_FILTERS = [
   "discovered",
   "enriching",
   "verified",
+  "enrichment_failed",
   "pending_review",
   "approved",
   "promoted",
@@ -2262,6 +2274,8 @@ type CandidateInboxProps = {
   onRestore: (id: string) => Promise<unknown>;
   onRequestReview: (id: string) => Promise<unknown>;
   onApprove: (id: string, note: string | null) => Promise<unknown>;
+  onEnrich: (id: string) => Promise<unknown>;
+  onPromote: (id: string) => Promise<unknown>;
   loadEvents: (id: string) => Promise<CandidateEventRow[]>;
 };
 
@@ -2273,6 +2287,8 @@ function CandidateInbox({
   onRestore,
   onRequestReview,
   onApprove,
+  onEnrich,
+  onPromote,
   loadEvents,
 }: CandidateInboxProps) {
   const [status, setStatus] = useState("discovered");
@@ -2409,6 +2425,28 @@ function CandidateInbox({
                     <span className="rounded-full border border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground">
                       ICP {row.icp_score}
                     </span>
+                    {["discovered", "enrichment_failed", "enriching"].includes(
+                      row.candidate_status,
+                    ) ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => guard(() => onEnrich(row.id))}
+                        className="rounded-lg border border-sky-300/40 px-3 py-1 text-xs text-sky-100 transition hover:bg-sky-300/10 disabled:opacity-50"
+                      >
+                        Verifikasi data eksternal
+                      </button>
+                    ) : null}
+                    {row.candidate_status === "approved" ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => guard(() => onPromote(row.id))}
+                        className="rounded-lg border border-primary/40 px-3 py-1 text-xs text-primary transition hover:bg-primary/10 disabled:opacity-50"
+                      >
+                        Promosikan ke prospek
+                      </button>
+                    ) : null}
                     {canTransition(row.candidate_status, "pending_review") ? (
                       <button
                         type="button"
