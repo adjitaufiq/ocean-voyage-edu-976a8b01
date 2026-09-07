@@ -6,7 +6,7 @@ import {
   apifyActorId,
   resolveApifyTransport,
   runApifyActor,
-} from "./apify.client.server";
+} from "@/lib/integrations/apify/apify.client.server";
 import {
   normalizeMapsItem,
   normalizeWebsiteItem,
