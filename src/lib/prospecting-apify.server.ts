@@ -24,6 +24,14 @@ type Actor = { userId: string; email?: string | null };
 
 export type SourceType = "google_maps" | "website" | "instagram" | "linkedin" | "facebook";
 
+/**
+ * Waterfall efficiency rule: Google Maps is the primary fact source. If its
+ * confidence falls below this threshold (or the business is NOT FOUND /
+ * PERMANENTLY CLOSED), enrichment stops immediately — Website and Social
+ * scrapers are never triggered, saving Apify credits and runtime.
+ */
+export const MAPS_CONFIDENCE_THRESHOLD = 50;
+
 export type MapsEvidence = {
   business_name: string | null;
   address: string | null;
