@@ -8,6 +8,8 @@ import {
   runApifyActor,
 } from "@/lib/integrations/apify/apify.server";
 import {
+  MAPS_CONFIDENCE_THRESHOLD,
+  mapsMatchConfidence,
   normalizeMapsItem,
   normalizeWebsiteItem,
   socialPlatform,
@@ -85,6 +87,19 @@ describe("apify client", () => {
     expect(apifyActorId("googleMaps", { APIFY_DEFAULT_ACTOR_GOOGLE_MAPS: "me~actor" } as NodeJS.ProcessEnv)).toBe(
       "me~actor",
     );
+  });
+});
+
+describe("waterfall gate", () => {
+  it("stops the pipeline when confidence is below the threshold", () => {
+    const weak = normalizeMapsItem({ title: "Kopi Ombak" }); // name-only hit
+    const moderate = normalizeMapsItem({ title: "Kopi Ombak", phone: "+628111" });
+    const strong = normalizeMapsItem({ title: "Kopi Ombak", placeId: "p1" });
+
+    expect(MAPS_CONFIDENCE_THRESHOLD).toBe(50);
+    expect(mapsMatchConfidence(weak)).toBeLessThan(MAPS_CONFIDENCE_THRESHOLD); // → stop, no website/social scraper
+    expect(mapsMatchConfidence(moderate)).toBeGreaterThanOrEqual(MAPS_CONFIDENCE_THRESHOLD);
+    expect(mapsMatchConfidence(strong)).toBe(90);
   });
 });
 

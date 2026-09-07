@@ -24,6 +24,14 @@ type Actor = { userId: string; email?: string | null };
 
 export type SourceType = "google_maps" | "website" | "instagram" | "linkedin" | "facebook";
 
+/**
+ * Waterfall efficiency rule: Google Maps is the primary fact source. If its
+ * confidence falls below this threshold (or the business is NOT FOUND /
+ * PERMANENTLY CLOSED), enrichment stops immediately — Website and Social
+ * scrapers are never triggered, saving Apify credits and runtime.
+ */
+export const MAPS_CONFIDENCE_THRESHOLD = 50;
+
 export type MapsEvidence = {
   business_name: string | null;
   address: string | null;
@@ -158,6 +166,18 @@ export function normalizeMapsItem(item: Record<string, unknown>): MapsEvidence {
   };
 }
 
+/**
+ * Waterfall confidence for a Google Maps match:
+ * - 90: real place_id (identity proven)
+ * - 60: no place_id but contact facts (phone/address) back it up
+ * - 40: bare name-only hit — below MAPS_CONFIDENCE_THRESHOLD, stops the pipeline
+ */
+export function mapsMatchConfidence(maps: MapsEvidence): number {
+  if (maps.place_id) return 90;
+  if (maps.phone || maps.address) return 60;
+  return 40;
+}
+
 export function normalizeWebsiteItem(item: Record<string, unknown>, url: string): WebsiteEvidence {
   const text = str(item["text"]) ?? str(item["markdown"]) ?? "";
   const emails = new Set<string>();
@@ -254,21 +274,32 @@ export async function enrichCandidateWithApify(
   const mapsItem = mapsRun.items[0];
   const maps = mapsRun.status === "succeeded" && mapsItem ? normalizeMapsItem(mapsItem) : null;
 
+  // Waterfall gate: Google Maps is the PRIMARY fact source. Confidence comes
+  // from identity strength — a real place_id is a strong match (90), a hit
+  // with contact facts but no place_id is moderate (60), a bare name-only hit
+  // is too weak to trust (40 → below threshold → stop), nothing found is 0.
+  const mapsConfidence = maps ? mapsMatchConfidence(maps) : 0;
+
   await saveEnrichment(supabase, {
     candidateId,
     sourceType: "google_maps",
     actorName: mapsActor,
     result: mapsRun,
     normalized: (maps ?? {}) as Record<string, unknown>,
-    confidence: maps ? (maps.place_id ? 90 : 60) : 0,
+    confidence: mapsConfidence,
     sourceUrl: maps?.google_maps_url ?? null,
     userId: actor.userId,
   });
 
-  if (!maps || maps.permanently_closed) {
+  // WATERFALL STOP: NOT FOUND / PERMANENTLY CLOSED / confidence below the
+  // threshold → mark enrichment_failed and STOP. Website and Social scrapers
+  // are never triggered for such candidates (cost efficiency).
+  if (!maps || maps.permanently_closed || mapsConfidence < MAPS_CONFIDENCE_THRESHOLD) {
     const reason = maps?.permanently_closed
       ? "Google Maps menandai bisnis sudah tutup permanen."
-      : (mapsRun.error ?? "Google Maps tidak menemukan bisnis ini.");
+      : !maps
+        ? (mapsRun.error ?? "Google Maps tidak menemukan bisnis ini.")
+        : `Confidence Google Maps ${mapsConfidence} di bawah ambang ${MAPS_CONFIDENCE_THRESHOLD}.`;
     await supabase
       .from("prospect_candidates")
       .update({ candidate_status: "enrichment_failed", rejected_reason: reason } as never)
