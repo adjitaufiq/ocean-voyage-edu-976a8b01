@@ -32,7 +32,7 @@ import { fetchIcpConfig } from "@/lib/prospecting.server";
 type Client = SupabaseClient<Database>;
 
 const CANDIDATE_COLUMNS =
-  "id, campaign_id, business_name, industry, city, country, why_match_icp, potential_problem_hypothesis, buying_signal_hypothesis, suggested_solution, discovery_reason, discovery_method, discovery_query, discovery_source, candidate_status, duplicate_status, duplicate_of, icp_score, trust_score, rejected_reason, promoted_prospect_id, icp_reason, approved_by_email, approved_at, approval_note, review_requested_at, created_at";
+  "id, campaign_id, business_name, industry, city, country, why_match_icp, potential_problem_hypothesis, buying_signal_hypothesis, suggested_solution, discovery_reason, discovery_method, discovery_query, discovery_source, candidate_status, duplicate_status, duplicate_of, duplicate_reason, duplicate_confidence, duplicate_detected_at, dedupe_key, website, contact_data, icp_score, trust_score, rejected_reason, promoted_prospect_id, icp_reason, approved_by_email, approved_at, approval_note, review_requested_at, created_at";
 
 function asRow(row: Record<string, unknown>): CandidateRow {
   return {
@@ -53,6 +53,13 @@ function asRow(row: Record<string, unknown>): CandidateRow {
     candidate_status: (row["candidate_status"] as CandidateStatus) ?? "discovered",
     duplicate_status: (row["duplicate_status"] as CandidateRow["duplicate_status"]) ?? "unchecked",
     duplicate_of: (row["duplicate_of"] as string | null) ?? null,
+    duplicate_reason: (row["duplicate_reason"] as string | null) ?? null,
+    duplicate_confidence:
+      row["duplicate_confidence"] == null ? null : Number(row["duplicate_confidence"]),
+    duplicate_detected_at: (row["duplicate_detected_at"] as string | null) ?? null,
+    dedupe_key: (row["dedupe_key"] as string | null) ?? null,
+    website: (row["website"] as string | null) ?? null,
+    contact_data: (row["contact_data"] as CandidateRow["contact_data"]) ?? {},
     icp_score: Number(row["icp_score"] ?? 0),
     trust_score: Number(row["trust_score"] ?? 0),
     rejected_reason: (row["rejected_reason"] as string | null) ?? null,
