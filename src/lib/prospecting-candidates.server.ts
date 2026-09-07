@@ -347,16 +347,21 @@ export async function discoverCandidates(
   }
 
   const icp = await fetchIcpConfig(supabase).catch(() => null);
-  const saved: { id: string; name: string }[] = [];
   let skipped = 0;
 
+  // Batch preparation: build every row first, then insert in one round trip.
+  const rows: Record<string, unknown>[] = [];
+  const meta: { key: string; icpReason: string; icpScore: number; duplicateOf: string | null }[] = [];
+
   for (const item of parsed) {
-    const key = normalizeBusinessKey(item.businessName);
-    if (!key || excludeKeys.has(key)) {
+    const nameKey = normalizeBusinessKey(item.businessName);
+    if (!nameKey) {
       skipped += 1;
       continue;
     }
-    excludeKeys.add(key);
+    const key = buildDedupeKey(item.businessName, item.city ?? null, item.country ?? "Indonesia");
+    const isDuplicate = knownKeys.has(key);
+    const duplicateOf = isDuplicate ? (knownKeys.get(key) ?? null) : null;
 
     const candidateShape = {
       industry: item.industry ?? null,
@@ -371,51 +376,77 @@ export async function discoverCandidates(
       cities: icp?.cities ?? [],
       painKeywords: icp?.painKeywords ?? [],
     });
-
     const icpReason = candidateIcpReason(candidateShape as never, {
       industries: icp?.industries ?? [],
       cities: icp?.cities ?? [],
       painKeywords: icp?.painKeywords ?? [],
     });
 
+    // A duplicate is never deleted or silently dropped: it is stored, flagged,
+    // and traceable so the same business stops resurfacing in discovery.
+    rows.push({
+      campaign_id: campaign.id,
+      business_name: item.businessName,
+      ...candidateShape,
+      country: item.country ?? "Indonesia",
+      discovery_reason: item.discoveryReason ?? null,
+      discovery_method: "ai_discovery",
+      discovery_query: query,
+      discovery_source: "ai_discovery",
+      raw_payload: item as never,
+      candidate_status: isDuplicate ? "rejected" : "discovered",
+      duplicate_status: isDuplicate ? "duplicate" : "unchecked",
+      duplicate_of: duplicateOf,
+      duplicate_reason: isDuplicate ? "Nama usaha, kota, dan negara sama dengan data yang sudah ada." : null,
+      duplicate_confidence: isDuplicate ? 95 : null,
+      duplicate_detected_at: isDuplicate ? new Date().toISOString() : null,
+      rejected_reason: isDuplicate ? "Duplikat entitas bisnis." : null,
+      icp_score: icpScore,
+      icp_reason: icpReason,
+      created_by: actor.userId,
+    });
+    meta.push({ key, icpReason, icpScore, duplicateOf });
+    knownKeys.set(key, null);
+  }
+
+  const saved: { id: string; name: string }[] = [];
+  let duplicates = 0;
+
+  if (rows.length) {
     const { data: inserted, error: insertError } = await supabase
       .from("prospect_candidates")
-      .insert({
-        campaign_id: campaign.id,
-        business_name: item.businessName,
-        ...candidateShape,
-        country: item.country ?? "Indonesia",
-        discovery_reason: item.discoveryReason ?? null,
-        discovery_method: "ai_discovery",
-        discovery_query: query,
-        discovery_source: "ai_discovery",
-        raw_payload: item as never,
-        candidate_status: "discovered",
-        icp_score: icpScore,
-        icp_reason: icpReason,
-        created_by: actor.userId,
-      } as never)
-      .select("id, business_name")
-      .single();
+      .insert(rows as never)
+      .select("id, business_name, dedupe_key, candidate_status");
 
-    if (insertError || !inserted) {
-      skipped += 1;
-      continue;
+    if (insertError) {
+      skipped += rows.length;
+    } else {
+      const events = (inserted ?? []).map((raw, index) => {
+        const row = raw as { id: string; business_name: string; candidate_status: string };
+        const info = meta[index];
+        const duplicate = row.candidate_status === "rejected";
+        if (duplicate) duplicates += 1;
+        else saved.push({ id: row.id, name: row.business_name });
+        return {
+          candidate_id: row.id,
+          event: duplicate ? "duplicate_detected" : "discovered",
+          actor_kind: "ai",
+          actor_label: "AI Discovery Agent",
+          data_source: "ai_discovery",
+          reason: duplicate ? "Duplikat entitas bisnis (nama + kota + negara sama)." : (info?.icpReason ?? null),
+          meta: {
+            icp_score: info?.icpScore ?? 0,
+            campaign_id: campaign.id,
+            dedupe_key: info?.key ?? null,
+            duplicate_of: info?.duplicateOf ?? null,
+            duplicate_confidence: duplicate ? 95 : null,
+          },
+        };
+      });
+      if (events.length) await supabase.from("prospect_candidate_events").insert(events as never);
     }
-    await logCandidateEvent(supabase, {
-      candidateId: (inserted as { id: string }).id,
-      event: "discovered",
-      actorKind: "ai",
-      actorLabel: "AI Discovery Agent",
-      dataSource: "ai_discovery",
-      reason: icpReason,
-      meta: { icp_score: icpScore, campaign_id: campaign.id },
-    });
-    saved.push({
-      id: (inserted as { id: string }).id,
-      name: (inserted as { business_name: string }).business_name,
-    });
   }
+  skipped += duplicates;
 
   await finish("done", {
     found_count: parsed.length,
