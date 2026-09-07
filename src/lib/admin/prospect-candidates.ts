@@ -110,13 +110,15 @@ export type CandidateRow = {
  */
 export const CANDIDATE_TRANSITIONS: Record<CandidateStatus, CandidateStatus[]> = {
   discovered: ["enriching", "pending_review", "rejected"],
-  enriching: ["verified", "pending_review", "rejected"],
+  enriching: ["verified", "enrichment_failed", "pending_review", "rejected"],
   verified: ["pending_review", "rejected"],
+  enrichment_failed: ["enriching", "discovered", "rejected"],
   pending_review: ["approved", "rejected", "discovered"],
   approved: ["promoted", "rejected"],
   rejected: ["discovered"],
   promoted: [],
 };
+
 
 export function canTransition(from: CandidateStatus, to: CandidateStatus): boolean {
   return (CANDIDATE_TRANSITIONS[from] ?? []).includes(to);
