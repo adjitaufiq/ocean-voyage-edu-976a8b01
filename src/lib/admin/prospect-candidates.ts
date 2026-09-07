@@ -11,6 +11,7 @@ export const CANDIDATE_STATUSES = [
   "discovered",
   "enriching",
   "verified",
+  "enrichment_failed",
   "pending_review",
   "approved",
   "rejected",
@@ -22,6 +23,7 @@ export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
   discovered: "Kandidat baru",
   enriching: "Sedang diverifikasi",
   verified: "Terverifikasi",
+  enrichment_failed: "Gagal verifikasi",
   pending_review: "Menunggu tinjauan",
   approved: "Disetujui",
   rejected: "Ditolak",
@@ -38,6 +40,8 @@ export function candidateStatusClass(status: CandidateStatus): string {
       return "border-emerald-500/40 bg-emerald-500/15 text-emerald-100";
     case "enriching":
       return "border-sky-400/40 bg-sky-400/10 text-sky-200";
+    case "enrichment_failed":
+      return "border-orange-400/40 bg-orange-400/10 text-orange-200";
     case "promoted":
       return "border-primary/40 bg-primary/10 text-primary";
     case "rejected":
@@ -46,6 +50,7 @@ export function candidateStatusClass(status: CandidateStatus): string {
       return "border-border/50 bg-muted/20 text-muted-foreground";
   }
 }
+
 
 
 export const DUPLICATE_STATUSES = ["unchecked", "unique", "suspected", "duplicate"] as const;
