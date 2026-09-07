@@ -263,9 +263,10 @@ export async function enrichCandidateWithApify(
   const maps = mapsRun.status === "succeeded" && mapsItem ? normalizeMapsItem(mapsItem) : null;
 
   // Waterfall gate: Google Maps is the PRIMARY fact source. Confidence comes
-  // from identity strength — a real place_id is a strong match (90), a loose
-  // name-only hit is weak (60), nothing found is 0.
-  const mapsConfidence = maps ? (maps.place_id ? 90 : 60) : 0;
+  // from identity strength — a real place_id is a strong match (90), a hit
+  // with contact facts but no place_id is moderate (60), a bare name-only hit
+  // is too weak to trust (40 → below threshold → stop), nothing found is 0.
+  const mapsConfidence = maps ? mapsMatchConfidence(maps) : 0;
 
   await saveEnrichment(supabase, {
     candidateId,
