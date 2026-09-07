@@ -166,6 +166,18 @@ export function normalizeMapsItem(item: Record<string, unknown>): MapsEvidence {
   };
 }
 
+/**
+ * Waterfall confidence for a Google Maps match:
+ * - 90: real place_id (identity proven)
+ * - 60: no place_id but contact facts (phone/address) back it up
+ * - 40: bare name-only hit — below MAPS_CONFIDENCE_THRESHOLD, stops the pipeline
+ */
+export function mapsMatchConfidence(maps: MapsEvidence): number {
+  if (maps.place_id) return 90;
+  if (maps.phone || maps.address) return 60;
+  return 40;
+}
+
 export function normalizeWebsiteItem(item: Record<string, unknown>, url: string): WebsiteEvidence {
   const text = str(item["text"]) ?? str(item["markdown"]) ?? "";
   const emails = new Set<string>();
