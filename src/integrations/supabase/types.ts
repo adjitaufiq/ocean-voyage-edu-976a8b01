@@ -148,6 +148,65 @@ export type Database = {
           },
         ]
       }
+      apify_runs: {
+        Row: {
+          actor: string
+          candidate_id: string | null
+          created_at: string
+          created_by: string | null
+          dataset_id: string | null
+          duration_ms: number | null
+          error: string | null
+          id: string
+          input: Json
+          item_count: number
+          run_id: string | null
+          source_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor: string
+          candidate_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dataset_id?: string | null
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          input?: Json
+          item_count?: number
+          run_id?: string | null
+          source_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor?: string
+          candidate_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dataset_id?: string | null
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          input?: Json
+          item_count?: number
+          run_id?: string | null
+          source_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apify_runs_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assistant_daily_briefs: {
         Row: {
           brief_date: string
@@ -2002,6 +2061,81 @@ export type Database = {
           {
             foreignKeyName: "prospect_candidates_promoted_prospect_id_fkey"
             columns: ["promoted_prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_enrichments: {
+        Row: {
+          actor_name: string | null
+          confidence_score: number
+          created_at: string
+          created_by: string | null
+          dataset_id: string | null
+          error_message: string | null
+          id: string
+          normalized_data: Json
+          prospect_candidate_id: string | null
+          prospect_id: string | null
+          provider: string
+          raw_payload: Json
+          run_id: string | null
+          source_type: string
+          source_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor_name?: string | null
+          confidence_score?: number
+          created_at?: string
+          created_by?: string | null
+          dataset_id?: string | null
+          error_message?: string | null
+          id?: string
+          normalized_data?: Json
+          prospect_candidate_id?: string | null
+          prospect_id?: string | null
+          provider?: string
+          raw_payload?: Json
+          run_id?: string | null
+          source_type: string
+          source_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_name?: string | null
+          confidence_score?: number
+          created_at?: string
+          created_by?: string | null
+          dataset_id?: string | null
+          error_message?: string | null
+          id?: string
+          normalized_data?: Json
+          prospect_candidate_id?: string | null
+          prospect_id?: string | null
+          provider?: string
+          raw_payload?: Json
+          run_id?: string | null
+          source_type?: string
+          source_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_enrichments_prospect_candidate_id_fkey"
+            columns: ["prospect_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_enrichments_prospect_id_fkey"
+            columns: ["prospect_id"]
             isOneToOne: false
             referencedRelation: "prospects"
             referencedColumns: ["id"]
