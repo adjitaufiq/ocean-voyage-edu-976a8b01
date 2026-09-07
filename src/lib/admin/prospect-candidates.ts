@@ -92,6 +92,12 @@ export type CandidateRow = {
   candidate_status: CandidateStatus;
   duplicate_status: DuplicateStatus;
   duplicate_of: string | null;
+  duplicate_reason: string | null;
+  duplicate_confidence: number | null;
+  duplicate_detected_at: string | null;
+  dedupe_key: string | null;
+  website: string | null;
+  contact_data: Record<string, { value: string; source: string; source_url: string | null; verified_at: string }>;
   icp_score: number;
   trust_score: number;
   rejected_reason: string | null;
