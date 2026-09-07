@@ -104,6 +104,7 @@ import {
   canTransition,
   ICP_REVIEW_THRESHOLD,
   ACTOR_KIND_LABELS,
+  CONTACT_CHANNEL_LABELS,
   type CandidateRow,
   type CandidateEventRow,
 } from "@/lib/admin/prospect-candidates";
