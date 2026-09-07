@@ -17,7 +17,7 @@ import {
   ApifyAuthError,
   ApifyConfigError,
   type ApifyRunResult,
-} from "@/lib/integrations/apify/apify.client.server";
+} from "@/lib/integrations/apify/apify.server";
 
 type Client = SupabaseClient<Database>;
 type Actor = { userId: string; email?: string | null };
