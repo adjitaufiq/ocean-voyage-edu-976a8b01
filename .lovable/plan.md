@@ -1,45 +1,67 @@
-# Refactor alur penjualan + lapisan kandidat
+# Trust Score Engine + Entity Resolution
 
-Sebagian besar rangka sudah ada (lapisan Kandidat, verifikasi Apify, validasi, ICP, pipeline). Yang belum: kunci anti-duplikat yang tegas, penyimpanan kontak pada kandidat, penyisipan massal, dan status sesuai penamaan baru. Semua perubahan bersifat menambah — tidak ada tabel atau alur lama yang dihapus.
+Satu angka kepercayaan untuk setiap prospek, plus pendeteksi usaha kembar yang lebih pintar (mengenali "PT ABC Indonesia" = "ABC Indonesia").
 
-## 1. Perubahan database (satu migrasi tambahan)
+## 1. Skema database baru (additive, tidak menghapus apa pun)
 
-Pada `prospect_candidates`:
-- Kolom baru: `website`, `contact_data` (jsonb, diisi hanya oleh sumber eksternal), `dedupe_key` (teks, terisi otomatis dari nama ternormalisasi + kota).
-- Indeks unik parsial pada `dedupe_key` agar penemuan ulang tidak menumpuk data kembar; indeks bantu pada `candidate_status` dan `campaign_id`.
-- Status tambahan sebagai alias penamaan baru: `raw`, `processing`, `verified_candidate`, `duplicate`. Status lama (`discovered`, `enriching`, `verified`, `pending_review`, `approved`, `rejected`, `promoted`, `enrichment_failed`) tetap sah, jadi data lama tidak rusak.
-- Trigger pengisi `dedupe_key` saat simpan.
+Pada tabel prospek (`prospects`):
+- `trust_score` (0–100), `trust_tier` (untrusted / emerging / trusted / verified), `trust_breakdown` (rincian skor + alasan), `trust_computed_at`.
+- Kolom kandidat `trust_score` sudah ada; ditambah `trust_breakdown`, `trust_tier`.
 
-Tidak ada `DROP`, tidak ada perubahan tipe, tidak ada perubahan aturan akses tabel lama.
+Tabel baru `entity_match_candidates`:
+- `id`, `prospect_a`, `prospect_b` (boleh kandidat atau prospek, ditandai `entity_kind`), `similarity_score` (0–100), `match_reason` (jsonb), `status` (`flagged` / `needs_review` / `confirmed_duplicate` / `not_duplicate` / `ignored`), `reviewed_by`, `reviewed_at`, `created_at`, `updated_at`.
+- GRANT untuk pengguna terautentikasi + service role, RLS: baca untuk anggota workspace, tulis untuk peran sales/admin/owner.
 
-## 2. Berkas yang berubah
+Pencocokan mirip:
+- Ekstensi `pg_trgm` (sudah aktif) + indeks GIN pada `business_name_normalized` di `prospects` dan `prospect_candidates`.
+- Indeks tambahan pada domain website dan telepon untuk pencocokan cepat.
 
-- `src/lib/admin/prospect-candidates.ts` — status baru + label, peta perpindahan status, pemetaan alias status lama→baru.
-- `src/lib/prospecting-candidates.server.ts` — penemuan AI menyimpan sekaligus (bulk insert) alih-alih satu per satu, menyaring kembar lewat `dedupe_key`, mencatat riwayat secara massal, dan menandai kandidat kembar sebagai `duplicate` alih-alih membuangnya diam-diam.
-- `src/lib/prospecting-apify.server.ts` — menulis hasil verifikasi ke `contact_data` + `website` pada kandidat, dan memperketat syarat promosi (bisnis terbukti ada, bukti eksternal ada, cek kembar lolos, ambang kepercayaan lolos, sudah disetujui manusia).
-- `src/routes/_authenticated/admin.prospects.tsx` — filter dan label status baru pada tab Candidate inbox.
-- `docs/CANDIDATE-GOVERNANCE.md` — daur hidup diperbarui.
-
-## 3. Alur lama vs baru
+## 2. Formula Trust Score
 
 ```text
-Lama : AI Discovery -> prospects -> validasi -> sales
-Baru : AI Discovery -> prospect_candidates (raw)
-        -> verifikasi data eksternal (Google Maps dulu, waterfall)
-        -> deteksi kembar
-        -> validasi
-        -> penilaian kepercayaan
-        -> prospects -> Sales Queue
+trust = 0.25*ICP fit + 0.25*validation + 0.15*AI quality + 0.35*external verification
 ```
 
-Antrean penjualan tetap hanya membaca tabel `prospects` dengan tahap `sales_ready` — kandidat mentah, kembar, atau ditolak tidak pernah muncul di sana. Perilaku ini sudah berlaku dan akan diuji ulang.
+- ICP fit: `fit_score` prospek / `icp_score` kandidat.
+- Validation: `validation_score` (6 pengecekan yang sudah ada).
+- AI quality: skor `quality_gate`.
+- External verification: skor bukti Apify saat ini (Google Maps place_id 45, telepon 20, alamat 10, website 15, social 10) — dipertahankan, kini jadi komponen berbobot terbesar.
 
-## 4. Risiko
+Komponen yang belum punya data dihitung 0 dan alasannya dicatat, sehingga prospek tanpa bukti eksternal tidak bisa naik tier tinggi.
 
-- Indeks unik `dedupe_key` bisa menolak baris jika data lama sudah punya kembar. Ditangani dengan indeks unik parsial (hanya baris berstatus aktif) dan pengisian nilai bertahap sebelum indeks dibuat.
-- Penyisipan massal mengembalikan galat per-batch, bukan per-baris; ringkasan hasil penemuan akan menyebut jumlah tersimpan/dilewati agar tetap jelas.
-- Status baru berdampingan dengan status lama; layar bisa terasa punya dua penamaan. Diatasi dengan label yang menyatu di UI.
+Tier: 90–100 verified, 75–89 trusted, 50–74 emerging, <50 untrusted.
 
-## 5. Cara membatalkan
+`trust_breakdown` menyimpan tiap komponen + daftar alasan ("Google Maps terverifikasi", "Website aktif", "Cocok ICP").
 
-Setiap langkah berdiri sendiri: hapus indeks dan kolom baru (`website`, `contact_data`, `dedupe_key`) lalu kembalikan daftar status ke bentuk lama — data dan alur lama tetap utuh karena tidak ada yang dihapus atau diubah tipenya. Di sisi kode, perubahan hanya menambah cabang baru sehingga bisa dikembalikan per berkas.
+## 3. Algoritma entity resolution
+
+Nama dinormalkan lebih dulu (huruf kecil, buang PT/CV/UD/Tbk/dll., buang tanda baca, rapikan spasi) — fungsi `normalize_business_name` yang sudah ada dipakai kembali.
+
+Skor kemiripan (0–100) gabungan sinyal:
+- kemiripan nama (trigram) — bobot 40
+- domain website sama — 25
+- nomor telepon sama (dinormalkan) — 20
+- email sama — 10
+- kota sama — 5
+- `place_id` Google Maps sama — langsung 100 (bukti kuat)
+
+Keputusan: ≥85 ditandai otomatis (`flagged`), 60–84 masuk antrean tinjauan manusia (`needs_review`), <60 diabaikan. **Tidak ada penggabungan otomatis**; owner memutuskan.
+
+## 4. File yang berubah
+
+- `src/lib/admin/prospecting.ts` — bobot trust, tier, helper breakdown (client-safe).
+- `src/lib/admin/prospect-candidates.ts` — tipe trust tier/breakdown pada kandidat.
+- `src/lib/entity-resolution.server.ts` (baru) — pencarian kandidat kembar + penilaian kemiripan + penyimpanan hasil.
+- `src/lib/prospecting-trust.server.ts` (baru) — hitung & simpan trust score/tier/breakdown untuk satu atau banyak prospek.
+- `src/lib/prospecting-apify.server.ts` — promosi memakai trust engine terpadu.
+- `src/lib/prospecting.functions.ts` — server function baru: hitung ulang trust, jalankan entity resolution, tinjau hasil pencocokan.
+- `src/routes/_authenticated/admin.prospects.tsx` — badge Trust tier + rincian skor pada daftar/detail, tab **Duplicate review**.
+- `docs/OUTBOUND-SOP.md` — aturan tier dan tinjauan duplikat.
+- Pengujian baru di `src/lib/__tests__` untuk formula skor dan pencocokan entity.
+
+## 5. Risiko & mitigasi
+
+- **Prospek lama nilainya turun** karena belum punya bukti eksternal. Mitigasi: hitung ulang massal saat migrasi selesai; Sales Queue tetap memakai aturan lama sampai tier terisi, lalu beralih ke `trusted`+.
+- **Positif palsu pada nama umum** (mis. "Kopi Kita"). Mitigasi: nama saja tidak pernah mencapai ambang otomatis tanpa sinyal kedua.
+- **Beban query trigram** pada data besar. Mitigasi: indeks GIN + batasi kandidat pembanding per kota/negara.
+- Rollback: kolom dan tabel bersifat tambahan; cukup berhenti memakai trust engine — data lama tidak tersentuh.
