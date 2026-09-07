@@ -1949,14 +1949,19 @@ export type Database = {
           campaign_id: string | null
           candidate_status: string
           city: string | null
+          contact_data: Json
           country: string
           created_at: string
           created_by: string | null
+          dedupe_key: string | null
           discovery_method: string
           discovery_query: string | null
           discovery_reason: string | null
           discovery_source: string | null
+          duplicate_confidence: number | null
+          duplicate_detected_at: string | null
           duplicate_of: string | null
+          duplicate_reason: string | null
           duplicate_status: string
           icp_reason: string | null
           icp_score: number
@@ -1971,6 +1976,7 @@ export type Database = {
           trust_breakdown: Json
           trust_score: number
           updated_at: string
+          website: string | null
           why_match_icp: string | null
         }
         Insert: {
@@ -1984,14 +1990,19 @@ export type Database = {
           campaign_id?: string | null
           candidate_status?: string
           city?: string | null
+          contact_data?: Json
           country?: string
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           discovery_method?: string
           discovery_query?: string | null
           discovery_reason?: string | null
           discovery_source?: string | null
+          duplicate_confidence?: number | null
+          duplicate_detected_at?: string | null
           duplicate_of?: string | null
+          duplicate_reason?: string | null
           duplicate_status?: string
           icp_reason?: string | null
           icp_score?: number
@@ -2006,6 +2017,7 @@ export type Database = {
           trust_breakdown?: Json
           trust_score?: number
           updated_at?: string
+          website?: string | null
           why_match_icp?: string | null
         }
         Update: {
@@ -2019,14 +2031,19 @@ export type Database = {
           campaign_id?: string | null
           candidate_status?: string
           city?: string | null
+          contact_data?: Json
           country?: string
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           discovery_method?: string
           discovery_query?: string | null
           discovery_reason?: string | null
           discovery_source?: string | null
+          duplicate_confidence?: number | null
+          duplicate_detected_at?: string | null
           duplicate_of?: string | null
+          duplicate_reason?: string | null
           duplicate_status?: string
           icp_reason?: string | null
           icp_score?: number
@@ -2041,6 +2058,7 @@ export type Database = {
           trust_breakdown?: Json
           trust_score?: number
           updated_at?: string
+          website?: string | null
           why_match_icp?: string | null
         }
         Relationships: [
@@ -2692,8 +2710,13 @@ export type Database = {
       }
     }
     Functions: {
+      build_dedupe_key: {
+        Args: { _city: string; _country: string; _name: string }
+        Returns: string
+      }
       can_manage_business: { Args: { _user_id: string }; Returns: boolean }
       can_work_leads: { Args: { _user_id: string }; Returns: boolean }
+      country_code: { Args: { _raw: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
