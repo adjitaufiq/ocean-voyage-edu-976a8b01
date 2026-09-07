@@ -107,3 +107,53 @@ describe("evidence normalizers", () => {
     expect(socialPlatform("https://example.com")).toBeNull();
   });
 });
+
+describe("promotion gate", () => {
+  function stubClient(rows: unknown[]) {
+    const builder: Record<string, unknown> = {};
+    for (const key of ["select", "eq", "order"]) {
+      builder[key] = () => builder;
+    }
+    builder["then"] = undefined;
+    return {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              order: async () => ({ data: rows }),
+            }),
+          }),
+        }),
+      }),
+    } as never;
+  }
+
+  it("5. blocks promotion when external evidence is missing", async () => {
+    const { validateExternalEvidence } = await import("@/lib/prospecting-apify.server");
+    const verdict = await validateExternalEvidence(stubClient([]), "00000000-0000-0000-0000-000000000000");
+    expect(verdict.ok).toBe(false);
+    expect(verdict.trustScore).toBeLessThan(65);
+    expect(verdict.reasons.join(" ")).toContain("Google Maps");
+  });
+
+  it("passes when Google Maps proves the business and a phone exists", async () => {
+    const { validateExternalEvidence } = await import("@/lib/prospecting-apify.server");
+    const verdict = await validateExternalEvidence(
+      stubClient([
+        {
+          source_type: "google_maps",
+          confidence_score: 90,
+          normalized_data: {
+            place_id: "p1",
+            phone: "+628111",
+            address: "Jl. Laut 1",
+            permanently_closed: false,
+          },
+        },
+      ]),
+      "00000000-0000-0000-0000-000000000000",
+    );
+    expect(verdict.trustScore).toBeGreaterThanOrEqual(65);
+    expect(verdict.ok).toBe(true);
+  });
+});
