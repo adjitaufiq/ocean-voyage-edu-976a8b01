@@ -108,6 +108,14 @@ import {
   type CandidateRow,
   type CandidateEventRow,
 } from "@/lib/admin/prospect-candidates";
+import {
+  MATCH_STATUS_LABELS,
+  TRUST_TIER_LABELS,
+  trustTierClass,
+  type EntityMatchRow,
+  type MatchStatus,
+  type TrustTier,
+} from "@/lib/admin/trust";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/prospects")({
@@ -140,6 +148,8 @@ type ListRow = {
   status: string;
   fit_score: number;
   fit_tier: string;
+  trust_score?: number;
+  trust_tier?: string;
   do_not_contact: boolean;
   next_follow_up_at: string | null;
   lead_id: string | null;
@@ -257,7 +267,7 @@ function ProspectsPage() {
   const [validating, setValidating] = useState(false);
 
   const [tab, setTab] = useState<
-    "queue" | "candidates" | "campaigns" | "prospects" | "audit"
+    "queue" | "candidates" | "campaigns" | "prospects" | "duplicates" | "audit"
   >("queue");
   const [status, setStatus] = useState("all");
   const [tier, setTier] = useState("all");
@@ -508,7 +518,7 @@ function ProspectsPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2 border-b border-border/40 pb-3">
-        {(["queue", "candidates", "campaigns", "prospects", "audit"] as const).map((item) => (
+        {(["queue", "candidates", "campaigns", "prospects", "duplicates", "audit"] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -528,7 +538,9 @@ function ProspectsPage() {
                   ? "Campaigns"
                   : item === "prospects"
                     ? "All prospects"
-                    : "Audit"}
+                    : item === "duplicates"
+                      ? "Duplicate review"
+                      : "Audit"}
           </button>
         ))}
       </div>
@@ -755,6 +767,17 @@ function ProspectsPage() {
             void run(discover({ data: { campaignId: id } }), "Discovery AI selesai.")
           }
           onDelete={(id) => void run(deleteCampaign({ data: { id } }), "Kampanye dihapus.")}
+        />
+      ) : tab === "duplicates" ? (
+        <DuplicateReview
+          load={(input) => entityMatchesFn({ data: input })}
+          onScan={() =>
+            void run(runEntityResolution({}), "Pemindaian usaha kembar selesai.")
+          }
+          onReview={(id, status) =>
+            void run(reviewEntityMatch({ data: { id, status } }), "Keputusan tersimpan.")
+          }
+          onOpenProspect={(id) => setOpenId(id)}
         />
       ) : tab === "audit" ? (
         <AuditPanel
@@ -1042,6 +1065,16 @@ function ProspectRow({ row, onOpen }: { row: ListRow; onOpen: () => void }) {
         )}
       >
         {row.fit_score} · {FIT_TIER_LABELS[row.fit_tier as FitTier] ?? row.fit_tier}
+      </span>
+      <span
+        className={cn(
+          "rounded-full border px-2 py-0.5 text-[0.65rem] font-medium",
+          trustTierClass(row.trust_tier ?? "untrusted"),
+        )}
+        title="Skor kepercayaan gabungan (ICP, validasi, kualitas AI, bukti eksternal)"
+      >
+        Trust {row.trust_score ?? 0} ·{" "}
+        {TRUST_TIER_LABELS[(row.trust_tier ?? "untrusted") as TrustTier] ?? row.trust_tier}
       </span>
     </button>
   );
