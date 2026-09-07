@@ -92,6 +92,12 @@ export type CandidateRow = {
   candidate_status: CandidateStatus;
   duplicate_status: DuplicateStatus;
   duplicate_of: string | null;
+  duplicate_reason: string | null;
+  duplicate_confidence: number | null;
+  duplicate_detected_at: string | null;
+  dedupe_key: string | null;
+  website: string | null;
+  contact_data: Record<string, { value: string; source: string; source_url: string | null; verified_at: string }>;
   icp_score: number;
   trust_score: number;
   rejected_reason: string | null;
@@ -286,4 +292,57 @@ export type CandidateEventRow = {
   data_source_url: string | null;
   reason: string | null;
   created_at: string;
+};
+
+/* ------------------- Data quality hardening (patch V4.1) ------------------ */
+
+/** ISO-ish country code used inside the dedupe key. Mirrors `public.country_code`. */
+export function countryCode(raw: string | null | undefined): string {
+  const value = (raw ?? "").trim().toLowerCase();
+  if (!value || value === "indonesia" || value === "id" || value === "idn") return "ID";
+  return value.replace(/[^a-z]/g, "").slice(0, 2).toUpperCase() || "ID";
+}
+
+/**
+ * RULE 1 (patch) — dedupe key is region scoped: name + city + country code.
+ * Prevents false duplicates between same-named businesses in different places.
+ * Mirrors `public.build_dedupe_key`.
+ */
+export function buildDedupeKey(
+  businessName: string,
+  city?: string | null,
+  country?: string | null,
+): string {
+  const name = normalizeBusinessKey(businessName).replace(/\s+/g, "_");
+  const town = (normalizeBusinessKey(city ?? "") || "unknown").replace(/\s+/g, "_");
+  return [name, town, countryCode(country)].join("_");
+}
+
+/** RULE 2 (patch) — every contact fact carries its provenance. */
+export type ContactEntry = {
+  value: string;
+  source: string;
+  source_url: string | null;
+  verified_at: string;
+};
+export type ContactData = Partial<Record<"phone" | "email" | "website" | "address" | "social", ContactEntry>>;
+
+/** Builds a provenance-complete contact entry; returns null when unprovable. */
+export function contactEntry(
+  value: string | null | undefined,
+  source: string | null | undefined,
+  sourceUrl?: string | null,
+): ContactEntry | null {
+  const trimmed = (value ?? "").trim();
+  const src = (source ?? "").trim();
+  if (!trimmed || !src) return null;
+  return { value: trimmed, source: src, source_url: sourceUrl ?? null, verified_at: new Date().toISOString() };
+}
+
+export const CONTACT_CHANNEL_LABELS: Record<string, string> = {
+  phone: "Telepon",
+  email: "Email",
+  website: "Website",
+  address: "Alamat",
+  social: "Sosial media",
 };

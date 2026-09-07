@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { logCandidateEvent } from "@/lib/prospecting-candidates.server";
+import { contactEntry } from "@/lib/admin/prospect-candidates";
 import { createProspect } from "@/lib/prospecting.server";
 import {
   apifyActorId,
@@ -355,9 +356,30 @@ export async function enrichCandidateWithApify(
     if (website) sources.push("website");
   }
 
+  // RULE 2 — contact facts are stored WITH provenance, and only from external
+  // sources. AI output never reaches contact_data.
+  const contactData: Record<string, unknown> = {};
+  const phoneEntry = contactEntry(maps.phone, "google_maps", maps.google_maps_url);
+  if (phoneEntry) contactData["phone"] = phoneEntry;
+  const addressEntry = contactEntry(maps.address, "google_maps", maps.google_maps_url);
+  if (addressEntry) contactData["address"] = addressEntry;
+  const websiteEntry = contactEntry(
+    maps.website,
+    website ? "website_scraper" : "google_maps",
+    website ? maps.website : maps.google_maps_url,
+  );
+  if (websiteEntry) contactData["website"] = websiteEntry;
+  const emailEntry = contactEntry(website?.emails_found?.[0] ?? null, "website_scraper", maps.website);
+  if (emailEntry) contactData["email"] = emailEntry;
+
   await supabase
     .from("prospect_candidates")
-    .update({ candidate_status: "verified", rejected_reason: null } as never)
+    .update({
+      candidate_status: "verified",
+      rejected_reason: null,
+      website: maps.website ?? null,
+      contact_data: contactData as never,
+    } as never)
     .eq("id", candidateId);
 
   await logCandidateEvent(supabase, {
