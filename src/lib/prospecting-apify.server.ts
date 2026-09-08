@@ -253,13 +253,23 @@ export async function enrichCandidateWithApify(
     .update({ candidate_status: "enriching" } as never)
     .eq("id", candidateId);
 
-  const location = [candidate.city, candidate.country].filter(Boolean).join(", ");
+  const countryName =
+    !candidate.country || /^id$/i.test(candidate.country) ? "Indonesia" : candidate.country;
+  const location = [candidate.city, countryName].filter(Boolean).join(", ");
+  // Region-isolated query: never a bare business name, always scoped to
+  // city + country so foreign look-alikes cannot be returned.
+  const scopedQuery = buildScopedSearchQuery({
+    businessName: candidate.business_name,
+    city: candidate.city,
+    country: countryName,
+  });
   const mapsActor = apifyActorId("googleMaps");
   const mapsInput = {
-    searchStringsArray: [candidate.business_name],
-    searchTerms: [candidate.business_name],
+    searchStringsArray: [scopedQuery],
+    searchTerms: [scopedQuery],
     locationQuery: location,
     location,
+    countryCode: "id",
     maxCrawledPlacesPerSearch: 5,
     maxResults: 5,
     language: "id",
