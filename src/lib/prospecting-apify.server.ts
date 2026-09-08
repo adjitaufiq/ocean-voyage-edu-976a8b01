@@ -68,6 +68,9 @@ export type SocialEvidence = {
   profile_name: string | null;
   profile_url: string | null;
   platform: SourceType;
+  bio: string | null;
+  bio_link: string | null;
+  cross_reference: SocialVerdict | null;
 };
 
 export type EnrichmentOutcome = {
