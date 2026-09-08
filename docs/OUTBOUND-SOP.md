@@ -120,3 +120,16 @@ beserta `rejected_reason`. Seluruh transisi tercatat di Activity CRM.
 - Akurasi per kampanye dihitung ulang setiap verdict. Bila akurasi < 70%, kampanye ditandai
   `needs_review` dengan alasan, dan batch discovery-nya harus diperiksa sebelum dilanjutkan.
 - Riwayat audit tersimpan permanen di `prospect_audits` (tidak boleh dihapus).
+
+## Discovery engine (tab Discovery)
+
+1. **Buat tugas** — pilih kampanye, sistem memecahnya menjadi tugas kata kunci x wilayah
+   (maks. 60 per kampanye). Mengulang tidak pernah menggandakan tugas.
+2. **Jalankan batch** — maksimum 5 tugas per jalan, tugas dikunci sebelum diproses sehingga
+   dua pemanggilan bersamaan tidak menggandakan pekerjaan. Jadwal otomatis memakai
+   `/api/public/hooks/discovery-worker` (dilindungi kunci penjadwal).
+3. **Ulangi yang gagal** — memasukkan kembali tugas gagal yang masih punya sisa percobaan.
+4. Kandidat baru **selalu** masuk Candidate inbox (bukan Sales Queue). Promosi ke prospek
+   tetap lewat verifikasi eksternal + persetujuan manusia.
+5. Penyedia data: mock (uji, aktif sekarang), Google Maps Platform (aktif otomatis setelah
+   koneksi dipasang), Apify (cadangan). Tidak ada browser/extension/Playwright.

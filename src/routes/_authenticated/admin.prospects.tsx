@@ -101,6 +101,10 @@ import {
   runEntityResolutionFn,
   getEntityMatchesFn,
   reviewEntityMatchFn,
+  planDiscoveryFn,
+  runDiscoveryBatchFn,
+  retryDiscoveryTasksFn,
+  discoveryOverviewFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
@@ -112,6 +116,10 @@ import {
   type CandidateRow,
   type CandidateEventRow,
 } from "@/lib/admin/prospect-candidates";
+import {
+  DISCOVERY_TASK_STATUS_LABELS,
+  type DiscoveryTaskRow,
+} from "@/lib/admin/discovery";
 import {
   MATCH_STATUS_LABELS,
   TRUST_TIER_LABELS,
@@ -271,7 +279,7 @@ function ProspectsPage() {
   const [validating, setValidating] = useState(false);
 
   const [tab, setTab] = useState<
-    "queue" | "candidates" | "campaigns" | "prospects" | "duplicates" | "audit"
+    "queue" | "discovery" | "candidates" | "campaigns" | "prospects" | "duplicates" | "audit"
   >("queue");
   const [status, setStatus] = useState("all");
   const [tier, setTier] = useState("all");
@@ -289,6 +297,10 @@ function ProspectsPage() {
   const runEntityResolution = useServerFn(runEntityResolutionFn);
   const entityMatchesFn = useServerFn(getEntityMatchesFn);
   const reviewEntityMatch = useServerFn(reviewEntityMatchFn);
+  const planDiscovery = useServerFn(planDiscoveryFn);
+  const runDiscovery = useServerFn(runDiscoveryBatchFn);
+  const retryDiscovery = useServerFn(retryDiscoveryTasksFn);
+  const discoveryOverview = useServerFn(discoveryOverviewFn);
 
   const list = useQuery({
     queryKey: ["admin", "prospects", status, tier, search, tab],
@@ -536,7 +548,7 @@ function ProspectsPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2 border-b border-border/40 pb-3">
-        {(["queue", "candidates", "campaigns", "prospects", "duplicates", "audit"] as const).map((item) => (
+        {(["queue", "discovery", "candidates", "campaigns", "prospects", "duplicates", "audit"] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -550,6 +562,8 @@ function ProspectsPage() {
           >
             {item === "queue"
               ? "Daily sales queue"
+              : item === "discovery"
+                ? "Discovery"
               : item === "candidates"
                 ? "Candidate inbox"
                 : item === "campaigns"
@@ -751,7 +765,27 @@ function ProspectsPage() {
         </SectionCard>
       ) : null}
 
-      {tab === "candidates" ? (
+      {tab === "discovery" ? (
+        <DiscoveryPanel
+          campaigns={campaignRows}
+          load={() => discoveryOverview({})}
+          onPlan={(campaignId) =>
+            void run(planDiscovery({ data: { campaignId } }), "Tugas discovery dibuat.")
+          }
+          onRun={(campaignId) =>
+            void run(
+              runDiscovery({ data: campaignId ? { campaignId } : {} }),
+              "Batch discovery selesai.",
+            )
+          }
+          onRetry={(campaignId) =>
+            void run(
+              retryDiscovery({ data: campaignId ? { campaignId } : {} }),
+              "Tugas gagal dimasukkan ulang ke antrean.",
+            )
+          }
+        />
+      ) : tab === "candidates" ? (
         <CandidateInbox
           campaigns={campaignRows}
           load={(input) => candidatesFn({ data: input })}
@@ -2777,3 +2811,182 @@ function DuplicateReview({
     </div>
   );
 }
+
+function DiscoveryPanel({
+  campaigns,
+  load,
+  onPlan,
+  onRun,
+  onRetry,
+}: {
+  campaigns: CampaignRow[];
+  load: () => Promise<unknown>;
+  onPlan: (campaignId: string) => void;
+  onRun: (campaignId?: string) => void;
+  onRetry: (campaignId?: string) => void;
+}) {
+  const [campaignId, setCampaignId] = useState("");
+  const overview = useQuery({
+    queryKey: ["admin", "discovery-overview"],
+    queryFn: () => load() as Promise<DiscoveryOverviewData>,
+  });
+  const data = overview.data;
+  const scope = campaignId || undefined;
+
+  return (
+    <div className="space-y-4">
+      <GlassCard className="p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold">Discovery engine</h2>
+            <p className="text-xs text-muted-foreground">
+              Kampanye dipecah menjadi tugas kata kunci x wilayah, lalu dijalankan bertahap di
+              server. Kandidat baru selalu masuk Candidate inbox untuk ditinjau.
+            </p>
+          </div>
+          <select
+            value={campaignId}
+            onChange={(e) => setCampaignId(e.target.value)}
+            className={cn(inputClass, "w-auto")}
+          >
+            <option value="">Semua kampanye</option>
+            {campaigns.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!campaignId}
+            onClick={() => campaignId && onPlan(campaignId)}
+            className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50 disabled:opacity-40"
+          >
+            <Target className="h-4 w-4" /> Buat tugas
+          </button>
+          <button
+            type="button"
+            onClick={() => onRun(scope)}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary/15 px-3 py-2 text-sm text-primary transition hover:bg-primary/25"
+          >
+            <Sparkles className="h-4 w-4" /> Jalankan batch
+          </button>
+          <button
+            type="button"
+            onClick={() => onRetry(scope)}
+            className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50"
+          >
+            <RefreshCcw className="h-4 w-4" /> Ulangi yang gagal
+          </button>
+        </div>
+      </GlassCard>
+
+      {data ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricTile label="Tugas antre" value={data.tasks.queued} />
+          <MetricTile label="Tugas selesai" value={data.tasks.completed} />
+          <MetricTile label="Tugas gagal" value={data.tasks.failed} tone="hot" />
+          <MetricTile label="Kandidat" value={data.candidates} />
+          <MetricTile label="Hot lead" value={data.hotLeads} tone="primary" />
+          <MetricTile label="Antre QC" value={data.qcPending} />
+          <MetricTile
+            label="Permintaan provider hari ini"
+            value={data.usageToday.reduce((sum, row) => sum + row.requests, 0)}
+          />
+          <MetricTile
+            label="Hasil provider hari ini"
+            value={data.usageToday.reduce((sum, row) => sum + row.results, 0)}
+          />
+        </div>
+      ) : null}
+
+      <SectionCard title="Progres kampanye" description="Target kandidat vs yang sudah tersimpan.">
+        {overview.isLoading ? (
+          <p className="text-sm text-muted-foreground">Memuat data discovery...</p>
+        ) : !data || data.campaigns.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Belum ada kampanye dengan tugas discovery. Pilih kampanye lalu klik "Buat tugas".
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {data.campaigns.map((row) => (
+              <div key={row.id} className="rounded-2xl border border-border/40 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium">{row.name}</p>
+                  <span className="rounded-full border border-border/50 px-2 py-0.5 text-[0.65rem] text-muted-foreground">
+                    {row.provider}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {row.saved} / {row.target} kandidat - {row.completed}/{row.tasks} tugas selesai
+                  {row.failed ? ` - ${row.failed} gagal` : ""}
+                </p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/40">
+                  <div
+                    className="h-full rounded-full bg-primary/70"
+                    style={{ width: `${Math.min(100, row.progress)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Tugas terbaru" description="Riwayat eksekusi termasuk catatan galat.">
+        {!data || data.recentTasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada tugas discovery.</p>
+        ) : (
+          <div className="space-y-2">
+            {data.recentTasks.slice(0, 25).map((task) => (
+              <div
+                key={task.id}
+                className="rounded-xl border border-border/40 px-3 py-2 text-xs text-muted-foreground"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-foreground">
+                    {task.keyword} - {task.area}
+                  </span>
+                  <span className="rounded-full border border-border/50 px-2 py-0.5 text-[0.65rem]">
+                    {DISCOVERY_TASK_STATUS_LABELS[task.status] ?? task.status}
+                  </span>
+                  <span>
+                    {task.saved_count} tersimpan - {task.duplicate_count} kembar -{" "}
+                    {task.rejected_count} ditolak
+                  </span>
+                  <span>
+                    Percobaan {task.attempt}/{task.max_attempts}
+                  </span>
+                </div>
+                {task.last_error ? (
+                  <p className="mt-1 text-destructive">{task.last_error}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+type DiscoveryOverviewData = {
+  tasks: { queued: number; running: number; completed: number; failed: number; total: number };
+  candidates: number;
+  hotLeads: number;
+  qcPending: number;
+  usageToday: { provider: string; requests: number; results: number; errors: number }[];
+  campaigns: {
+    id: string;
+    name: string;
+    provider: string;
+    target: number;
+    tasks: number;
+    completed: number;
+    failed: number;
+    found: number;
+    saved: number;
+    progress: number;
+  }[];
+  recentTasks: DiscoveryTaskRow[];
+};

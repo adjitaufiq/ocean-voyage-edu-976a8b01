@@ -730,3 +730,70 @@ export const reviewEntityMatchFn = createServerFn({ method: "POST" })
       email: actorEmail(context.claims),
     });
   });
+
+/* ------------------------------------------------------------------ */
+/* Discovery engine                                                    */
+/* ------------------------------------------------------------------ */
+
+export const planDiscoveryFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid(),
+        keywords: z.array(z.string().min(1).max(120)).max(40).optional(),
+        areas: z.array(z.string().min(1).max(120)).max(40).optional(),
+        radiusMeters: z.number().int().min(500).max(50000).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { planCampaignDiscovery } = await import("./prospecting-discovery.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return planCampaignDiscovery(context.supabase, data, { userId: context.userId });
+  });
+
+export const runDiscoveryBatchFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid().optional(),
+        taskId: z.string().uuid().optional(),
+        limit: z.number().int().min(1).max(5).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { runDiscoveryBatch } = await import("./prospecting-discovery.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return runDiscoveryBatch(context.supabase, data);
+  });
+
+export const retryDiscoveryTasksFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid().optional(),
+        taskId: z.string().uuid().optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { retryFailedDiscoveryTasks } = await import("./prospecting-discovery.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return retryFailedDiscoveryTasks(context.supabase, data);
+  });
+
+export const discoveryOverviewFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { buildDiscoveryOverview } = await import("./prospecting-discovery.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return buildDiscoveryOverview(context.supabase);
+  });
