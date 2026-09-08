@@ -191,3 +191,37 @@ export async function searchPlaces(input: SearchPlacesInput): Promise<SearchPlac
     raw,
   };
 }
+
+const DETAIL_FIELD_MASK = FIELD_MASK.replace(/places\./g, "").replace(",nextPageToken", "");
+
+/** Single place lookup (Places API New details endpoint). */
+export async function fetchPlaceDetail(
+  placeId: string,
+  options: { keyword?: string | null; fetchImpl?: typeof fetch; env?: NodeJS.ProcessEnv } = {},
+): Promise<DiscoveredPlace | null> {
+  const { fetchImpl = fetch, env = process.env } = options;
+  const { lovableKey, connectionKey } = credentials(env);
+
+  const response = await fetchImpl(
+    `${GATEWAY_URL}/places/v1/places/${encodeURIComponent(placeId)}?languageCode=id`,
+    {
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": connectionKey,
+        "X-Goog-FieldMask": DETAIL_FIELD_MASK,
+      },
+    },
+  );
+
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new MapsRequestError(
+      `Google Maps gagal [${response.status}]: ${text.slice(0, 300)}`,
+      response.status,
+    );
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  return normalizePlace(payload, options.keyword ?? null);
+}
