@@ -4,8 +4,10 @@
  * One number sales can read instead of four separate scores:
  *   trust = 25% ICP fit + 25% validation + 15% AI quality + 35% external verification
  * External verification carries the largest weight because it is external fact,
- * not model output.
+ * not model output. Geofencing rules (see ./geofence) apply on top.
  */
+import { phoneGeoVerdict, phonesComparable, FOREIGN_PHONE_PENALTY } from "@/lib/admin/geofence";
+
 
 export const TRUST_WEIGHTS = {
   fit: 0.25,
