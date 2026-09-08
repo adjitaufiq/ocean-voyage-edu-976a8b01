@@ -13,6 +13,13 @@ import { logCandidateEvent } from "@/lib/prospecting-candidates.server";
 import { contactEntry } from "@/lib/admin/prospect-candidates";
 import { createProspect } from "@/lib/prospecting.server";
 import {
+  buildScopedSearchQuery,
+  crossReferenceSocial,
+  phoneGeoVerdict,
+  FOREIGN_PHONE_PENALTY,
+  type SocialVerdict,
+} from "@/lib/admin/geofence";
+import {
   apifyActorId,
   runApifyActor,
   ApifyAuthError,
@@ -61,6 +68,9 @@ export type SocialEvidence = {
   profile_name: string | null;
   profile_url: string | null;
   platform: SourceType;
+  bio: string | null;
+  bio_link: string | null;
+  cross_reference: SocialVerdict | null;
 };
 
 export type EnrichmentOutcome = {
@@ -206,6 +216,13 @@ export function normalizeSocialItem(
     profile_name: name,
     profile_url: url,
     platform,
+    bio: str(item["biography"]) ?? str(item["bio"]) ?? str(item["description"]),
+    bio_link:
+      str(item["externalUrl"]) ??
+      str(item["external_url"]) ??
+      str(item["websiteUrl"]) ??
+      str(item["website"]),
+    cross_reference: null,
   };
 }
 
@@ -236,13 +253,23 @@ export async function enrichCandidateWithApify(
     .update({ candidate_status: "enriching" } as never)
     .eq("id", candidateId);
 
-  const location = [candidate.city, candidate.country].filter(Boolean).join(", ");
+  const countryName =
+    !candidate.country || /^id$/i.test(candidate.country) ? "Indonesia" : candidate.country;
+  const location = [candidate.city, countryName].filter(Boolean).join(", ");
+  // Region-isolated query: never a bare business name, always scoped to
+  // city + country so foreign look-alikes cannot be returned.
+  const scopedQuery = buildScopedSearchQuery({
+    businessName: candidate.business_name,
+    city: candidate.city,
+    country: countryName,
+  });
   const mapsActor = apifyActorId("googleMaps");
   const mapsInput = {
-    searchStringsArray: [candidate.business_name],
-    searchTerms: [candidate.business_name],
+    searchStringsArray: [scopedQuery],
+    searchTerms: [scopedQuery],
     locationQuery: location,
     location,
+    countryCode: "id",
     maxCrawledPlacesPerSearch: 5,
     maxResults: 5,
     language: "id",
@@ -358,8 +385,14 @@ export async function enrichCandidateWithApify(
 
   // RULE 2 — contact facts are stored WITH provenance, and only from external
   // sources. AI output never reaches contact_data.
+  // GEOFENCE — a phone whose country code is not the target country is never
+  // stored as a contact fact; the candidate is marked as a foreign mismatch.
+  const phoneGeo = phoneGeoVerdict(maps.phone);
+  const foreignPhone = phoneGeo.foreign;
   const contactData: Record<string, unknown> = {};
-  const phoneEntry = contactEntry(maps.phone, "google_maps", maps.google_maps_url);
+  const phoneEntry = foreignPhone
+    ? null
+    : contactEntry(maps.phone, "google_maps", maps.google_maps_url);
   if (phoneEntry) contactData["phone"] = phoneEntry;
   const addressEntry = contactEntry(maps.address, "google_maps", maps.google_maps_url);
   if (addressEntry) contactData["address"] = addressEntry;
@@ -372,6 +405,39 @@ export async function enrichCandidateWithApify(
   const emailEntry = contactEntry(website?.emails_found?.[0] ?? null, "website_scraper", maps.website);
   if (emailEntry) contactData["email"] = emailEntry;
 
+  if (foreignPhone) {
+    const reason = `Nomor dari Google Maps bukan nomor ${"Indonesia"}: ${phoneGeo.reason ?? "kode negara asing"} (trust -${FOREIGN_PHONE_PENALTY}).`;
+    await supabase
+      .from("prospect_candidates")
+      .update({
+        candidate_status: "enrichment_failed",
+        rejected_reason: reason,
+        website: maps.website ?? null,
+        contact_data: contactData as never,
+      } as never)
+      .eq("id", candidateId);
+    await logCandidateEvent(supabase, {
+      candidateId,
+      event: "rejected_foreign_entity",
+      field: "phone",
+      newValue: maps.phone,
+      actorKind: "system",
+      actorLabel: "Geofence",
+      dataSource: "apify:google_maps",
+      dataSourceUrl: maps.google_maps_url,
+      reason,
+    });
+    return {
+      candidateId,
+      status: "failed",
+      sources,
+      maps,
+      website,
+      social: null,
+      error: reason,
+    };
+  }
+
   await supabase
     .from("prospect_candidates")
     .update({
@@ -381,6 +447,7 @@ export async function enrichCandidateWithApify(
       contact_data: contactData as never,
     } as never)
     .eq("id", candidateId);
+
 
   await logCandidateEvent(supabase, {
     candidateId,
@@ -429,13 +496,51 @@ export async function enrichSocialProfile(
   await finishRun(supabase, logId, run);
   const item = run.items[0];
   const social = run.status === "succeeded" && item ? normalizeSocialItem(item, platform, url) : null;
+
+  // CROSS-REFERENCE — a matching handle is never enough. Bio link, bio contact
+  // and geographic keywords must agree with the candidate's own facts.
+  let confidence = social?.profile_exists ? 60 : 0;
+  if (social) {
+    const { data: candidate } = await supabase
+      .from("prospect_candidates")
+      .select("website, contact_data")
+      .eq("id", candidateId)
+      .maybeSingle();
+    const contacts = (candidate?.contact_data ?? {}) as Record<string, { value?: string } | undefined>;
+    const verdict = crossReferenceSocial({
+      candidateWebsite: candidate?.website ?? null,
+      candidatePhone: contacts["phone"]?.value ?? null,
+      candidateEmail: contacts["email"]?.value ?? null,
+      bioLink: social.bio_link,
+      bio: social.bio,
+    });
+    social.cross_reference = verdict;
+    if (verdict.status === "rejected_foreign_entity") confidence = 0;
+    else confidence = Math.max(0, confidence - verdict.penalty);
+
+    if (verdict.status !== "verified") {
+      await logCandidateEvent(supabase, {
+        candidateId,
+        event:
+          verdict.status === "rejected_foreign_entity" ? "rejected_foreign_entity" : "mismatch_social",
+        field: "social",
+        newValue: url,
+        actorKind: "system",
+        actorLabel: "Geofence cross-reference",
+        dataSource: `apify:${platform}`,
+        dataSourceUrl: url,
+        reason: verdict.reasons.join("; ") || "Bukti silang social tidak cukup.",
+      });
+    }
+  }
+
   await saveEnrichment(supabase, {
     candidateId,
     sourceType: platform,
     actorName: socialActor,
     result: run,
     normalized: (social ?? {}) as Record<string, unknown>,
-    confidence: social?.profile_exists ? 60 : 0,
+    confidence,
     sourceUrl: url,
     userId: actor.userId,
   });
@@ -485,15 +590,36 @@ export async function validateExternalEvidence(
   if (!maps || !maps.place_id) reasons.push("Belum ada bukti keberadaan bisnis dari Google Maps.");
   else trust += 45;
   if (maps?.permanently_closed) reasons.push("Bisnis ditandai tutup permanen.");
+  const phoneGeo = phoneGeoVerdict(maps?.phone ?? null);
   if (maps?.phone) trust += 20;
   else reasons.push("Belum ada nomor telepon dari sumber eksternal.");
   if (maps?.address) trust += 10;
   if (website) trust += 15;
-  if (socialRow) trust += 10;
+
+  // GEOFENCE PENALTY — foreign country code is an instant reject.
+  if (phoneGeo.foreign) {
+    trust -= FOREIGN_PHONE_PENALTY;
+    reasons.push(phoneGeo.reason ?? "Nomor telepon memakai kode negara asing.");
+  }
+
+  // SOCIAL CROSS-REFERENCE PENALTY — handle match alone earns nothing.
+  const social = (socialRow?.normalized_data as SocialEvidence | undefined) ?? null;
+  const crossRef = social?.cross_reference ?? null;
+  if (socialRow) {
+    if (!crossRef || crossRef.status === "verified") trust += 10;
+    else if (crossRef.status === "rejected_foreign_entity") {
+      trust = 0;
+      reasons.push(`Profil social milik entitas luar negeri: ${crossRef.reasons.join("; ")}`);
+    } else {
+      trust -= crossRef.penalty;
+      reasons.push(...crossRef.reasons);
+    }
+  }
 
   trust = Math.max(0, Math.min(100, trust));
   const ok = reasons.length === 0 && trust >= 65;
   if (!ok && trust < 65) reasons.push(`Trust score ${trust} di bawah ambang 65.`);
+
 
   return { ok, trustScore: trust, reasons, maps, website };
 }

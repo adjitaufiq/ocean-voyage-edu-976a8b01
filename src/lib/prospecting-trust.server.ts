@@ -81,6 +81,7 @@ function trustFor(row: TrustRow): TrustBreakdown {
     qualityScore: gate?.score ?? 0,
     externalScore: external.score,
     reasons: external.reasons,
+    phone: row.contact_phone ?? row.contact_whatsapp,
   });
 }
 

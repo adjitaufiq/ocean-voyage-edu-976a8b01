@@ -4,8 +4,10 @@
  * One number sales can read instead of four separate scores:
  *   trust = 25% ICP fit + 25% validation + 15% AI quality + 35% external verification
  * External verification carries the largest weight because it is external fact,
- * not model output.
+ * not model output. Geofencing rules (see ./geofence) apply on top.
  */
+import { phoneGeoVerdict, phonesComparable, FOREIGN_PHONE_PENALTY } from "@/lib/admin/geofence";
+
 
 export const TRUST_WEIGHTS = {
   fit: 0.25,
@@ -63,6 +65,10 @@ export type TrustInput = {
   qualityScore?: number | null;
   externalScore?: number | null;
   reasons?: string[];
+  /** Primary contact phone — checked against the target country code. */
+  phone?: string | null;
+  /** Extra penalty points, e.g. a social bio linking to a foreign domain. */
+  penalty?: number;
 };
 
 export function computeTrust(input: TrustInput): TrustBreakdown {
@@ -71,14 +77,24 @@ export function computeTrust(input: TrustInput): TrustBreakdown {
   const quality = clamp(input.qualityScore ?? 0);
   const external = clamp(input.externalScore ?? 0);
 
+  const reason = [...(input.reasons ?? [])];
+
+  // Geofence penalty: a phone from another country is not our prospect.
+  let penalty = Math.max(0, input.penalty ?? 0);
+  const geo = phoneGeoVerdict(input.phone ?? null);
+  if (geo.foreign) {
+    penalty += FOREIGN_PHONE_PENALTY;
+    reason.push(geo.reason ?? "Nomor telepon memakai kode negara asing.");
+  }
+
   const score = clamp(
     fit * TRUST_WEIGHTS.fit +
       validation * TRUST_WEIGHTS.validation +
       quality * TRUST_WEIGHTS.quality +
-      external * TRUST_WEIGHTS.external,
+      external * TRUST_WEIGHTS.external -
+      penalty,
   );
 
-  const reason = [...(input.reasons ?? [])];
   if (external === 0) reason.push("Belum ada bukti eksternal (Google Maps/website).");
   if (validation === 0) reason.push("Belum melewati validation pipeline.");
   if (fit >= 70) reason.push("Cocok dengan ICP.");
@@ -220,7 +236,8 @@ export function scoreEntityMatch(a: EntityFacts, b: EntityFacts): MatchVerdict {
 
   const phoneA = normalizePhone(a.phone);
   const phoneB = normalizePhone(b.phone);
-  if (phoneA && phoneB && phoneA === phoneB) {
+  // Geofence: never match phones across different country codes.
+  if (phoneA && phoneB && phoneA === phoneB && phonesComparable(a.phone, b.phone)) {
     score += MATCH_SIGNAL_WEIGHTS.phone;
     reasons.push("Nomor telepon sama");
   }
