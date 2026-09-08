@@ -11,6 +11,7 @@ import { parseQualityGate } from "@/lib/admin/prospecting";
 import {
   computeTrust,
   domainOf,
+  normalizePhone,
   scoreEntityMatch,
   type EntityFacts,
   type EntityMatchRow,
