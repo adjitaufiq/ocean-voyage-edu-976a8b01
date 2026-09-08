@@ -496,13 +496,51 @@ export async function enrichSocialProfile(
   await finishRun(supabase, logId, run);
   const item = run.items[0];
   const social = run.status === "succeeded" && item ? normalizeSocialItem(item, platform, url) : null;
+
+  // CROSS-REFERENCE — a matching handle is never enough. Bio link, bio contact
+  // and geographic keywords must agree with the candidate's own facts.
+  let confidence = social?.profile_exists ? 60 : 0;
+  if (social) {
+    const { data: candidate } = await supabase
+      .from("prospect_candidates")
+      .select("website, contact_data")
+      .eq("id", candidateId)
+      .maybeSingle();
+    const contacts = (candidate?.contact_data ?? {}) as Record<string, { value?: string } | undefined>;
+    const verdict = crossReferenceSocial({
+      candidateWebsite: candidate?.website ?? null,
+      candidatePhone: contacts["phone"]?.value ?? null,
+      candidateEmail: contacts["email"]?.value ?? null,
+      bioLink: social.bio_link,
+      bio: social.bio,
+    });
+    social.cross_reference = verdict;
+    if (verdict.status === "rejected_foreign_entity") confidence = 0;
+    else confidence = Math.max(0, confidence - verdict.penalty);
+
+    if (verdict.status !== "verified") {
+      await logCandidateEvent(supabase, {
+        candidateId,
+        event:
+          verdict.status === "rejected_foreign_entity" ? "rejected_foreign_entity" : "mismatch_social",
+        field: "social",
+        newValue: url,
+        actorKind: "system",
+        actorLabel: "Geofence cross-reference",
+        dataSource: `apify:${platform}`,
+        dataSourceUrl: url,
+        reason: verdict.reasons.join("; ") || "Bukti silang social tidak cukup.",
+      });
+    }
+  }
+
   await saveEnrichment(supabase, {
     candidateId,
     sourceType: platform,
     actorName: socialActor,
     result: run,
     normalized: (social ?? {}) as Record<string, unknown>,
-    confidence: social?.profile_exists ? 60 : 0,
+    confidence,
     sourceUrl: url,
     userId: actor.userId,
   });
