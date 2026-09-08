@@ -216,6 +216,13 @@ export function normalizeSocialItem(
     profile_name: name,
     profile_url: url,
     platform,
+    bio: str(item["biography"]) ?? str(item["bio"]) ?? str(item["description"]),
+    bio_link:
+      str(item["externalUrl"]) ??
+      str(item["external_url"]) ??
+      str(item["websiteUrl"]) ??
+      str(item["website"]),
+    cross_reference: null,
   };
 }
 
