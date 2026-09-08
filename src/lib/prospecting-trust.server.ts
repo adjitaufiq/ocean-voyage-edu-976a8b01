@@ -11,6 +11,7 @@ import { parseQualityGate } from "@/lib/admin/prospecting";
 import {
   computeTrust,
   domainOf,
+  normalizePhone,
   scoreEntityMatch,
   type EntityFacts,
   type EntityMatchRow,
@@ -169,26 +170,83 @@ export async function runEntityResolution(
   let needsReview = 0;
   let compared = 0;
 
-  for (let i = 0; i < facts.length; i += 1) {
-    for (let j = i + 1; j < facts.length; j += 1) {
-      const a = facts[i]!;
-      const b = facts[j]!;
-      compared += 1;
-      const verdict = scoreEntityMatch(a, b);
-      if (!verdict.status) continue;
-      if (verdict.status === "flagged") flagged += 1;
-      else needsReview += 1;
-      const [left, right] = [a.id, b.id].sort() as [string, string];
-      pending.push({
-        entity_kind: "prospect",
-        prospect_a: left,
-        prospect_b: right,
-        similarity_score: verdict.score,
-        match_reason: verdict.reasons,
-        status: verdict.status,
-      });
+  const consider = (a: EntityFacts, b: EntityFacts) => {
+    compared += 1;
+    const verdict = scoreEntityMatch(a, b);
+    if (!verdict.status) return;
+    if (verdict.status === "flagged") flagged += 1;
+    else needsReview += 1;
+    const [left, right] = [a.id, b.id].sort() as [string, string];
+    pending.push({
+      entity_kind: "prospect",
+      prospect_a: left,
+      prospect_b: right,
+      similarity_score: verdict.score,
+      match_reason: verdict.reasons,
+      status: verdict.status,
+    });
+  };
+
+  // Scoped fuzzy matching: never compare every pair in the table.
+  // 1) Fuzzy name comparison only inside the same city bucket.
+  // 2) Rows without a city are only compared on an exact website-domain or
+  //    phone key, never through a blind fuzzy sweep.
+  const cityBuckets = new Map<string, EntityFacts[]>();
+  const noCity: EntityFacts[] = [];
+  for (const fact of facts) {
+    const city = fact.city?.trim().toLowerCase();
+    if (city) {
+      const bucket = cityBuckets.get(city) ?? [];
+      bucket.push(fact);
+      cityBuckets.set(city, bucket);
+    } else {
+      noCity.push(fact);
     }
   }
+
+  for (const bucket of cityBuckets.values()) {
+    for (let i = 0; i < bucket.length; i += 1) {
+      for (let j = i + 1; j < bucket.length; j += 1) {
+        consider(bucket[i]!, bucket[j]!);
+      }
+    }
+  }
+
+  const exactBuckets = new Map<string, EntityFacts[]>();
+  const addExact = (key: string | null, fact: EntityFacts) => {
+    if (!key) return;
+    const bucket = exactBuckets.get(key) ?? [];
+    bucket.push(fact);
+    exactBuckets.set(key, bucket);
+  };
+  for (const fact of noCity) {
+    addExact(domainOf(fact.websiteDomain), fact);
+    addExact(normalizePhone(fact.phone), fact);
+  }
+  // Locationless rows can also match a located row through the same exact key.
+  for (const bucket of cityBuckets.values()) {
+    for (const fact of bucket) {
+      const domainKey = domainOf(fact.websiteDomain);
+      if (domainKey && exactBuckets.has(domainKey)) addExact(domainKey, fact);
+      const phoneKey = normalizePhone(fact.phone);
+      if (phoneKey && exactBuckets.has(phoneKey)) addExact(phoneKey, fact);
+    }
+  }
+
+  const seenPairs = new Set<string>();
+  for (const bucket of exactBuckets.values()) {
+    if (bucket.length < 2) continue;
+    for (let i = 0; i < bucket.length; i += 1) {
+      for (let j = i + 1; j < bucket.length; j += 1) {
+        const [left, right] = [bucket[i]!.id, bucket[j]!.id].sort() as [string, string];
+        const key = `${left}|${right}`;
+        if (seenPairs.has(key)) continue;
+        seenPairs.add(key);
+        consider(bucket[i]!, bucket[j]!);
+      }
+    }
+  }
+
 
   if (pending.length > 0) {
     // Never overwrite a human review verdict: ignore conflicts on the pair index.
