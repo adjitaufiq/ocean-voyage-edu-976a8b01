@@ -220,7 +220,8 @@ export function scoreEntityMatch(a: EntityFacts, b: EntityFacts): MatchVerdict {
 
   const phoneA = normalizePhone(a.phone);
   const phoneB = normalizePhone(b.phone);
-  if (phoneA && phoneB && phoneA === phoneB) {
+  // Geofence: never match phones across different country codes.
+  if (phoneA && phoneB && phoneA === phoneB && phonesComparable(a.phone, b.phone)) {
     score += MATCH_SIGNAL_WEIGHTS.phone;
     reasons.push("Nomor telepon sama");
   }
