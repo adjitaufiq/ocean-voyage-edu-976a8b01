@@ -640,6 +640,106 @@ export type Database = {
           },
         ]
       }
+      candidate_sources: {
+        Row: {
+          candidate_id: string
+          confidence_score: number
+          created_at: string
+          external_id: string | null
+          fetched_at: string
+          id: string
+          normalized_data: Json
+          provider: string
+          raw_payload: Json
+          source_type: string
+          source_url: string | null
+          status: string
+        }
+        Insert: {
+          candidate_id: string
+          confidence_score?: number
+          created_at?: string
+          external_id?: string | null
+          fetched_at?: string
+          id?: string
+          normalized_data?: Json
+          provider: string
+          raw_payload?: Json
+          source_type: string
+          source_url?: string | null
+          status?: string
+        }
+        Update: {
+          candidate_id?: string
+          confidence_score?: number
+          created_at?: string
+          external_id?: string | null
+          fetched_at?: string
+          id?: string
+          normalized_data?: Json
+          provider?: string
+          raw_payload?: Json
+          source_type?: string
+          source_url?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_sources_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_status_history: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          actor_label: string | null
+          candidate_id: string
+          created_at: string
+          from_status: string | null
+          id: string
+          meta: Json
+          reason: string | null
+          to_status: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind?: string
+          actor_label?: string | null
+          candidate_id: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          meta?: Json
+          reason?: string | null
+          to_status: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          actor_label?: string | null
+          candidate_id?: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          meta?: Json
+          reason?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_status_history_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_documents: {
         Row: {
           client_id: string
@@ -1133,6 +1233,113 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      discovery_tasks: {
+        Row: {
+          area: string
+          attempt: number
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          duplicate_count: number
+          found_count: number
+          id: string
+          keyword: string
+          last_error: string | null
+          last_run_at: string | null
+          latitude: number | null
+          locked_at: string | null
+          longitude: number | null
+          max_attempts: number
+          page_token: string | null
+          radius_meters: number
+          rejected_count: number
+          saved_count: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          attempt?: number
+          campaign_id: string
+          created_at?: string
+          created_by?: string | null
+          duplicate_count?: number
+          found_count?: number
+          id?: string
+          keyword: string
+          last_error?: string | null
+          last_run_at?: string | null
+          latitude?: number | null
+          locked_at?: string | null
+          longitude?: number | null
+          max_attempts?: number
+          page_token?: string | null
+          radius_meters?: number
+          rejected_count?: number
+          saved_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          attempt?: number
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          duplicate_count?: number
+          found_count?: number
+          id?: string
+          keyword?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          latitude?: number | null
+          locked_at?: string | null
+          longitude?: number | null
+          max_attempts?: number
+          page_token?: string | null
+          radius_meters?: number
+          rejected_count?: number
+          saved_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_tasks_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discovery_usage_daily: {
+        Row: {
+          errors: number
+          provider: string
+          requests: number
+          results: number
+          updated_at: string
+          usage_date: string
+        }
+        Insert: {
+          errors?: number
+          provider: string
+          requests?: number
+          results?: number
+          updated_at?: string
+          usage_date: string
+        }
+        Update: {
+          errors?: number
+          provider?: string
+          requests?: number
+          results?: number
+          updated_at?: string
+          usage_date?: string
+        }
+        Relationships: []
       }
       document_links: {
         Row: {
@@ -1850,73 +2057,94 @@ export type Database = {
       }
       prospect_campaigns: {
         Row: {
+          areas: Json
           created_at: string
           created_by: string | null
           custom_solutions: Json
           daily_target: number
+          discovery_provider: string
           enrichment_budget_daily: number
           id: string
           industry: string
           keywords: Json
           last_run_at: string | null
+          latitude: number | null
           location: string
+          longitude: number | null
           name: string
           needs_review: boolean
           notes: string | null
           pipeline_version: string
           primary_solution: string | null
+          radius_meters: number
           review_reason: string | null
           solution: string
           solutions: Json
           status: string
+          target_candidates: number
+          target_categories: Json
           total_discovered: number
           updated_at: string
           validation_accuracy: number | null
         }
         Insert: {
+          areas?: Json
           created_at?: string
           created_by?: string | null
           custom_solutions?: Json
           daily_target?: number
+          discovery_provider?: string
           enrichment_budget_daily?: number
           id?: string
           industry: string
           keywords?: Json
           last_run_at?: string | null
+          latitude?: number | null
           location: string
+          longitude?: number | null
           name: string
           needs_review?: boolean
           notes?: string | null
           pipeline_version?: string
           primary_solution?: string | null
+          radius_meters?: number
           review_reason?: string | null
           solution: string
           solutions?: Json
           status?: string
+          target_candidates?: number
+          target_categories?: Json
           total_discovered?: number
           updated_at?: string
           validation_accuracy?: number | null
         }
         Update: {
+          areas?: Json
           created_at?: string
           created_by?: string | null
           custom_solutions?: Json
           daily_target?: number
+          discovery_provider?: string
           enrichment_budget_daily?: number
           id?: string
           industry?: string
           keywords?: Json
           last_run_at?: string | null
+          latitude?: number | null
           location?: string
+          longitude?: number | null
           name?: string
           needs_review?: boolean
           notes?: string | null
           pipeline_version?: string
           primary_solution?: string | null
+          radius_meters?: number
           review_reason?: string | null
           solution?: string
           solutions?: Json
           status?: string
+          target_candidates?: number
+          target_categories?: Json
           total_discovered?: number
           updated_at?: string
           validation_accuracy?: number | null
@@ -1984,6 +2212,7 @@ export type Database = {
       }
       prospect_candidates: {
         Row: {
+          address: string | null
           approval_note: string | null
           approved_at: string | null
           approved_by: string | null
@@ -1993,39 +2222,66 @@ export type Database = {
           buying_signal_hypothesis: string | null
           campaign_id: string | null
           candidate_status: string
+          category: string | null
           city: string | null
           contact_data: Json
           country: string
           created_at: string
           created_by: string | null
           dedupe_key: string | null
+          digital_gap: string | null
           discovery_method: string
           discovery_query: string | null
           discovery_reason: string | null
           discovery_source: string | null
+          discovery_task_id: string | null
           duplicate_confidence: number | null
           duplicate_detected_at: string | null
           duplicate_of: string | null
           duplicate_reason: string | null
           duplicate_status: string
+          google_maps_url: string | null
           icp_reason: string | null
           icp_score: number
           id: string
           industry: string | null
+          latitude: number | null
+          lead_reason: string | null
+          lead_score: number
+          lead_temperature: string
+          longitude: number | null
+          opening_hours: Json
+          permanently_closed: boolean
+          phone: string | null
+          place_id: string | null
+          postal_code: string | null
           potential_problem_hypothesis: string | null
           promoted_prospect_id: string | null
+          province: string | null
+          qc_reason: string | null
+          qc_reviewed_at: string | null
+          qc_reviewed_by: string | null
+          qc_reviewed_by_email: string | null
+          qc_status: string
+          rating: number | null
           raw_payload: Json
+          recommended_solution: string | null
           rejected_reason: string | null
+          review_count: number | null
           review_requested_at: string | null
+          sales_priority: string | null
+          source_keyword: string | null
           suggested_solution: string | null
           trust_breakdown: Json
           trust_score: number
           trust_tier: string
           updated_at: string
           website: string | null
+          website_status: string
           why_match_icp: string | null
         }
         Insert: {
+          address?: string | null
           approval_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -2035,39 +2291,66 @@ export type Database = {
           buying_signal_hypothesis?: string | null
           campaign_id?: string | null
           candidate_status?: string
+          category?: string | null
           city?: string | null
           contact_data?: Json
           country?: string
           created_at?: string
           created_by?: string | null
           dedupe_key?: string | null
+          digital_gap?: string | null
           discovery_method?: string
           discovery_query?: string | null
           discovery_reason?: string | null
           discovery_source?: string | null
+          discovery_task_id?: string | null
           duplicate_confidence?: number | null
           duplicate_detected_at?: string | null
           duplicate_of?: string | null
           duplicate_reason?: string | null
           duplicate_status?: string
+          google_maps_url?: string | null
           icp_reason?: string | null
           icp_score?: number
           id?: string
           industry?: string | null
+          latitude?: number | null
+          lead_reason?: string | null
+          lead_score?: number
+          lead_temperature?: string
+          longitude?: number | null
+          opening_hours?: Json
+          permanently_closed?: boolean
+          phone?: string | null
+          place_id?: string | null
+          postal_code?: string | null
           potential_problem_hypothesis?: string | null
           promoted_prospect_id?: string | null
+          province?: string | null
+          qc_reason?: string | null
+          qc_reviewed_at?: string | null
+          qc_reviewed_by?: string | null
+          qc_reviewed_by_email?: string | null
+          qc_status?: string
+          rating?: number | null
           raw_payload?: Json
+          recommended_solution?: string | null
           rejected_reason?: string | null
+          review_count?: number | null
           review_requested_at?: string | null
+          sales_priority?: string | null
+          source_keyword?: string | null
           suggested_solution?: string | null
           trust_breakdown?: Json
           trust_score?: number
           trust_tier?: string
           updated_at?: string
           website?: string | null
+          website_status?: string
           why_match_icp?: string | null
         }
         Update: {
+          address?: string | null
           approval_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -2077,36 +2360,62 @@ export type Database = {
           buying_signal_hypothesis?: string | null
           campaign_id?: string | null
           candidate_status?: string
+          category?: string | null
           city?: string | null
           contact_data?: Json
           country?: string
           created_at?: string
           created_by?: string | null
           dedupe_key?: string | null
+          digital_gap?: string | null
           discovery_method?: string
           discovery_query?: string | null
           discovery_reason?: string | null
           discovery_source?: string | null
+          discovery_task_id?: string | null
           duplicate_confidence?: number | null
           duplicate_detected_at?: string | null
           duplicate_of?: string | null
           duplicate_reason?: string | null
           duplicate_status?: string
+          google_maps_url?: string | null
           icp_reason?: string | null
           icp_score?: number
           id?: string
           industry?: string | null
+          latitude?: number | null
+          lead_reason?: string | null
+          lead_score?: number
+          lead_temperature?: string
+          longitude?: number | null
+          opening_hours?: Json
+          permanently_closed?: boolean
+          phone?: string | null
+          place_id?: string | null
+          postal_code?: string | null
           potential_problem_hypothesis?: string | null
           promoted_prospect_id?: string | null
+          province?: string | null
+          qc_reason?: string | null
+          qc_reviewed_at?: string | null
+          qc_reviewed_by?: string | null
+          qc_reviewed_by_email?: string | null
+          qc_status?: string
+          rating?: number | null
           raw_payload?: Json
+          recommended_solution?: string | null
           rejected_reason?: string | null
+          review_count?: number | null
           review_requested_at?: string | null
+          sales_priority?: string | null
+          source_keyword?: string | null
           suggested_solution?: string | null
           trust_breakdown?: Json
           trust_score?: number
           trust_tier?: string
           updated_at?: string
           website?: string | null
+          website_status?: string
           why_match_icp?: string | null
         }
         Relationships: [
