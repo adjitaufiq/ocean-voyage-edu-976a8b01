@@ -285,6 +285,10 @@ function ProspectsPage() {
   const [message, setMessage] = useState("");
   const [note, setNote] = useState("");
   const [followUp, setFollowUp] = useState("");
+  const recomputeTrust = useServerFn(recomputeTrustFn);
+  const runEntityResolution = useServerFn(runEntityResolutionFn);
+  const entityMatchesFn = useServerFn(getEntityMatchesFn);
+  const reviewEntityMatch = useServerFn(reviewEntityMatchFn);
 
   const list = useQuery({
     queryKey: ["admin", "prospects", status, tier, search, tab],
