@@ -1,67 +1,41 @@
-# Trust Score Engine + Entity Resolution
+# Discovery Engine — penyelesaian komponen yang belum jadi
 
-Satu angka kepercayaan untuk setiap prospek, plus pendeteksi usaha kembar yang lebih pintar (mengenali "PT ABC Indonesia" = "ABC Indonesia").
+Melanjutkan Sales Intelligence yang sudah ada. Tidak membuat aplikasi baru, tidak mengulang AI Screening, Lead Scoring, Digital Gap, QC Pipeline, dan Sales Preparation — semuanya dipakai ulang apa adanya.
 
-## 1. Skema database baru (additive, tidak menghapus apa pun)
+## 1. File yang berubah
 
-Pada tabel prospek (`prospects`):
-- `trust_score` (0–100), `trust_tier` (untrusted / emerging / trusted / verified), `trust_breakdown` (rincian skor + alasan), `trust_computed_at`.
-- Kolom kandidat `trust_score` sudah ada; ditambah `trust_breakdown`, `trust_tier`.
+Baru:
+- `src/lib/integrations/discovery/provider.ts` — kontrak penyedia data: `searchBusinesses()`, `getBusinessDetail()`, `normalizeResult()`, plus `resolveDiscoveryProvider(name)`.
+- `src/lib/integrations/discovery/mock.provider.ts` — penyedia uji (data deterministik, bisa dipakai sekarang tanpa koneksi apa pun).
+- `src/lib/integrations/discovery/google-maps.provider.ts` — pembungkus tipis di atas `maps.server.ts` yang sudah ada; aktif otomatis begitu koneksi Google Maps dipasang, jika belum terpasang ia melapor "belum terkonfigurasi" tanpa mematikan sisanya.
+- `src/lib/integrations/discovery/apify.provider.ts` — cadangan masa depan memakai klien Apify yang sudah ada.
+- `src/lib/prospecting-discovery.server.ts` — pemecah kampanye menjadi tugas + pekerja penemuan.
+- `src/routes/api/public/hooks/discovery-worker.ts` — jalur pemanggilan terjadwal (dilindungi kunci penjadwal yang sudah dipakai hook lain).
+- `src/lib/prospecting-discovery.test.ts` — pengujian dengan penyedia uji.
 
-Tabel baru `entity_match_candidates`:
-- `id`, `prospect_a`, `prospect_b` (boleh kandidat atau prospek, ditandai `entity_kind`), `similarity_score` (0–100), `match_reason` (jsonb), `status` (`flagged` / `needs_review` / `confirmed_duplicate` / `not_duplicate` / `ignored`), `reviewed_by`, `reviewed_at`, `created_at`, `updated_at`.
-- GRANT untuk pengguna terautentikasi + service role, RLS: baca untuk anggota workspace, tulis untuk peran sales/admin/owner.
+Diubah:
+- `src/lib/prospecting.functions.ts` — fungsi server: buat tugas, jalankan batch, ulangi tugas gagal, baca ringkasan Discovery.
+- `src/routes/_authenticated/admin.prospects.tsx` — tab **Discovery** baru.
+- `docs/OUTBOUND-SOP.md` — satu bagian cara kerja Discovery.
 
-Pencocokan mirip:
-- Ekstensi `pg_trgm` (sudah aktif) + indeks GIN pada `business_name_normalized` di `prospects` dan `prospect_candidates`.
-- Indeks tambahan pada domain website dan telepon untuk pencocokan cepat.
+## 2. Database yang berubah
 
-## 2. Formula Trust Score
+Tidak ada migrasi baru. Semua tabel yang dibutuhkan sudah dibuat pada langkah sebelumnya: `discovery_tasks`, `candidate_sources`, `candidate_status_history`, `discovery_usage_daily`, serta kolom penemuan pada `prospect_campaigns` dan `prospect_candidates`.
 
-```text
-trust = 0.25*ICP fit + 0.25*validation + 0.15*AI quality + 0.35*external verification
-```
+## 3. Risiko migration
 
-- ICP fit: `fit_score` prospek / `icp_score` kandidat.
-- Validation: `validation_score` (6 pengecekan yang sudah ada).
-- AI quality: skor `quality_gate`.
-- External verification: skor bukti Apify saat ini (Google Maps place_id 45, telepon 20, alamat 10, website 15, social 10) — dipertahankan, kini jadi komponen berbobot terbesar.
+Rendah — tanpa perubahan skema, tanpa penghapusan data. Risiko yang tersisa bersifat operasional: pemakaian kuota penyedia data (dibatasi jumlah tugas per jalan dan pencatat kuota harian) dan tugas yang berjalan dobel (dicegah kunci sewa satu-jalan + penanda tugas idempoten, sehingga tugas yang sudah selesai dilewati, bukan diulang).
 
-Komponen yang belum punya data dihitung 0 dan alasannya dicatat, sehingga prospek tanpa bukti eksternal tidak bisa naik tier tinggi.
+## 4. Cara kerja singkat
 
-Tier: 90–100 verified, 75–89 trusted, 50–74 emerging, <50 untrusted.
+- **Pemecah kampanye:** kata kunci × wilayah menghasilkan baris `discovery_tasks` (menunggu → berjalan → selesai / gagal), dibatasi target kandidat kampanye.
+- **Pekerja:** ambil sejumlah kecil tugas menunggu → panggil penyedia → normalkan → cek kembar (ID tempat, nama+alamat, sudah ada di CRM) → tolak yang tutup permanen / kategori tak sesuai → simpan kandidat dengan skor dan alasan dari mesin screening yang sudah ada → catat sumber data, riwayat status, dan pemakaian harian.
+- **Ketahanan:** batas kerja per jalan, percobaan ulang berbatas dengan jeda, pencatatan galat pada tugas, berhenti total saat penyedia menolak kredensial.
+- **Tanpa** peramban, extension, Playwright, atau Puppeteer.
 
-`trust_breakdown` menyimpan tiap komponen + daftar alasan ("Google Maps terverifikasi", "Website aktif", "Cocok ICP").
+## 5. Testing plan
 
-## 3. Algoritma entity resolution
-
-Nama dinormalkan lebih dulu (huruf kecil, buang PT/CV/UD/Tbk/dll., buang tanda baca, rapikan spasi) — fungsi `normalize_business_name` yang sudah ada dipakai kembali.
-
-Skor kemiripan (0–100) gabungan sinyal:
-- kemiripan nama (trigram) — bobot 40
-- domain website sama — 25
-- nomor telepon sama (dinormalkan) — 20
-- email sama — 10
-- kota sama — 5
-- `place_id` Google Maps sama — langsung 100 (bukti kuat)
-
-Keputusan: ≥85 ditandai otomatis (`flagged`), 60–84 masuk antrean tinjauan manusia (`needs_review`), <60 diabaikan. **Tidak ada penggabungan otomatis**; owner memutuskan.
-
-## 4. File yang berubah
-
-- `src/lib/admin/prospecting.ts` — bobot trust, tier, helper breakdown (client-safe).
-- `src/lib/admin/prospect-candidates.ts` — tipe trust tier/breakdown pada kandidat.
-- `src/lib/entity-resolution.server.ts` (baru) — pencarian kandidat kembar + penilaian kemiripan + penyimpanan hasil.
-- `src/lib/prospecting-trust.server.ts` (baru) — hitung & simpan trust score/tier/breakdown untuk satu atau banyak prospek.
-- `src/lib/prospecting-apify.server.ts` — promosi memakai trust engine terpadu.
-- `src/lib/prospecting.functions.ts` — server function baru: hitung ulang trust, jalankan entity resolution, tinjau hasil pencocokan.
-- `src/routes/_authenticated/admin.prospects.tsx` — badge Trust tier + rincian skor pada daftar/detail, tab **Duplicate review**.
-- `docs/OUTBOUND-SOP.md` — aturan tier dan tinjauan duplikat.
-- Pengujian baru di `src/lib/__tests__` untuk formula skor dan pencocokan entity.
-
-## 5. Risiko & mitigasi
-
-- **Prospek lama nilainya turun** karena belum punya bukti eksternal. Mitigasi: hitung ulang massal saat migrasi selesai; Sales Queue tetap memakai aturan lama sampai tier terisi, lalu beralih ke `trusted`+.
-- **Positif palsu pada nama umum** (mis. "Kopi Kita"). Mitigasi: nama saja tidak pernah mencapai ambang otomatis tanpa sinyal kedua.
-- **Beban query trigram** pada data besar. Mitigasi: indeks GIN + batasi kandidat pembanding per kota/negara.
-- Rollback: kolom dan tabel bersifat tambahan; cukup berhenti memakai trust engine — data lama tidak tersentuh.
+- Pengujian unit dengan penyedia uji: pemecahan kampanye menghasilkan jumlah tugas benar; jalan kedua tidak menggandakan kandidat (idempoten); kandidat kembar ditandai bukan dihapus; usaha tutup permanen ditolak; tugas gagal naik hitungan percobaan lalu berhenti di batas.
+- Pengujian penyedia: kontrak yang sama dipenuhi penyedia uji dan Google Maps; penyedia yang belum terkonfigurasi melapor jelas.
+- Pemeriksaan tipe, seluruh pengujian yang ada, dan build produksi.
+- Cek tampilan tab Discovery memakai kampanye contoh dengan penyedia uji.
