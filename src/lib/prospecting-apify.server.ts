@@ -13,6 +13,13 @@ import { logCandidateEvent } from "@/lib/prospecting-candidates.server";
 import { contactEntry } from "@/lib/admin/prospect-candidates";
 import { createProspect } from "@/lib/prospecting.server";
 import {
+  buildScopedSearchQuery,
+  crossReferenceSocial,
+  phoneGeoVerdict,
+  FOREIGN_PHONE_PENALTY,
+  type SocialVerdict,
+} from "@/lib/admin/geofence";
+import {
   apifyActorId,
   runApifyActor,
   ApifyAuthError,
