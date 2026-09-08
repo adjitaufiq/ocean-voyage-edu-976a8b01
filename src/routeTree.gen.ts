@@ -55,6 +55,7 @@ import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicTelegramTestRouteImport } from './routes/api/public/telegram/test'
 import { Route as ApiPublicPaymentsXenditRouteImport } from './routes/api/public/payments/xendit'
 import { Route as ApiPublicHooksTelegramDailyBriefRouteImport } from './routes/api/public/hooks/telegram-daily-brief'
+import { Route as ApiPublicHooksDiscoveryWorkerRouteImport } from './routes/api/public/hooks/discovery-worker'
 import { Route as ApiPublicHooksAutomationScanRouteImport } from './routes/api/public/hooks/automation-scan'
 import { Route as AuthenticatedAdminProposalsIdRouteImport } from './routes/_authenticated/admin.proposals.$id'
 import { Route as AuthenticatedAdminProjectsIdRouteImport } from './routes/_authenticated/admin.projects.$id'
@@ -312,6 +313,12 @@ const ApiPublicHooksTelegramDailyBriefRoute =
     path: '/api/public/hooks/telegram-daily-brief',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksDiscoveryWorkerRoute =
+  ApiPublicHooksDiscoveryWorkerRouteImport.update({
+    id: '/api/public/hooks/discovery-worker',
+    path: '/api/public/hooks/discovery-worker',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksAutomationScanRoute =
   ApiPublicHooksAutomationScanRouteImport.update({
     id: '/api/public/hooks/automation-scan',
@@ -398,6 +405,7 @@ export interface FileRoutesByFullPath {
   '/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
   '/admin/proposals/$id': typeof AuthenticatedAdminProposalsIdRoute
   '/api/public/hooks/automation-scan': typeof ApiPublicHooksAutomationScanRoute
+  '/api/public/hooks/discovery-worker': typeof ApiPublicHooksDiscoveryWorkerRoute
   '/api/public/hooks/telegram-daily-brief': typeof ApiPublicHooksTelegramDailyBriefRoute
   '/api/public/payments/xendit': typeof ApiPublicPaymentsXenditRoute
   '/api/public/telegram/test': typeof ApiPublicTelegramTestRoute
@@ -450,6 +458,7 @@ export interface FileRoutesByTo {
   '/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
   '/admin/proposals/$id': typeof AuthenticatedAdminProposalsIdRoute
   '/api/public/hooks/automation-scan': typeof ApiPublicHooksAutomationScanRoute
+  '/api/public/hooks/discovery-worker': typeof ApiPublicHooksDiscoveryWorkerRoute
   '/api/public/hooks/telegram-daily-brief': typeof ApiPublicHooksTelegramDailyBriefRoute
   '/api/public/payments/xendit': typeof ApiPublicPaymentsXenditRoute
   '/api/public/telegram/test': typeof ApiPublicTelegramTestRoute
@@ -506,6 +515,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
   '/_authenticated/admin/proposals/$id': typeof AuthenticatedAdminProposalsIdRoute
   '/api/public/hooks/automation-scan': typeof ApiPublicHooksAutomationScanRoute
+  '/api/public/hooks/discovery-worker': typeof ApiPublicHooksDiscoveryWorkerRoute
   '/api/public/hooks/telegram-daily-brief': typeof ApiPublicHooksTelegramDailyBriefRoute
   '/api/public/payments/xendit': typeof ApiPublicPaymentsXenditRoute
   '/api/public/telegram/test': typeof ApiPublicTelegramTestRoute
@@ -562,6 +572,7 @@ export interface FileRouteTypes {
     | '/admin/projects/$id'
     | '/admin/proposals/$id'
     | '/api/public/hooks/automation-scan'
+    | '/api/public/hooks/discovery-worker'
     | '/api/public/hooks/telegram-daily-brief'
     | '/api/public/payments/xendit'
     | '/api/public/telegram/test'
@@ -614,6 +625,7 @@ export interface FileRouteTypes {
     | '/admin/projects/$id'
     | '/admin/proposals/$id'
     | '/api/public/hooks/automation-scan'
+    | '/api/public/hooks/discovery-worker'
     | '/api/public/hooks/telegram-daily-brief'
     | '/api/public/payments/xendit'
     | '/api/public/telegram/test'
@@ -669,6 +681,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/projects/$id'
     | '/_authenticated/admin/proposals/$id'
     | '/api/public/hooks/automation-scan'
+    | '/api/public/hooks/discovery-worker'
     | '/api/public/hooks/telegram-daily-brief'
     | '/api/public/payments/xendit'
     | '/api/public/telegram/test'
@@ -707,6 +720,7 @@ export interface RootRouteChildren {
   ProductsIndexRoute: typeof ProductsIndexRoute
   ApiPublicConsultantChatRoute: typeof ApiPublicConsultantChatRoute
   ApiPublicHooksAutomationScanRoute: typeof ApiPublicHooksAutomationScanRoute
+  ApiPublicHooksDiscoveryWorkerRoute: typeof ApiPublicHooksDiscoveryWorkerRoute
   ApiPublicHooksTelegramDailyBriefRoute: typeof ApiPublicHooksTelegramDailyBriefRoute
   ApiPublicPaymentsXenditRoute: typeof ApiPublicPaymentsXenditRoute
   ApiPublicTelegramTestRoute: typeof ApiPublicTelegramTestRoute
@@ -1037,6 +1051,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksTelegramDailyBriefRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/discovery-worker': {
+      id: '/api/public/hooks/discovery-worker'
+      path: '/api/public/hooks/discovery-worker'
+      fullPath: '/api/public/hooks/discovery-worker'
+      preLoaderRoute: typeof ApiPublicHooksDiscoveryWorkerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/automation-scan': {
       id: '/api/public/hooks/automation-scan'
       path: '/api/public/hooks/automation-scan'
@@ -1197,6 +1218,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProductsIndexRoute: ProductsIndexRoute,
   ApiPublicConsultantChatRoute: ApiPublicConsultantChatRoute,
   ApiPublicHooksAutomationScanRoute: ApiPublicHooksAutomationScanRoute,
+  ApiPublicHooksDiscoveryWorkerRoute: ApiPublicHooksDiscoveryWorkerRoute,
   ApiPublicHooksTelegramDailyBriefRoute: ApiPublicHooksTelegramDailyBriefRoute,
   ApiPublicPaymentsXenditRoute: ApiPublicPaymentsXenditRoute,
   ApiPublicTelegramTestRoute: ApiPublicTelegramTestRoute,
