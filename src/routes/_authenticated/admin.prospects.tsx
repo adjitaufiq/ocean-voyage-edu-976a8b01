@@ -318,6 +318,7 @@ function ProspectsPage() {
     void queryClient.invalidateQueries({ queryKey: ["admin", "prospect-campaigns"] });
     void queryClient.invalidateQueries({ queryKey: ["admin", "prospect-audits"] });
     void queryClient.invalidateQueries({ queryKey: ["admin", "prospect-candidates"] });
+    void queryClient.invalidateQueries({ queryKey: ["admin", "entity-matches"] });
   };
   const run = <T,>(promise: Promise<T>, okMessage: string) =>
     promise
