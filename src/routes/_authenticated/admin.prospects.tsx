@@ -97,6 +97,10 @@ import {
   enrichCandidateFn,
   promoteCandidateFn,
   getCandidateEventsFn,
+  recomputeTrustFn,
+  runEntityResolutionFn,
+  getEntityMatchesFn,
+  reviewEntityMatchFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
