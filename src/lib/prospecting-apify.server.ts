@@ -385,8 +385,14 @@ export async function enrichCandidateWithApify(
 
   // RULE 2 — contact facts are stored WITH provenance, and only from external
   // sources. AI output never reaches contact_data.
+  // GEOFENCE — a phone whose country code is not the target country is never
+  // stored as a contact fact; the candidate is marked as a foreign mismatch.
+  const phoneGeo = phoneGeoVerdict(maps.phone);
+  const foreignPhone = phoneGeo.foreign;
   const contactData: Record<string, unknown> = {};
-  const phoneEntry = contactEntry(maps.phone, "google_maps", maps.google_maps_url);
+  const phoneEntry = foreignPhone
+    ? null
+    : contactEntry(maps.phone, "google_maps", maps.google_maps_url);
   if (phoneEntry) contactData["phone"] = phoneEntry;
   const addressEntry = contactEntry(maps.address, "google_maps", maps.google_maps_url);
   if (addressEntry) contactData["address"] = addressEntry;
@@ -399,6 +405,39 @@ export async function enrichCandidateWithApify(
   const emailEntry = contactEntry(website?.emails_found?.[0] ?? null, "website_scraper", maps.website);
   if (emailEntry) contactData["email"] = emailEntry;
 
+  if (foreignPhone) {
+    const reason = `Nomor dari Google Maps bukan nomor ${"Indonesia"}: ${phoneGeo.reason ?? "kode negara asing"} (trust -${FOREIGN_PHONE_PENALTY}).`;
+    await supabase
+      .from("prospect_candidates")
+      .update({
+        candidate_status: "enrichment_failed",
+        rejected_reason: reason,
+        website: maps.website ?? null,
+        contact_data: contactData as never,
+      } as never)
+      .eq("id", candidateId);
+    await logCandidateEvent(supabase, {
+      candidateId,
+      event: "rejected_foreign_entity",
+      field: "phone",
+      newValue: maps.phone,
+      actorKind: "system",
+      actorLabel: "Geofence",
+      dataSource: "apify:google_maps",
+      dataSourceUrl: maps.google_maps_url,
+      reason,
+    });
+    return {
+      candidateId,
+      status: "failed",
+      sources,
+      maps,
+      website,
+      social: null,
+      error: reason,
+    };
+  }
+
   await supabase
     .from("prospect_candidates")
     .update({
@@ -408,6 +447,7 @@ export async function enrichCandidateWithApify(
       contact_data: contactData as never,
     } as never)
     .eq("id", candidateId);
+
 
   await logCandidateEvent(supabase, {
     candidateId,
