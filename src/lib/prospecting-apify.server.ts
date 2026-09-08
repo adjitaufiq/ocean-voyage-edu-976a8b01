@@ -590,15 +590,36 @@ export async function validateExternalEvidence(
   if (!maps || !maps.place_id) reasons.push("Belum ada bukti keberadaan bisnis dari Google Maps.");
   else trust += 45;
   if (maps?.permanently_closed) reasons.push("Bisnis ditandai tutup permanen.");
+  const phoneGeo = phoneGeoVerdict(maps?.phone ?? null);
   if (maps?.phone) trust += 20;
   else reasons.push("Belum ada nomor telepon dari sumber eksternal.");
   if (maps?.address) trust += 10;
   if (website) trust += 15;
-  if (socialRow) trust += 10;
+
+  // GEOFENCE PENALTY — foreign country code is an instant reject.
+  if (phoneGeo.foreign) {
+    trust -= FOREIGN_PHONE_PENALTY;
+    reasons.push(phoneGeo.reason ?? "Nomor telepon memakai kode negara asing.");
+  }
+
+  // SOCIAL CROSS-REFERENCE PENALTY — handle match alone earns nothing.
+  const social = (socialRow?.normalized_data as SocialEvidence | undefined) ?? null;
+  const crossRef = social?.cross_reference ?? null;
+  if (socialRow) {
+    if (!crossRef || crossRef.status === "verified") trust += 10;
+    else if (crossRef.status === "rejected_foreign_entity") {
+      trust = 0;
+      reasons.push(`Profil social milik entitas luar negeri: ${crossRef.reasons.join("; ")}`);
+    } else {
+      trust -= crossRef.penalty;
+      reasons.push(...crossRef.reasons);
+    }
+  }
 
   trust = Math.max(0, Math.min(100, trust));
   const ok = reasons.length === 0 && trust >= 65;
   if (!ok && trust < 65) reasons.push(`Trust score ${trust} di bawah ambang 65.`);
+
 
   return { ok, trustScore: trust, reasons, maps, website };
 }
