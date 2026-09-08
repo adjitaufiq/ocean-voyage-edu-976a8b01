@@ -499,6 +499,15 @@ function ProspectsPage() {
         </button>
         <button
           type="button"
+          onClick={() =>
+            void run(recomputeTrust({ data: { scope: "all" } }), "Trust score diperbarui.")
+          }
+          className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50"
+        >
+          <Sparkles className="h-4 w-4" /> Hitung ulang trust
+        </button>
+        <button
+          type="button"
           onClick={() => setShowCampaignForm((value) => !value)}
           className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50"
         >
