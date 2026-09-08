@@ -2645,3 +2645,135 @@ function CandidateInbox({
     </div>
   );
 }
+
+type EntityMatchListItem = EntityMatchRow & {
+  business_a: string | null;
+  business_b: string | null;
+};
+
+function DuplicateReview({
+  load,
+  onScan,
+  onReview,
+  onOpenProspect,
+}: {
+  load: (input: { status?: MatchStatus | "open" }) => Promise<unknown>;
+  onScan: () => void;
+  onReview: (id: string, status: MatchStatus) => void;
+  onOpenProspect: (id: string) => void;
+}) {
+  const [filter, setFilter] = useState<MatchStatus | "open">("open");
+  const matches = useQuery({
+    queryKey: ["admin", "entity-matches", filter],
+    queryFn: () => load({ status: filter }) as Promise<EntityMatchListItem[]>,
+  });
+  const rows = matches.data ?? [];
+
+  return (
+    <div className="space-y-4">
+      <GlassCard className="p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold">Duplicate review</h2>
+            <p className="text-xs text-muted-foreground">
+              Dugaan usaha kembar dari kemiripan nama, domain, telepon, email, kota, dan Google
+              Maps. Tidak ada penggabungan otomatis — keputusan tetap di tangan Anda.
+            </p>
+          </div>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as MatchStatus | "open")}
+            className={cn(inputClass, "w-auto")}
+          >
+            <option value="open">Perlu keputusan</option>
+            <option value="flagged">{MATCH_STATUS_LABELS.flagged}</option>
+            <option value="needs_review">{MATCH_STATUS_LABELS.needs_review}</option>
+            <option value="confirmed_duplicate">{MATCH_STATUS_LABELS.confirmed_duplicate}</option>
+            <option value="not_duplicate">{MATCH_STATUS_LABELS.not_duplicate}</option>
+            <option value="ignored">{MATCH_STATUS_LABELS.ignored}</option>
+          </select>
+          <button
+            type="button"
+            onClick={onScan}
+            className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50"
+          >
+            <Search className="h-4 w-4" /> Pindai usaha kembar
+          </button>
+        </div>
+      </GlassCard>
+
+      <GlassCard className="p-4">
+        {matches.isLoading ? (
+          <p className="text-sm text-muted-foreground">Memuat dugaan kembar…</p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Belum ada dugaan usaha kembar. Klik “Pindai usaha kembar” untuk memeriksa ulang.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {rows.map((row) => (
+              <div key={row.id} className="rounded-2xl border border-border/40 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenProspect(row.prospect_a)}
+                    className="text-sm font-medium hover:text-primary"
+                  >
+                    {row.business_a ?? "Prospek A"}
+                  </button>
+                  <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => onOpenProspect(row.prospect_b)}
+                    className="text-sm font-medium hover:text-primary"
+                  >
+                    {row.business_b ?? "Prospek B"}
+                  </button>
+                  <span className="rounded-full border border-border/50 px-2 py-0.5 text-[0.65rem] text-muted-foreground">
+                    Kemiripan {row.similarity_score}
+                  </span>
+                  <span className="rounded-full border border-border/50 px-2 py-0.5 text-[0.65rem] text-muted-foreground">
+                    {MATCH_STATUS_LABELS[row.status] ?? row.status}
+                  </span>
+                </div>
+                {row.match_reason.length ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {row.match_reason.join(" • ")}
+                  </p>
+                ) : null}
+                {row.reviewed_by_email ? (
+                  <p className="mt-1 text-[0.65rem] text-muted-foreground">
+                    Ditinjau oleh {row.reviewed_by_email}
+                  </p>
+                ) : null}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onReview(row.id, "confirmed_duplicate")}
+                    className="inline-flex items-center gap-1 rounded-xl border border-destructive/40 px-2.5 py-1.5 text-xs text-destructive transition hover:bg-destructive/10"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Memang kembar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onReview(row.id, "not_duplicate")}
+                    className="inline-flex items-center gap-1 rounded-xl border border-border/50 px-2.5 py-1.5 text-xs transition hover:border-primary/50"
+                  >
+                    <X className="h-3.5 w-3.5" /> Bukan kembar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onReview(row.id, "ignored")}
+                    className="inline-flex items-center gap-1 rounded-xl border border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-primary/50"
+                  >
+                    <Ban className="h-3.5 w-3.5" /> Abaikan
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
+    </div>
+  );
+}
