@@ -19,6 +19,9 @@ import {
   type DiscoveryTaskRow,
 } from "@/lib/admin/discovery";
 import { buildDedupeKey, normalizeBusinessKey } from "@/lib/admin/prospect-candidates";
+import { qualifyCandidate } from "@/lib/admin/qualification";
+import { qualificationPatch } from "@/lib/prospecting-qualification.server";
+
 import {
   ProviderNotConfiguredError,
   resolveDiscoveryProvider,
