@@ -14,6 +14,7 @@ import {
   type ContactEntryLike,
   type QualificationInput,
   type QualificationResult,
+  type ValidationCheck,
 } from "@/lib/admin/qualification";
 
 type Client = SupabaseClient<Database>;
