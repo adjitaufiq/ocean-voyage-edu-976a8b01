@@ -582,6 +582,8 @@ function ProspectsPage() {
                 ? "Discovery"
               : item === "candidates"
                 ? "Candidate inbox"
+                : item === "qc"
+                ? "QC review"
                 : item === "campaigns"
                   ? "Campaigns"
                   : item === "prospects"
