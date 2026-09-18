@@ -279,7 +279,14 @@ function ProspectsPage() {
   const [validating, setValidating] = useState(false);
 
   const [tab, setTab] = useState<
-    "queue" | "discovery" | "candidates" | "campaigns" | "prospects" | "duplicates" | "audit"
+    | "queue"
+    | "discovery"
+    | "candidates"
+    | "qc"
+    | "campaigns"
+    | "prospects"
+    | "duplicates"
+    | "audit"
   >("queue");
   const [status, setStatus] = useState("all");
   const [tier, setTier] = useState("all");
