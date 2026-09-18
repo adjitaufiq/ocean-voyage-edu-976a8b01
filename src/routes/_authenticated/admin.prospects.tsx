@@ -26,6 +26,7 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { QualificationPanel } from "@/components/admin/QualificationPanel";
 import { GlassCard, MetricTile, SectionCard } from "@/components/admin/ui";
 import {
   CAMPAIGN_INDUSTRIES,
@@ -105,6 +106,9 @@ import {
   runDiscoveryBatchFn,
   retryDiscoveryTasksFn,
   discoveryOverviewFn,
+  qualificationBoardFn,
+  qualifyCandidatesFn,
+  setCandidateQcFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
@@ -308,6 +312,9 @@ function ProspectsPage() {
   const runDiscovery = useServerFn(runDiscoveryBatchFn);
   const retryDiscovery = useServerFn(retryDiscoveryTasksFn);
   const discoveryOverview = useServerFn(discoveryOverviewFn);
+  const qualificationBoard = useServerFn(qualificationBoardFn);
+  const qualifyCandidates = useServerFn(qualifyCandidatesFn);
+  const setCandidateQc = useServerFn(setCandidateQcFn);
 
   const list = useQuery({
     queryKey: ["admin", "prospects", status, tier, search, tab],
@@ -800,6 +807,23 @@ function ProspectsPage() {
             void run(
               retryDiscovery({ data: campaignId ? { campaignId } : {} }),
               "Tugas gagal dimasukkan ulang ke antrean.",
+            )
+          }
+        />
+      ) : tab === "qc" ? (
+        <QualificationPanel
+          campaigns={campaignRows.map((item) => ({ id: item.id, name: item.name }))}
+          load={(input) => qualificationBoard({ data: input })}
+          onQualify={(campaignId) =>
+            run(
+              qualifyCandidates({ data: campaignId ? { campaignId } : {} }),
+              "Kualifikasi ulang selesai.",
+            )
+          }
+          onQc={(id, statusValue, reason) =>
+            run(
+              setCandidateQc({ data: { id, status: statusValue, ...(reason ? { reason } : {}) } }),
+              "Keputusan QC tersimpan.",
             )
           }
         />
