@@ -797,3 +797,70 @@ export const discoveryOverviewFn = createServerFn({ method: "POST" })
     await assertLeadWork(context.supabase, context.userId);
     return buildDiscoveryOverview(context.supabase);
   });
+
+/* ------------------------------------------------------------------ */
+/* Qualification intelligence (Prompt 4.4)                             */
+/* ------------------------------------------------------------------ */
+
+export const qualifyCandidatesFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        candidateId: z.string().uuid().optional(),
+        campaignId: z.string().uuid().optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { qualifyCandidates } = await import("./prospecting-qualification.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return qualifyCandidates(context.supabase, data);
+  });
+
+export const setCandidateQcFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["new", "reviewed", "approved", "rejected", "duplicate", "contacted"]),
+        reason: z.string().max(500).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { setCandidateQc } = await import("./prospecting-qualification.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return setCandidateQc(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
+export const qualificationBoardFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid().optional(),
+        category: z.string().max(120).optional(),
+        city: z.string().max(120).optional(),
+        temperature: z.string().max(20).optional(),
+        qcStatus: z.string().max(20).optional(),
+        minScore: z.number().int().min(0).max(100).optional(),
+        digitalGap: z.string().max(200).optional(),
+        solution: z.string().max(300).optional(),
+        limit: z.number().int().min(1).max(500).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { buildQualificationBoard } = await import("./prospecting-qualification.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return buildQualificationBoard(context.supabase, data);
+  });

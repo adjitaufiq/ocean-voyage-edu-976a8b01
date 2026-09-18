@@ -19,6 +19,9 @@ import {
   type DiscoveryTaskRow,
 } from "@/lib/admin/discovery";
 import { buildDedupeKey, normalizeBusinessKey } from "@/lib/admin/prospect-candidates";
+import { qualifyCandidate } from "@/lib/admin/qualification";
+import { qualificationPatch } from "@/lib/prospecting-qualification.server";
+
 import {
   ProviderNotConfiguredError,
   resolveDiscoveryProvider,
@@ -393,6 +396,29 @@ async function saveCandidates(
       };
     }
 
+    const qualification = qualifyCandidate({
+      businessName: place.name,
+      category: place.category,
+      industry: campaign.industry,
+      address: place.address,
+      city: place.city,
+      province: place.province,
+      country: place.country,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      phone: place.phone,
+      website: place.website,
+      websiteStatus: place.websiteStatus,
+      rating: place.rating,
+      reviewCount: place.reviewCount,
+      placeId: place.placeId,
+      googleMapsUrl: place.mapsUrl,
+      permanentlyClosed: place.permanentlyClosed,
+      contactData: contactData as Record<string, { value?: string | null; source?: string | null }>,
+      targetCategories: campaign.target_categories,
+      targetCities: campaign.areas.length ? campaign.areas : [campaign.location],
+    });
+
     rows.push({
       campaign_id: campaign.id,
       discovery_task_id: task.id,
@@ -423,14 +449,10 @@ async function saveCandidates(
       discovery_reason: screening.reason,
       candidate_status: "discovered",
       qc_status: "new",
-      lead_score: screening.score,
-      lead_temperature: screening.temperature,
-      lead_reason: screening.reason,
-      digital_gap: screening.digitalGap,
-      recommended_solution: screening.recommendedSolution,
-      sales_priority: screening.salesPriority,
       raw_payload: raw[index] ?? {},
+      ...qualificationPatch(qualification),
     });
+
   });
 
   if (rows.length === 0) return outcome;
@@ -627,6 +649,8 @@ export type DiscoveryCampaignProgress = {
 export type DiscoveryOverview = {
   tasks: { queued: number; running: number; completed: number; failed: number; total: number };
   candidates: number;
+  validated: number;
+  qualified: number;
   hotLeads: number;
   qcPending: number;
   usageToday: { provider: string; requests: number; results: number; errors: number }[];
@@ -649,7 +673,7 @@ export async function buildDiscoveryOverview(supabase: Client): Promise<Discover
     supabase.from("discovery_usage_daily").select("provider, requests, results, errors").eq("usage_date", today),
     supabase
       .from("prospect_candidates")
-      .select("id, lead_temperature, qc_status, discovery_task_id")
+      .select("id, lead_temperature, qc_status, validation_status, discovery_task_id")
       .not("discovery_task_id", "is", null)
       .limit(2000),
   ]);
@@ -666,6 +690,7 @@ export async function buildDiscoveryOverview(supabase: Client): Promise<Discover
   const candidateRows = (candidatesRes.data ?? []) as {
     lead_temperature: string | null;
     qc_status: string | null;
+    validation_status: string | null;
   }[];
 
   const campaigns = ((campaignsRes.data ?? []) as Record<string, unknown>[])
@@ -692,6 +717,10 @@ export async function buildDiscoveryOverview(supabase: Client): Promise<Discover
   return {
     tasks: counts,
     candidates: candidateRows.length,
+    validated: candidateRows.filter((row) => row.validation_status === "validated").length,
+    qualified: candidateRows.filter(
+      (row) => row.validation_status === "validated" && row.lead_temperature !== "cold",
+    ).length,
     hotLeads: candidateRows.filter((row) => row.lead_temperature === "hot").length,
     qcPending: candidateRows.filter((row) => (row.qc_status ?? "new") === "new").length,
     usageToday: ((usageRes.data ?? []) as Record<string, unknown>[]).map((row) => ({
