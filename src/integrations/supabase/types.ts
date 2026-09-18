@@ -2251,6 +2251,7 @@ export type Database = {
           lead_temperature: string
           longitude: number | null
           opening_hours: Json
+          pain_signal: string | null
           permanently_closed: boolean
           phone: string | null
           place_id: string | null
@@ -2263,6 +2264,7 @@ export type Database = {
           qc_reviewed_by: string | null
           qc_reviewed_by_email: string | null
           qc_status: string
+          qualified_at: string | null
           rating: number | null
           raw_payload: Json
           recommended_solution: string | null
@@ -2276,6 +2278,10 @@ export type Database = {
           trust_score: number
           trust_tier: string
           updated_at: string
+          validated_at: string | null
+          validation_checks: Json
+          validation_reason: string | null
+          validation_status: string
           website: string | null
           website_status: string
           why_match_icp: string | null
@@ -2320,6 +2326,7 @@ export type Database = {
           lead_temperature?: string
           longitude?: number | null
           opening_hours?: Json
+          pain_signal?: string | null
           permanently_closed?: boolean
           phone?: string | null
           place_id?: string | null
@@ -2332,6 +2339,7 @@ export type Database = {
           qc_reviewed_by?: string | null
           qc_reviewed_by_email?: string | null
           qc_status?: string
+          qualified_at?: string | null
           rating?: number | null
           raw_payload?: Json
           recommended_solution?: string | null
@@ -2345,6 +2353,10 @@ export type Database = {
           trust_score?: number
           trust_tier?: string
           updated_at?: string
+          validated_at?: string | null
+          validation_checks?: Json
+          validation_reason?: string | null
+          validation_status?: string
           website?: string | null
           website_status?: string
           why_match_icp?: string | null
@@ -2389,6 +2401,7 @@ export type Database = {
           lead_temperature?: string
           longitude?: number | null
           opening_hours?: Json
+          pain_signal?: string | null
           permanently_closed?: boolean
           phone?: string | null
           place_id?: string | null
@@ -2401,6 +2414,7 @@ export type Database = {
           qc_reviewed_by?: string | null
           qc_reviewed_by_email?: string | null
           qc_status?: string
+          qualified_at?: string | null
           rating?: number | null
           raw_payload?: Json
           recommended_solution?: string | null
@@ -2414,6 +2428,10 @@ export type Database = {
           trust_score?: number
           trust_tier?: string
           updated_at?: string
+          validated_at?: string | null
+          validation_checks?: Json
+          validation_reason?: string | null
+          validation_status?: string
           website?: string | null
           website_status?: string
           why_match_icp?: string | null
