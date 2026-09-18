@@ -133,3 +133,27 @@ beserta `rejected_reason`. Seluruh transisi tercatat di Activity CRM.
    tetap lewat verifikasi eksternal + persetujuan manusia.
 5. Penyedia data: mock (uji, aktif sekarang), Google Maps Platform (aktif otomatis setelah
    koneksi dipasang), Apify (cadangan). Tidak ada browser/extension/Playwright.
+
+## Qualification intelligence & QC review (tab QC review)
+
+Setiap kandidat baru dari discovery langsung melewati kualifikasi otomatis, dan kandidat lama
+bisa diproses ulang lewat tombol **Kualifikasi ulang** (per kampanye atau seluruhnya).
+
+1. **Business validation** — 7 pemeriksaan: bisnis benar ada, lokasi valid, kategori sesuai
+   kampanye, bisnis masih aktif (tidak tutup permanen), bukan duplikat, kontak valid & bersumber,
+   negara sesuai aturan (Indonesia/+62). Kegagalan blocking → `validation_status = rejected`
+   beserta `validation_reason`; kandidat tidak pernah dihapus.
+2. **Digital gap analysis** — status website (tidak ada / lemah / ada), kehadiran online, dan
+   celah operasional (belum ada katalog digital, belum ada sistem pemesanan).
+3. **Lead scoring 0–100** — deterministik dari fakta Maps (rating, jumlah ulasan, kategori,
+   lokasi, status website) + bonus kualitas data. Label: HOT (>=70), WARM (>=45), COLD.
+4. **Sales reasoning** — `lead_reason`, `pain_signal`, `recommended_solution`, `sales_priority`.
+5. **QC pipeline** — status `new / reviewed / approved / rejected / duplicate / contacted`.
+   Aksi: Approve, Reject (wajib alasan), Mark duplicate, Request verification, Contact ready.
+   Setiap aksi menyimpan peninjau, email, waktu, dan alasan ke `candidate_status_history`.
+6. **Hot lead dashboard** — hitungan Found / Validated / Rejected / Qualified / Hot / Warm /
+   antre QC / disetujui, dengan filter kampanye, kategori, kota, suhu lead, status QC, solusi,
+   dan skor minimum.
+
+Kualifikasi ulang **tidak pernah menimpa keputusan manusia**: kandidat dengan `qc_status`
+selain `new` dilewati.

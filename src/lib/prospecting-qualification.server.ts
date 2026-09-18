@@ -14,6 +14,7 @@ import {
   type ContactEntryLike,
   type QualificationInput,
   type QualificationResult,
+  type ValidationCheck,
 } from "@/lib/admin/qualification";
 
 type Client = SupabaseClient<Database>;
@@ -257,7 +258,7 @@ export type QualifiedCandidateRow = {
   sales_priority: string | null;
   validation_status: string;
   validation_reason: string | null;
-  validation_checks: unknown;
+  validation_checks: ValidationCheck[];
   qc_status: string;
   qc_reason: string | null;
   qc_reviewed_by_email: string | null;
@@ -320,7 +321,9 @@ function asBoardRow(row: Record<string, unknown>): QualifiedCandidateRow {
     sales_priority: (row["sales_priority"] as string | null) ?? null,
     validation_status: String(row["validation_status"] ?? "pending"),
     validation_reason: (row["validation_reason"] as string | null) ?? null,
-    validation_checks: row["validation_checks"] ?? [],
+    validation_checks: Array.isArray(row["validation_checks"])
+      ? (row["validation_checks"] as ValidationCheck[])
+      : [],
     qc_status: String(row["qc_status"] ?? "new"),
     qc_reason: (row["qc_reason"] as string | null) ?? null,
     qc_reviewed_by_email: (row["qc_reviewed_by_email"] as string | null) ?? null,

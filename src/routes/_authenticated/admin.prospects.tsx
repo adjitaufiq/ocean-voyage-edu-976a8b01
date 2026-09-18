@@ -26,6 +26,7 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { QualificationPanel } from "@/components/admin/QualificationPanel";
 import { GlassCard, MetricTile, SectionCard } from "@/components/admin/ui";
 import {
   CAMPAIGN_INDUSTRIES,
@@ -105,6 +106,9 @@ import {
   runDiscoveryBatchFn,
   retryDiscoveryTasksFn,
   discoveryOverviewFn,
+  qualificationBoardFn,
+  qualifyCandidatesFn,
+  setCandidateQcFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
@@ -279,7 +283,14 @@ function ProspectsPage() {
   const [validating, setValidating] = useState(false);
 
   const [tab, setTab] = useState<
-    "queue" | "discovery" | "candidates" | "campaigns" | "prospects" | "duplicates" | "audit"
+    | "queue"
+    | "discovery"
+    | "candidates"
+    | "qc"
+    | "campaigns"
+    | "prospects"
+    | "duplicates"
+    | "audit"
   >("queue");
   const [status, setStatus] = useState("all");
   const [tier, setTier] = useState("all");
@@ -301,6 +312,9 @@ function ProspectsPage() {
   const runDiscovery = useServerFn(runDiscoveryBatchFn);
   const retryDiscovery = useServerFn(retryDiscoveryTasksFn);
   const discoveryOverview = useServerFn(discoveryOverviewFn);
+  const qualificationBoard = useServerFn(qualificationBoardFn);
+  const qualifyCandidates = useServerFn(qualifyCandidatesFn);
+  const setCandidateQc = useServerFn(setCandidateQcFn);
 
   const list = useQuery({
     queryKey: ["admin", "prospects", status, tier, search, tab],
@@ -548,7 +562,16 @@ function ProspectsPage() {
       ) : null}
 
       <div className="flex flex-wrap gap-2 border-b border-border/40 pb-3">
-        {(["queue", "discovery", "candidates", "campaigns", "prospects", "duplicates", "audit"] as const).map((item) => (
+        {([
+          "queue",
+          "discovery",
+          "candidates",
+          "qc",
+          "campaigns",
+          "prospects",
+          "duplicates",
+          "audit",
+        ] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -566,6 +589,8 @@ function ProspectsPage() {
                 ? "Discovery"
               : item === "candidates"
                 ? "Candidate inbox"
+                : item === "qc"
+                ? "QC review"
                 : item === "campaigns"
                   ? "Campaigns"
                   : item === "prospects"
@@ -782,6 +807,23 @@ function ProspectsPage() {
             void run(
               retryDiscovery({ data: campaignId ? { campaignId } : {} }),
               "Tugas gagal dimasukkan ulang ke antrean.",
+            )
+          }
+        />
+      ) : tab === "qc" ? (
+        <QualificationPanel
+          campaigns={campaignRows.map((item) => ({ id: item.id, name: item.name }))}
+          load={(input) => qualificationBoard({ data: input })}
+          onQualify={(campaignId) =>
+            run(
+              qualifyCandidates({ data: campaignId ? { campaignId } : {} }),
+              "Kualifikasi ulang selesai.",
+            )
+          }
+          onQc={(id, statusValue, reason) =>
+            run(
+              setCandidateQc({ data: { id, status: statusValue, ...(reason ? { reason } : {}) } }),
+              "Keputusan QC tersimpan.",
             )
           }
         />
