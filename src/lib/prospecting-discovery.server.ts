@@ -393,6 +393,29 @@ async function saveCandidates(
       };
     }
 
+    const qualification = qualifyCandidate({
+      businessName: place.name,
+      category: place.category,
+      industry: campaign.industry,
+      address: place.address,
+      city: place.city,
+      province: place.province,
+      country: place.country,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      phone: place.phone,
+      website: place.website,
+      websiteStatus: place.websiteStatus,
+      rating: place.rating,
+      reviewCount: place.reviewCount,
+      placeId: place.placeId,
+      googleMapsUrl: place.mapsUrl,
+      permanentlyClosed: place.permanentlyClosed,
+      contactData: contactData as Record<string, { value?: string | null; source?: string | null }>,
+      targetCategories: campaign.target_categories,
+      targetCities: campaign.areas.length ? campaign.areas : [campaign.location],
+    });
+
     rows.push({
       campaign_id: campaign.id,
       discovery_task_id: task.id,
@@ -423,14 +446,10 @@ async function saveCandidates(
       discovery_reason: screening.reason,
       candidate_status: "discovered",
       qc_status: "new",
-      lead_score: screening.score,
-      lead_temperature: screening.temperature,
-      lead_reason: screening.reason,
-      digital_gap: screening.digitalGap,
-      recommended_solution: screening.recommendedSolution,
-      sales_priority: screening.salesPriority,
       raw_payload: raw[index] ?? {},
+      ...qualificationPatch(qualification),
     });
+
   });
 
   if (rows.length === 0) return outcome;
