@@ -704,6 +704,9 @@ export async function promoteCandidateToProspect(
     } as never)
     .eq("id", candidateId);
 
+  const { attachPreparationToProspect } = await import("./prospecting-salesprep.server");
+  await attachPreparationToProspect(supabase, candidateId, created.id);
+
   await logCandidateEvent(supabase, {
     candidateId,
     event: "promoted",

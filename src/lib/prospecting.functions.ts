@@ -864,3 +864,42 @@ export const qualificationBoardFn = createServerFn({ method: "POST" })
     await assertLeadWork(context.supabase, context.userId);
     return buildQualificationBoard(context.supabase, data);
   });
+
+/* ------------------- Prompt 4.5 — Sales Preparation ---------------------- */
+
+export const prepareSalesFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { candidateId?: string; campaignId?: string; limit?: number }) => input)
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { prepareSalesForCandidates } = await import("./prospecting-salesprep.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return prepareSalesForCandidates(context.supabase, data);
+  });
+
+export const setSalesStageFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; stage: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { setSalesStage } = await import("./prospecting-salesprep.server");
+    const { SALES_STAGES } = await import("@/lib/admin/sales-prep");
+    await assertLeadWork(context.supabase, context.userId);
+    const stage = data.stage as (typeof SALES_STAGES)[number];
+    if (!SALES_STAGES.includes(stage)) throw new Error("Tahap penjualan tidak dikenal.");
+    return setSalesStage(
+      context.supabase,
+      { id: data.id, stage },
+      { userId: context.userId, email: actorEmail(context.claims) },
+    );
+  });
+
+export const salesPrepBoardFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { campaignId?: string; stage?: string; limit?: number }) => input)
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { buildSalesPrepBoard } = await import("./prospecting-salesprep.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return buildSalesPrepBoard(context.supabase, data);
+  });
