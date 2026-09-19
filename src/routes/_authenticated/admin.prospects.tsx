@@ -929,9 +929,15 @@ function ProspectsPage() {
       ) : tab === "campaigns" ? (
         <CampaignList
           campaigns={campaignRows}
-          onDiscover={(id) =>
-            void run(discover({ data: { campaignId: id } }), "Discovery AI selesai.")
-          }
+          onDiscover={(id) => {
+            // Discovery always lands in the candidate pipeline, never in prospects.
+            setTab("candidates");
+            void run(
+              discoverCandidates({ data: { campaignId: id } }),
+              "Kandidat baru masuk Candidate inbox.",
+            );
+          }}
+
           onDelete={(id) => void run(deleteCampaign({ data: { id } }), "Kampanye dihapus.")}
         />
       ) : tab === "duplicates" ? (
@@ -1468,7 +1474,7 @@ function CampaignList({
                 onClick={() => onDiscover(campaign.id)}
                 className="inline-flex items-center gap-2 rounded-xl bg-primary/20 px-3 py-1.5 text-xs font-medium text-primary"
               >
-                <Sparkles className="h-3.5 w-3.5" /> Generate prospek AI
+                <Sparkles className="h-3.5 w-3.5" /> Cari kandidat baru
               </button>
               <button
                 type="button"
@@ -2491,7 +2497,7 @@ function CandidateInbox({
   onPromote,
   loadEvents,
 }: CandidateInboxProps) {
-  const [status, setStatus] = useState("discovered");
+  const [status, setStatus] = useState("all");
   const [campaignId, setCampaignId] = useState("");
   const [search, setSearch] = useState("");
   const [count, setCount] = useState(10);
