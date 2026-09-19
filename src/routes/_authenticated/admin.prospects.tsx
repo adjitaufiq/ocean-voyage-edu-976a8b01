@@ -321,6 +321,9 @@ function ProspectsPage() {
   const qualificationBoard = useServerFn(qualificationBoardFn);
   const qualifyCandidates = useServerFn(qualifyCandidatesFn);
   const setCandidateQc = useServerFn(setCandidateQcFn);
+  const prepareSales = useServerFn(prepareSalesFn);
+  const setSalesStage = useServerFn(setSalesStageFn);
+  const salesPrepBoard = useServerFn(salesPrepBoardFn);
 
   const list = useQuery({
     queryKey: ["admin", "prospects", status, tier, search, tab],
