@@ -836,6 +836,20 @@ function ProspectsPage() {
             )
           }
         />
+      ) : tab === "salesprep" ? (
+        <SalesPrepPanel
+          campaigns={campaignRows.map((item) => ({ id: item.id, name: item.name }))}
+          load={(input) => salesPrepBoard({ data: input })}
+          onPrepare={(campaignId) =>
+            run(
+              prepareSales({ data: campaignId ? { campaignId } : {} }),
+              "Materi persiapan penjualan dibuat.",
+            )
+          }
+          onStage={(id, stage: SalesStage) =>
+            run(setSalesStage({ data: { id, stage } }), "Tahap penjualan diperbarui.")
+          }
+        />
       ) : tab === "candidates" ? (
         <CandidateInbox
           campaigns={campaignRows}
