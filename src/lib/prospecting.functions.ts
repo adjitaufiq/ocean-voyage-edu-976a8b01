@@ -890,7 +890,7 @@ export const setSalesStageFn = createServerFn({ method: "POST" })
     return setSalesStage(
       context.supabase,
       { id: data.id, stage },
-      { userId: context.userId, email: context.claims?.email ?? null },
+      { userId: context.userId, email: actorEmail(context.claims) },
     );
   });
 
