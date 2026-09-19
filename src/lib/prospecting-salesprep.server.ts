@@ -75,10 +75,13 @@ export async function prepareSalesForCandidates(
   for (const row of rows) {
     outcome.scanned += 1;
     const id = String(row["id"]);
-    if (String(row["qc_status"] ?? "new") === "rejected" || row["duplicate_status"] === "duplicate") {
+    // Stage gate: sales material is only built for QC-approved candidates.
+    const qc = String(row["qc_status"] ?? "new");
+    if (qc !== "approved" || row["duplicate_status"] === "duplicate") {
       outcome.skipped += 1;
       continue;
     }
+
 
     const prep = prepareSales(toInput(row));
 
