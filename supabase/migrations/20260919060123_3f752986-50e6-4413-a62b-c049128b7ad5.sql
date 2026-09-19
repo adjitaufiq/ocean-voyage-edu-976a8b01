@@ -1,0 +1,2 @@
+ALTER TABLE public.prospect_campaigns ALTER COLUMN discovery_provider SET DEFAULT 'google_maps';
+UPDATE public.prospect_campaigns SET discovery_provider = 'google_maps' WHERE discovery_provider IS NULL OR discovery_provider = 'mock';
