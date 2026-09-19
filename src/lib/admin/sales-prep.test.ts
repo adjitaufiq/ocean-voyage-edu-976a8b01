@@ -109,3 +109,38 @@ describe("readyOutreachBlockers", () => {
     ).toHaveLength(0);
   });
 });
+
+describe("readyOutreachBlockers stage gates", () => {
+  const contactData = { phone: { value: "+62812", source: "google_maps" } };
+
+  it("blocks when QC has not approved the candidate", () => {
+    const blockers = readyOutreachBlockers({
+      validationStatus: "validated",
+      qcStatus: "new",
+      hasPreparation: true,
+      contactData,
+    });
+    expect(blockers.join(" ")).toContain("QC");
+  });
+
+  it("blocks when no active sales preparation exists", () => {
+    const blockers = readyOutreachBlockers({
+      validationStatus: "validated",
+      qcStatus: "approved",
+      hasPreparation: false,
+      contactData,
+    });
+    expect(blockers.join(" ")).toContain("persiapan");
+  });
+
+  it("allows a QC approved candidate with preparation and sourced contact", () => {
+    expect(
+      readyOutreachBlockers({
+        validationStatus: "validated",
+        qcStatus: "approved",
+        hasPreparation: true,
+        contactData,
+      }),
+    ).toHaveLength(0);
+  });
+});

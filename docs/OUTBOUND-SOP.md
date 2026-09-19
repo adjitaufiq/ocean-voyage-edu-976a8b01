@@ -3,6 +3,30 @@
 Outbound melengkapi CRM inbound. **Prospek bukan lead**: data prospek hidup di tabel
 `prospects` dan baru masuk CRM (`consultations`) setelah seorang manusia menyetujui handoff.
 
+## Pipeline akuisisi (sumber utama)
+
+Semua penemuan baru masuk ke pipeline kandidat, tidak pernah langsung ke `prospects`:
+
+`Campaign → prospect_candidates (discovered) → Validation (validated) → QC review (approved)
+→ Sales preparation → Ready Outreach → Promote ke prospects/CRM`
+
+Gerbang wajib tiap tahap:
+
+| Tahap | Syarat |
+| --- | --- |
+| Discovery | Tombol kampanye "Cari kandidat baru" menulis ke `prospect_candidates` |
+| Validation | `validation_status = validated` |
+| QC | `qc_status = approved` |
+| Sales preparation | Hanya kandidat QC approved yang dibuatkan materi |
+| Ready outreach | QC approved + materi persiapan aktif + kontak bersumber |
+| Promote CRM | `sales_stage = ready_outreach` (selain approval & anti-duplikat) |
+
+Dashboard Prospects memisahkan **Acquisition pipeline** (kandidat ditemukan, terverifikasi,
+QC approved, sales prepared, ready outreach) dari **CRM pipeline** (prospek aktif, dihubungi,
+meeting, deal). Data `prospects` lama tetap utuh sebagai riwayat CRM.
+
+
+
 ## Alur kerja
 
 1. **Discovery** — prospek dibuat manual di `/admin/prospects` (atau dari run discovery
