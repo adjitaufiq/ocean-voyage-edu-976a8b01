@@ -27,6 +27,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { QualificationPanel } from "@/components/admin/QualificationPanel";
+import { SalesPrepPanel } from "@/components/admin/SalesPrepPanel";
+import type { SalesStage } from "@/lib/admin/sales-prep";
 import { GlassCard, MetricTile, SectionCard } from "@/components/admin/ui";
 import {
   CAMPAIGN_INDUSTRIES,
@@ -109,6 +111,9 @@ import {
   qualificationBoardFn,
   qualifyCandidatesFn,
   setCandidateQcFn,
+  prepareSalesFn,
+  setSalesStageFn,
+  salesPrepBoardFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
