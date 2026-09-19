@@ -319,8 +319,8 @@ export async function attachPreparationToProspect(
   if (!note) return;
   await supabase.from("prospect_activities").insert({
     prospect_id: prospectId,
-    activity_type: "sales_preparation",
-    summary: note.slice(0, 2000),
-    actor_kind: "system",
+    action: "sales_preparation",
+    label: "Materi persiapan penjualan",
+    content: note.slice(0, 2000),
   } as never);
 }
