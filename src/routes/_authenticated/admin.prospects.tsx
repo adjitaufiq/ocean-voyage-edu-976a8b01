@@ -292,6 +292,7 @@ function ProspectsPage() {
     | "discovery"
     | "candidates"
     | "qc"
+    | "salesprep"
     | "campaigns"
     | "prospects"
     | "duplicates"
@@ -572,6 +573,7 @@ function ProspectsPage() {
           "discovery",
           "candidates",
           "qc",
+          "salesprep",
           "campaigns",
           "prospects",
           "duplicates",
