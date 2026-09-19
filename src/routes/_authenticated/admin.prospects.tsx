@@ -346,6 +346,16 @@ function ProspectsPage() {
     queryFn: () => detailFn({ data: { id: openId as string } }),
     enabled: Boolean(openId),
   });
+  // Acquisition pipeline metrics stay separate from CRM metrics on purpose.
+  const acquisitionSummary = useQuery({
+    queryKey: ["admin", "prospect-candidates", "summary"],
+    queryFn: () => candidatesFn({ data: { limit: 1, status: "all" } }),
+  });
+  const acquisitionStages = useQuery({
+    queryKey: ["admin", "sales-prep-board", "summary"],
+    queryFn: () => salesPrepBoard({ data: {} }),
+  });
+
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["admin", "prospects"] });
