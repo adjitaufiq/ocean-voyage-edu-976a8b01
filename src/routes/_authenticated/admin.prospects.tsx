@@ -27,6 +27,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { QualificationPanel } from "@/components/admin/QualificationPanel";
+import { SalesPrepPanel } from "@/components/admin/SalesPrepPanel";
+import type { SalesStage } from "@/lib/admin/sales-prep";
 import { GlassCard, MetricTile, SectionCard } from "@/components/admin/ui";
 import {
   CAMPAIGN_INDUSTRIES,
@@ -109,6 +111,9 @@ import {
   qualificationBoardFn,
   qualifyCandidatesFn,
   setCandidateQcFn,
+  prepareSalesFn,
+  setSalesStageFn,
+  salesPrepBoardFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
@@ -287,6 +292,7 @@ function ProspectsPage() {
     | "discovery"
     | "candidates"
     | "qc"
+    | "salesprep"
     | "campaigns"
     | "prospects"
     | "duplicates"
@@ -315,6 +321,9 @@ function ProspectsPage() {
   const qualificationBoard = useServerFn(qualificationBoardFn);
   const qualifyCandidates = useServerFn(qualifyCandidatesFn);
   const setCandidateQc = useServerFn(setCandidateQcFn);
+  const prepareSales = useServerFn(prepareSalesFn);
+  const setSalesStage = useServerFn(setSalesStageFn);
+  const salesPrepBoard = useServerFn(salesPrepBoardFn);
 
   const list = useQuery({
     queryKey: ["admin", "prospects", status, tier, search, tab],
@@ -567,6 +576,7 @@ function ProspectsPage() {
           "discovery",
           "candidates",
           "qc",
+          "salesprep",
           "campaigns",
           "prospects",
           "duplicates",
@@ -591,6 +601,8 @@ function ProspectsPage() {
                 ? "Candidate inbox"
                 : item === "qc"
                 ? "QC review"
+                : item === "salesprep"
+                ? "Sales preparation"
                 : item === "campaigns"
                   ? "Campaigns"
                   : item === "prospects"
@@ -825,6 +837,20 @@ function ProspectsPage() {
               setCandidateQc({ data: { id, status: statusValue, ...(reason ? { reason } : {}) } }),
               "Keputusan QC tersimpan.",
             )
+          }
+        />
+      ) : tab === "salesprep" ? (
+        <SalesPrepPanel
+          campaigns={campaignRows.map((item) => ({ id: item.id, name: item.name }))}
+          load={(input) => salesPrepBoard({ data: input })}
+          onPrepare={(campaignId) =>
+            run(
+              prepareSales({ data: campaignId ? { campaignId } : {} }),
+              "Materi persiapan penjualan dibuat.",
+            )
+          }
+          onStage={(id, stage: SalesStage) =>
+            run(setSalesStage({ data: { id, stage } }), "Tahap penjualan diperbarui.")
           }
         />
       ) : tab === "candidates" ? (
