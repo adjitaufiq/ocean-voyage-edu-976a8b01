@@ -219,7 +219,7 @@ export async function buildSalesPrepBoard(
   let candidates = supabase
     .from("prospect_candidates")
     .select(
-      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, contact_data",
+      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, qc_status, contact_data",
     )
     .order("lead_score", { ascending: false })
     .limit(limit);
@@ -277,6 +277,8 @@ export async function buildSalesPrepBoard(
       selected_asset: (prep["selected_asset"] as SalesPrepRow["selected_asset"]) ?? {},
       ready_blockers: readyOutreachBlockers({
         validationStatus: (row["validation_status"] as string | null) ?? null,
+        qcStatus: String(row["qc_status"] ?? "new"),
+        hasPreparation: true,
         contactData:
           (row["contact_data"] as Record<
             string,
