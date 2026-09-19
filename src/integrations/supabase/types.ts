@@ -2271,7 +2271,9 @@ export type Database = {
           rejected_reason: string | null
           review_count: number | null
           review_requested_at: string | null
+          sales_prepared_at: string | null
           sales_priority: string | null
+          sales_stage: string
           source_keyword: string | null
           suggested_solution: string | null
           trust_breakdown: Json
@@ -2346,7 +2348,9 @@ export type Database = {
           rejected_reason?: string | null
           review_count?: number | null
           review_requested_at?: string | null
+          sales_prepared_at?: string | null
           sales_priority?: string | null
+          sales_stage?: string
           source_keyword?: string | null
           suggested_solution?: string | null
           trust_breakdown?: Json
@@ -2421,7 +2425,9 @@ export type Database = {
           rejected_reason?: string | null
           review_count?: number | null
           review_requested_at?: string | null
+          sales_prepared_at?: string | null
           sales_priority?: string | null
+          sales_stage?: string
           source_keyword?: string | null
           suggested_solution?: string | null
           trust_breakdown?: Json
@@ -2922,6 +2928,85 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_preparations: {
+        Row: {
+          approach_category: string
+          approach_reason: string | null
+          business_brief: Json
+          campaign_id: string | null
+          candidate_id: string | null
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          generated_by: string
+          id: string
+          is_active: boolean
+          outreach_message: Json
+          prospect_id: string | null
+          recommended_solution: string | null
+          selected_asset: Json
+          updated_at: string
+        }
+        Insert: {
+          approach_category?: string
+          approach_reason?: string | null
+          business_brief?: Json
+          campaign_id?: string | null
+          candidate_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          generated_by?: string
+          id?: string
+          is_active?: boolean
+          outreach_message?: Json
+          prospect_id?: string | null
+          recommended_solution?: string | null
+          selected_asset?: Json
+          updated_at?: string
+        }
+        Update: {
+          approach_category?: string
+          approach_reason?: string | null
+          business_brief?: Json
+          campaign_id?: string | null
+          candidate_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          generated_by?: string
+          id?: string
+          is_active?: boolean
+          outreach_message?: Json
+          prospect_id?: string | null
+          recommended_solution?: string | null
+          selected_asset?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_preparations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_preparations_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_preparations_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
             referencedColumns: ["id"]
           },
         ]
