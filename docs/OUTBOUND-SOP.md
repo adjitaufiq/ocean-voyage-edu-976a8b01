@@ -157,3 +157,29 @@ bisa diproses ulang lewat tombol **Kualifikasi ulang** (per kampanye atau seluru
 
 Kualifikasi ulang **tidak pernah menimpa keputusan manusia**: kandidat dengan `qc_status`
 selain `new` dilewati.
+
+## Sales preparation (tab Sales preparation)
+
+Setelah kandidat lolos kualifikasi (HOT/WARM, `validation_status = validated`), tim penjualan
+menyiapkan materi kontak lewat tab **Sales preparation**. Tidak ada pesan yang terkirim otomatis.
+
+1. **Business brief otomatis** — `business_summary`, `current_digital_condition`,
+   `potential_problem`, `opportunity`, disusun dari fakta kandidat (kategori, kota, rating,
+   ulasan, status website). Tidak ada fakta yang dikarang.
+2. **Sales approach** — deterministik: F&B → QResto + online ordering; tanpa website →
+   Website bisnis + SEO lokal; bisnis berkembang (ulasan >=150 atau rating >=4.6) →
+   custom system + dashboard.
+3. **Outreach draft** — pembuka, alasan menghubungi, nilai yang ditawarkan, dan ajakan;
+   berbasis data bisnis, bukan template spam. Draf hanya tersimpan sampai manusia menyetujui.
+4. **Sales asset matching** — QResto demo, portofolio website, portofolio sistem custom,
+   atau demo dashboard analitik.
+5. **Sales stage** — `qualified → sales_prepared → ready_outreach`. Naik ke **Ready Outreach**
+   ditolak bila kandidat belum tervalidasi atau belum punya kontak bersumber
+   (`value` + `source` + `source_url` + `verified_at`). Setiap perubahan tahap dicatat di
+   `candidate_status_history`.
+6. **Integrasi CRM** — saat kandidat dipromosikan menjadi prospek, brief, solusi, aset, dan draf
+   pesan ikut pindah ke catatan prospek dan dicatat sebagai aktivitas CRM. Status
+   `ready_outreach` menjadi syarat tambahan masuk Daily Sales Queue.
+
+Versi persiapan lama tidak dihapus: hanya satu baris `sales_preparations.is_active = true`
+per kandidat, sisanya tersimpan sebagai riwayat.
