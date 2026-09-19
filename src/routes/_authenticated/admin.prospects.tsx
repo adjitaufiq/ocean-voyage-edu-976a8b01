@@ -346,6 +346,16 @@ function ProspectsPage() {
     queryFn: () => detailFn({ data: { id: openId as string } }),
     enabled: Boolean(openId),
   });
+  // Acquisition pipeline metrics stay separate from CRM metrics on purpose.
+  const acquisitionSummary = useQuery({
+    queryKey: ["admin", "prospect-candidates", "summary"],
+    queryFn: () => candidatesFn({ data: { limit: 1, status: "all" } }),
+  });
+  const acquisitionStages = useQuery({
+    queryKey: ["admin", "sales-prep-board", "summary"],
+    queryFn: () => salesPrepBoard({ data: {} }),
+  });
+
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["admin", "prospects"] });
@@ -557,18 +567,54 @@ function ProspectsPage() {
         </button>
       </header>
 
-      {summary ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
-          <MetricTile label="Ditemukan" value={summary.total} />
-          <MetricTile label="Sales ready" value={salesReady} tone="primary" />
-          <MetricTile label="Perlu verifikasi" value={needVerification} />
-          <MetricTile label="Follow-up hari ini" value={todayFollowUps} tone="hot" />
-          <MetricTile label="Dihubungi" value={summary.contacted} />
-          <MetricTile label="Reply rate" value={`${summary.replyRate}%`} />
-          <MetricTile label="Meeting" value={summary.meetings} />
-          <MetricTile label="Deal" value={summary.deals} tone="primary" />
+      <section className="space-y-2">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+          Acquisition pipeline (kandidat)
+        </p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          <MetricTile
+            label="Kandidat ditemukan"
+            value={acquisitionSummary.data?.summary?.discovered ?? 0}
+          />
+          <MetricTile
+            label="Terverifikasi"
+            value={acquisitionSummary.data?.summary?.verified ?? 0}
+          />
+          <MetricTile
+            label="QC approved"
+            value={acquisitionSummary.data?.summary?.approved ?? 0}
+            tone="primary"
+          />
+          <MetricTile
+            label="Sales prepared"
+            value={acquisitionStages.data?.counts?.prepared ?? 0}
+          />
+          <MetricTile
+            label="Ready outreach"
+            value={acquisitionStages.data?.counts?.ready ?? 0}
+            tone="hot"
+          />
         </div>
+      </section>
+
+      {summary ? (
+        <section className="space-y-2">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            CRM pipeline (prospek)
+          </p>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+            <MetricTile label="Prospek aktif" value={summary.total} />
+            <MetricTile label="Sales ready" value={salesReady} tone="primary" />
+            <MetricTile label="Perlu verifikasi" value={needVerification} />
+            <MetricTile label="Follow-up hari ini" value={todayFollowUps} tone="hot" />
+            <MetricTile label="Dihubungi" value={summary.contacted} />
+            <MetricTile label="Reply rate" value={`${summary.replyRate}%`} />
+            <MetricTile label="Meeting" value={summary.meetings} />
+            <MetricTile label="Deal" value={summary.deals} tone="primary" />
+          </div>
+        </section>
       ) : null}
+
 
       <div className="flex flex-wrap gap-2 border-b border-border/40 pb-3">
         {([
@@ -883,9 +929,15 @@ function ProspectsPage() {
       ) : tab === "campaigns" ? (
         <CampaignList
           campaigns={campaignRows}
-          onDiscover={(id) =>
-            void run(discover({ data: { campaignId: id } }), "Discovery AI selesai.")
-          }
+          onDiscover={(id) => {
+            // Discovery always lands in the candidate pipeline, never in prospects.
+            setTab("candidates");
+            void run(
+              discoverCandidates({ data: { campaignId: id } }),
+              "Kandidat baru masuk Candidate inbox.",
+            );
+          }}
+
           onDelete={(id) => void run(deleteCampaign({ data: { id } }), "Kampanye dihapus.")}
         />
       ) : tab === "duplicates" ? (
@@ -1422,7 +1474,7 @@ function CampaignList({
                 onClick={() => onDiscover(campaign.id)}
                 className="inline-flex items-center gap-2 rounded-xl bg-primary/20 px-3 py-1.5 text-xs font-medium text-primary"
               >
-                <Sparkles className="h-3.5 w-3.5" /> Generate prospek AI
+                <Sparkles className="h-3.5 w-3.5" /> Cari kandidat baru
               </button>
               <button
                 type="button"
@@ -2445,7 +2497,7 @@ function CandidateInbox({
   onPromote,
   loadEvents,
 }: CandidateInboxProps) {
-  const [status, setStatus] = useState("discovered");
+  const [status, setStatus] = useState("all");
   const [campaignId, setCampaignId] = useState("");
   const [search, setSearch] = useState("");
   const [count, setCount] = useState(10);

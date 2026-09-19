@@ -75,10 +75,13 @@ export async function prepareSalesForCandidates(
   for (const row of rows) {
     outcome.scanned += 1;
     const id = String(row["id"]);
-    if (String(row["qc_status"] ?? "new") === "rejected" || row["duplicate_status"] === "duplicate") {
+    // Stage gate: sales material is only built for QC-approved candidates.
+    const qc = String(row["qc_status"] ?? "new");
+    if (qc !== "approved" || row["duplicate_status"] === "duplicate") {
       outcome.skipped += 1;
       continue;
     }
+
 
     const prep = prepareSales(toInput(row));
 
@@ -133,7 +136,7 @@ export async function setSalesStage(
 
   const { data } = await supabase
     .from("prospect_candidates")
-    .select("sales_stage, validation_status, contact_data")
+    .select("sales_stage, validation_status, qc_status, contact_data")
     .eq("id", input.id)
     .maybeSingle();
   if (!data) throw new Error("Kandidat tidak ditemukan.");
@@ -142,14 +145,23 @@ export async function setSalesStage(
   const from = String(row["sales_stage"] ?? "qualified");
 
   if (input.stage === "ready_outreach") {
+    const { data: prep } = await supabase
+      .from("sales_preparations")
+      .select("id")
+      .eq("candidate_id", input.id)
+      .eq("is_active", true)
+      .maybeSingle();
     const blockers = readyOutreachBlockers({
       validationStatus: (row["validation_status"] as string | null) ?? null,
+      qcStatus: String(row["qc_status"] ?? "new"),
+      hasPreparation: Boolean(prep),
       contactData:
         (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
         {},
     });
     if (blockers.length > 0) return { ok: false, blockers };
   }
+
 
   const { error } = await supabase
     .from("prospect_candidates")
@@ -207,7 +219,7 @@ export async function buildSalesPrepBoard(
   let candidates = supabase
     .from("prospect_candidates")
     .select(
-      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, contact_data",
+      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, qc_status, contact_data",
     )
     .order("lead_score", { ascending: false })
     .limit(limit);
@@ -265,6 +277,8 @@ export async function buildSalesPrepBoard(
       selected_asset: (prep["selected_asset"] as SalesPrepRow["selected_asset"]) ?? {},
       ready_blockers: readyOutreachBlockers({
         validationStatus: (row["validation_status"] as string | null) ?? null,
+        qcStatus: String(row["qc_status"] ?? "new"),
+        hasPreparation: true,
         contactData:
           (row["contact_data"] as Record<
             string,

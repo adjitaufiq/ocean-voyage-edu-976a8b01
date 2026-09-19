@@ -640,7 +640,7 @@ export async function promoteCandidateToProspect(
   const { data: candidate } = await supabase
     .from("prospect_candidates")
     .select(
-      "id, business_name, industry, city, country, candidate_status, campaign_id, why_match_icp, potential_problem_hypothesis, buying_signal_hypothesis, suggested_solution, promoted_prospect_id, duplicate_status",
+      "id, business_name, industry, city, country, candidate_status, campaign_id, why_match_icp, potential_problem_hypothesis, buying_signal_hypothesis, suggested_solution, promoted_prospect_id, duplicate_status, qc_status, sales_stage",
     )
     .eq("id", candidateId)
     .maybeSingle();
@@ -652,8 +652,13 @@ export async function promoteCandidateToProspect(
   const reasons = [...verdict.reasons];
   if (candidate.candidate_status !== "approved")
     reasons.push("Kandidat belum disetujui manusia (status harus Disetujui).");
+  if ((candidate as { qc_status?: string | null }).qc_status !== "approved")
+    reasons.push("QC review belum menyetujui kandidat ini.");
+  if ((candidate as { sales_stage?: string | null }).sales_stage !== "ready_outreach")
+    reasons.push("Kandidat belum berada di tahap Ready Outreach.");
   if (candidate.duplicate_status === "duplicate")
     reasons.push("Kandidat ditandai duplikat.");
+
 
   if (reasons.length > 0) {
     await logCandidateEvent(supabase, {

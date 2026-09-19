@@ -250,13 +250,20 @@ export function prepareSales(input: QualificationInput): SalesPreparation {
 /** A lead may only move to Ready Outreach when someone can actually be reached. */
 export function readyOutreachBlockers(input: {
   validationStatus?: string | null;
+  qcStatus?: string | null;
+  hasPreparation?: boolean;
   contactData?: Record<string, { value?: string | null; source?: string | null }> | null;
 }): string[] {
   const blockers: string[] = [];
   if (input.validationStatus && input.validationStatus !== "validated")
     blockers.push("Kandidat belum lolos validasi bisnis.");
+  if (input.qcStatus !== undefined && input.qcStatus !== "approved")
+    blockers.push("Kandidat belum disetujui pada QC review.");
+  if (input.hasPreparation === false)
+    blockers.push("Materi persiapan penjualan belum dibuat.");
   const entries = Object.values(input.contactData ?? {});
   if (!entries.some((entry) => entry?.value && entry?.source))
     blockers.push("Belum ada kontak dengan sumber data yang tercatat.");
   return blockers;
 }
+
