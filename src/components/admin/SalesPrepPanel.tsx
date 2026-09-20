@@ -60,6 +60,8 @@ type Props = {
     offset: number;
   }) => Promise<SalesPrepRunResult>;
   onStage: (id: string, stage: SalesStage) => Promise<unknown>;
+  onVerify: (id: string, item: VerificationItem, value: boolean) => Promise<unknown>;
+  onContactStage: (id: string, stage: ContactStage) => Promise<unknown>;
 };
 
 const briefFields: Array<[string, string]> = [
