@@ -267,3 +267,55 @@ export function readyOutreachBlockers(input: {
   return blockers;
 }
 
+/* --------------------- Sales preparation eligibility --------------------- */
+
+export const SALES_PREP_BLOCKERS = [
+  "awaiting_qc",
+  "qc_rejected",
+  "duplicate",
+  "already_in_crm",
+  "already_prepared",
+  "contact_not_sourced",
+] as const;
+export type SalesPrepBlocker = (typeof SALES_PREP_BLOCKERS)[number];
+
+export const SALES_PREP_BLOCKER_LABELS: Record<SalesPrepBlocker, string> = {
+  awaiting_qc: "Menunggu QC review",
+  qc_rejected: "Ditolak pada QC review",
+  duplicate: "Ditandai duplikat",
+  already_in_crm: "Sudah menjadi prospek CRM",
+  already_prepared: "Sudah punya materi persiapan aktif",
+  contact_not_sourced: "Kontak belum punya sumber data",
+};
+
+export type SalesPrepEligibilityInput = {
+  qcStatus?: string | null;
+  duplicateStatus?: string | null;
+  promotedProspectId?: string | null;
+  hasActivePreparation?: boolean;
+  contactData?: Record<string, { value?: string | null; source?: string | null }> | null;
+};
+
+/**
+ * QC approval is the only gate into sales preparation. Validation status is a
+ * quality signal, never the gate.
+ */
+export function salesPrepBlockers(input: SalesPrepEligibilityInput): SalesPrepBlocker[] {
+  const blockers: SalesPrepBlocker[] = [];
+  const qc = String(input.qcStatus ?? "new");
+  if (qc === "rejected") blockers.push("qc_rejected");
+  else if (qc !== "approved") blockers.push("awaiting_qc");
+  if (input.duplicateStatus === "duplicate" || qc === "duplicate") blockers.push("duplicate");
+  if (input.promotedProspectId) blockers.push("already_in_crm");
+  if (input.hasActivePreparation) blockers.push("already_prepared");
+  const entries = Object.values(input.contactData ?? {});
+  if (!entries.some((entry) => entry?.value && entry?.source))
+    blockers.push("contact_not_sourced");
+  return blockers;
+}
+
+export function canPrepareSales(input: SalesPrepEligibilityInput): boolean {
+  return salesPrepBlockers(input).length === 0;
+}
+
+
