@@ -222,3 +222,21 @@ ditampilkan bila `prepared = 0`.
 
 Versi persiapan lama tidak dihapus: hanya satu baris `sales_preparations.is_active = true`
 per kandidat, sisanya tersimpan sebagai riwayat.
+
+## Evidence panel + human verification gate
+
+Setiap materi menyimpan `evidence`: baris **data → sumber → keyakinan** (nama bisnis, kategori,
+lokasi, rating & ulasan, website, nomor telepon/WhatsApp). Tidak ada baris yang dikarang; nilai
+tanpa sumber ditandai keyakinan rendah.
+
+**Ready Outreach bukan izin menghubungi.** Kandidat di tahap `ready_outreach` berstatus
+*Pending Verification* sampai manusia mencentang seluruh ceklis:
+nama sesuai sumber, lokasi sesuai, rating/review sesuai, cek website valid, nomor WhatsApp valid,
+peluang AI masuk akal, draf pesan sudah sesuai. Ceklis lengkap → *Verified Ready Outreach*
+(`verified_ready_at` + `verified_by` terisi).
+
+Setelah verified, panel menampilkan: **Hubungi WhatsApp** (hanya nomor Indonesia valid, draf ikut
+terisi), **Copy message**, **Lihat sumber** (Google Maps), dan pilihan tahap CRM
+`Dihubungi → Dibalas → Demo dijadwalkan → Tertarik → Deal / Gagal`. Tahap kontak ditolak server
+bila ceklis belum lengkap, dan setiap perubahan dicatat di `candidate_status_history`
+(`actor_kind = human`).

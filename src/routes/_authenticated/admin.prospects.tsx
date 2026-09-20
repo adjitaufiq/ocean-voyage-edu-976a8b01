@@ -115,6 +115,8 @@ import {
   prepareSalesOneFn,
   setSalesStageFn,
   salesPrepBoardFn,
+  setVerificationItemFn,
+  setContactStageFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
@@ -326,6 +328,8 @@ function ProspectsPage() {
   const prepareSalesOne = useServerFn(prepareSalesOneFn);
   const setSalesStage = useServerFn(setSalesStageFn);
   const salesPrepBoard = useServerFn(salesPrepBoardFn);
+  const setVerificationItem = useServerFn(setVerificationItemFn);
+  const setContactStage = useServerFn(setContactStageFn);
 
   const list = useQuery({
     queryKey: ["admin", "prospects", status, tier, search, tab],
@@ -903,6 +907,15 @@ function ProspectsPage() {
           }}
           onStage={(id, stage: SalesStage) =>
             run(setSalesStage({ data: { id, stage } }), "Tahap penjualan diperbarui.")
+          }
+          onVerify={(id, item, value) =>
+            run(
+              setVerificationItem({ data: { id, item, value } }),
+              "Ceklis verifikasi diperbarui.",
+            )
+          }
+          onContactStage={(id, stage) =>
+            run(setContactStage({ data: { id, stage } }), "Tahap kontak diperbarui.")
           }
         />
       ) : tab === "candidates" ? (

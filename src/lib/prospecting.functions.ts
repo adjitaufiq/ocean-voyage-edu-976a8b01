@@ -906,6 +906,44 @@ export const setSalesStageFn = createServerFn({ method: "POST" })
     );
   });
 
+/** Human verification gate: a person ticks each item before any contact. */
+export const setVerificationItemFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        item: z.string().max(60),
+        value: z.boolean(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { setVerificationItem } = await import("./prospecting-salesprep.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return setVerificationItem(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
+/** CRM follow-up after the first human contact. */
+export const setContactStageFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ id: z.string().uuid(), stage: z.string().max(40) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { setContactStage } = await import("./prospecting-salesprep.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return setContactStage(context.supabase, data, {
+      userId: context.userId,
+      email: actorEmail(context.claims),
+    });
+  });
+
 export const salesPrepBoardFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { campaignId?: string; stage?: string; limit?: number }) => input)
