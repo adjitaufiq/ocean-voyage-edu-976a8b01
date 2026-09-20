@@ -426,7 +426,7 @@ export async function buildSalesPrepBoard(
     const { data: preps, error: prepError } = await supabase
       .from("sales_preparations")
       .select(
-        "id, candidate_id, business_brief, approach_category, approach_reason, recommended_solution, outreach_message, selected_asset, created_at",
+        "id, candidate_id, business_brief, approach_category, approach_reason, recommended_solution, outreach_message, selected_asset, evidence, created_at",
       )
       .in("candidate_id", ids)
       .eq("is_active", true);
@@ -514,6 +514,12 @@ export async function buildSalesPrepBoard(
         hasPreparation: true,
         contactData,
       }),
+      evidence: Array.isArray(prep["evidence"]) ? (prep["evidence"] as EvidenceItem[]) : [],
+      verification_checklist: normalizeChecklist(row["verification_checklist"]),
+      verified: checklistComplete(row["verification_checklist"]),
+      verified_ready_at: (row["verified_ready_at"] as string | null) ?? null,
+      contact_stage: (row["contact_stage"] as string | null) ?? null,
+      google_maps_url: (row["google_maps_url"] as string | null) ?? null,
       created_at: String(prep["created_at"] ?? new Date().toISOString()),
     });
   }
