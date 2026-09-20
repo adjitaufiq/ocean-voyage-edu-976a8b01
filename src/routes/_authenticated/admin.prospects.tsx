@@ -112,6 +112,7 @@ import {
   qualifyCandidatesFn,
   setCandidateQcFn,
   prepareSalesFn,
+  prepareSalesOneFn,
   setSalesStageFn,
   salesPrepBoardFn,
 } from "@/lib/prospecting.functions";
@@ -322,6 +323,7 @@ function ProspectsPage() {
   const qualifyCandidates = useServerFn(qualifyCandidatesFn);
   const setCandidateQc = useServerFn(setCandidateQcFn);
   const prepareSales = useServerFn(prepareSalesFn);
+  const prepareSalesOne = useServerFn(prepareSalesOneFn);
   const setSalesStage = useServerFn(setSalesStageFn);
   const salesPrepBoard = useServerFn(salesPrepBoardFn);
 
@@ -889,12 +891,16 @@ function ProspectsPage() {
         <SalesPrepPanel
           campaigns={campaignRows.map((item) => ({ id: item.id, name: item.name }))}
           load={(input) => salesPrepBoard({ data: input })}
-          onPrepare={(campaignId) =>
-            run(
-              prepareSales({ data: campaignId ? { campaignId } : {} }),
-              "Materi persiapan penjualan dibuat.",
-            )
-          }
+          onPrepareOne={async (candidateId) => {
+            const result = await prepareSalesOne({ data: { candidateId } });
+            invalidate();
+            return result;
+          }}
+          onPrepareBatch={async (input) => {
+            const result = await prepareSales({ data: input });
+            invalidate();
+            return result;
+          }}
           onStage={(id, stage: SalesStage) =>
             run(setSalesStage({ data: { id, stage } }), "Tahap penjualan diperbarui.")
           }

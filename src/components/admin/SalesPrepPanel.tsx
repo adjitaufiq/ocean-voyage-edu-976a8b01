@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardCheck, RefreshCcw, Sparkles } from "lucide-react";
+import { ClipboardCheck, Layers, RefreshCcw, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { GlassCard, MetricTile, SectionCard } from "@/components/admin/ui";
 import { leadTemperatureClass, type LeadTemperature } from "@/lib/admin/discovery";
@@ -10,18 +11,35 @@ import {
   type ApproachCategory,
   type SalesStage,
 } from "@/lib/admin/sales-prep";
-import type { SalesPrepBoard } from "@/lib/prospecting-salesprep.server";
+import type { SalesPrepBoard, SalesPrepRunResult } from "@/lib/prospecting-salesprep.server";
 import { cn } from "@/lib/utils";
 
 const inputClass =
   "w-full rounded-xl border border-border/50 bg-background/40 px-3 py-2 text-sm outline-none transition focus:border-primary/50";
 
+const BATCH_SIZE = 25;
+const MAX_CHUNKS = 200;
+
 type CampaignOption = { id: string; name: string };
+
+type Progress = {
+  total: number | null;
+  scanned: number;
+  prepared: number;
+  skipped: number;
+  failed: number;
+  running: boolean;
+};
 
 type Props = {
   campaigns: CampaignOption[];
   load: (input: { campaignId?: string; stage?: string }) => Promise<SalesPrepBoard>;
-  onPrepare: (campaignId?: string) => Promise<unknown>;
+  onPrepareOne: (candidateId: string) => Promise<SalesPrepRunResult>;
+  onPrepareBatch: (input: {
+    campaignId?: string;
+    limit: number;
+    offset: number;
+  }) => Promise<SalesPrepRunResult>;
   onStage: (id: string, stage: SalesStage) => Promise<unknown>;
 };
 
@@ -39,10 +57,23 @@ const outreachFields: Array<[string, string]> = [
   ["call_to_action", "Ajakan"],
 ];
 
-export function SalesPrepPanel({ campaigns, load, onPrepare, onStage }: Props) {
+function reasonSummary(reasons: Record<string, number>): string {
+  return Object.entries(reasons)
+    .map(([label, count]) => `${label} (${count})`)
+    .join(", ");
+}
+
+export function SalesPrepPanel({
+  campaigns,
+  load,
+  onPrepareOne,
+  onPrepareBatch,
+  onStage,
+}: Props) {
   const [campaignId, setCampaignId] = useState("all");
   const [stage, setStage] = useState("all");
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<Progress | null>(null);
 
   const board = useQuery({
     queryKey: ["admin", "sales-prep-board", campaignId, stage],
@@ -64,11 +95,95 @@ export function SalesPrepPanel({ campaigns, load, onPrepare, onStage }: Props) {
   };
 
   const counts = board.data?.counts;
+  const pending = board.data?.pending ?? [];
+  const eligibleCount = counts?.eligible ?? 0;
+
+  /** Manual mode: never show success when nothing was written. */
+  const prepareOne = async (candidateId: string, name: string) => {
+    setBusy(true);
+    try {
+      const result = await onPrepareOne(candidateId);
+      if (result.prepared > 0) {
+        toast.success(`Materi persiapan untuk ${name} berhasil dibuat.`);
+      } else if (result.failed > 0) {
+        toast.error(result.errors[0] ?? "Gagal menyimpan materi persiapan.");
+      } else {
+        toast.error(
+          `Kandidat belum memenuhi syarat: ${reasonSummary(result.skippedReasons) || "menunggu QC approval"}.`,
+        );
+      }
+      await board.refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal memproses aksi.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Batch mode: bounded chunks so thousands of candidates stay safe. */
+  const prepareBatch = async () => {
+    setBusy(true);
+    const totals: Progress = {
+      total: null,
+      scanned: 0,
+      prepared: 0,
+      skipped: 0,
+      failed: 0,
+      running: true,
+    };
+    const reasons: Record<string, number> = {};
+    const errors: string[] = [];
+    setProgress({ ...totals });
+
+    try {
+      let offset = 0;
+      for (let chunk = 0; chunk < MAX_CHUNKS; chunk += 1) {
+        const result = await onPrepareBatch({
+          ...(campaignId !== "all" ? { campaignId } : {}),
+          limit: BATCH_SIZE,
+          offset,
+        });
+        totals.total = result.total ?? totals.total;
+        totals.scanned += result.scanned;
+        totals.prepared += result.prepared;
+        totals.skipped += result.skipped;
+        totals.failed += result.failed;
+        for (const [label, count] of Object.entries(result.skippedReasons)) {
+          reasons[label] = (reasons[label] ?? 0) + count;
+        }
+        for (const message of result.errors) {
+          if (errors.length < 5) errors.push(message);
+        }
+        setProgress({ ...totals });
+        if (result.nextOffset == null) break;
+        offset = result.nextOffset;
+      }
+
+      if (totals.prepared > 0) {
+        toast.success(`${totals.prepared} materi persiapan berhasil dibuat.`);
+        if (totals.failed > 0) toast.warning(`${totals.failed} kandidat gagal diproses.`);
+      } else if (totals.failed > 0) {
+        toast.error(errors[0] ?? "Semua pembuatan materi gagal.");
+      } else {
+        toast.error(
+          "Tidak ada kandidat yang memenuhi syarat. Kandidat masih menunggu QC approval.",
+        );
+      }
+      setProgress({ ...totals, running: false });
+      await board.refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal memproses aksi.");
+      setProgress({ ...totals, running: false });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
       {counts ? (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <MetricTile label="Menunggu QC review" value={counts.awaitingQc} />
           <MetricTile label="Qualified" value={counts.qualified} />
           <MetricTile label="Sales prepared" value={counts.prepared} tone="primary" />
           <MetricTile label="Ready outreach" value={counts.ready} tone="hot" />
@@ -77,7 +192,7 @@ export function SalesPrepPanel({ campaigns, load, onPrepare, onStage }: Props) {
 
       <SectionCard
         title="Sales preparation"
-        description="Brief bisnis, rekomendasi pendekatan, draf pesan, dan aset pendukung. Tidak ada pesan yang terkirim otomatis."
+        description="Hanya kandidat QC approved yang bisa disiapkan. Brief bisnis, rekomendasi pendekatan, draf pesan, dan aset pendukung — tidak ada pesan yang terkirim otomatis."
       >
         <div className="flex flex-wrap gap-2">
           <select
@@ -106,11 +221,11 @@ export function SalesPrepPanel({ campaigns, load, onPrepare, onStage }: Props) {
           </select>
           <button
             type="button"
-            disabled={busy}
-            onClick={() => void act(() => onPrepare(campaignId === "all" ? undefined : campaignId))}
-            className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2 text-sm transition hover:border-primary/50 disabled:opacity-50"
+            disabled={busy || eligibleCount === 0}
+            onClick={() => void prepareBatch()}
+            className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary transition disabled:opacity-40"
           >
-            <Sparkles className="h-4 w-4" /> Siapkan penjualan
+            <Layers className="h-4 w-4" /> Siapkan penjualan massal
           </button>
           <button
             type="button"
@@ -120,15 +235,76 @@ export function SalesPrepPanel({ campaigns, load, onPrepare, onStage }: Props) {
             <RefreshCcw className="h-4 w-4" /> Muat ulang
           </button>
         </div>
+
+        {counts && counts.ineligible > 0 ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {counts.ineligible} kandidat QC approved belum memenuhi syarat (duplikat, sudah di CRM,
+            atau kontak belum bersumber).
+          </p>
+        ) : null}
+
+        {progress ? (
+          <div className="mt-3 rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              {progress.running ? "Sedang memproses…" : "Laporan batch"}
+            </p>
+            <p>
+              Total kandidat: {progress.total ?? "—"} • Diproses: {progress.scanned} • Berhasil:{" "}
+              {progress.prepared} • Gagal: {progress.failed} • Dilewati: {progress.skipped}
+            </p>
+          </div>
+        ) : null}
       </SectionCard>
+
+      {pending.length > 0 ? (
+        <SectionCard
+          title="Kandidat QC approved menunggu materi"
+          description="Mode manual untuk review dan pengujian satu per satu."
+        >
+          <div className="space-y-2">
+            {pending.map((row) => (
+              <div
+                key={row.candidate_id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/40 bg-background/30 p-3"
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold">{row.business_name}</span>
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[11px]",
+                        leadTemperatureClass((row.lead_temperature as LeadTemperature) ?? "cold"),
+                      )}
+                    >
+                      {row.lead_score}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {[row.category, row.city].filter(Boolean).join(" • ") || "—"}
+                    {row.blockers.length > 0 ? ` • ${row.blockers.join(", ")}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy || !row.eligible}
+                  onClick={() => void prepareOne(row.candidate_id, row.business_name)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-1.5 text-xs transition hover:border-primary/50 disabled:opacity-40"
+                >
+                  <Sparkles className="h-3.5 w-3.5" /> Siapkan penjualan
+                </button>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
 
       <div className="space-y-2">
         {board.isLoading ? (
           <GlassCard className="p-4 text-sm text-muted-foreground">Memuat persiapan…</GlassCard>
         ) : (board.data?.rows.length ?? 0) === 0 ? (
           <GlassCard className="p-4 text-sm text-muted-foreground">
-            Belum ada materi persiapan. Klik “Siapkan penjualan” untuk kandidat yang sudah
-            tervalidasi.
+            Belum ada materi persiapan. Approve kandidat di tab QC review, lalu klik “Siapkan
+            penjualan”.
           </GlassCard>
         ) : (
           board.data?.rows.map((row) => (
@@ -150,8 +326,9 @@ export function SalesPrepPanel({ campaigns, load, onPrepare, onStage }: Props) {
                         row.sales_stage}
                     </span>
                     <span className="rounded-full border border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground">
-                      {APPROACH_LABELS[(row.approach_category as ApproachCategory) ?? "website_opportunity"] ??
-                        row.approach_category}
+                      {APPROACH_LABELS[
+                        (row.approach_category as ApproachCategory) ?? "website_opportunity"
+                      ] ?? row.approach_category}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -224,6 +401,14 @@ export function SalesPrepPanel({ campaigns, load, onPrepare, onStage }: Props) {
                   className="rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
                 >
                   Kembalikan ke Sales Prepared
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void prepareOne(row.candidate_id, row.business_name)}
+                  className="rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
+                >
+                  Buat ulang materi
                 </button>
                 <button
                   type="button"
