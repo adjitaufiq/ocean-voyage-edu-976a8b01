@@ -90,6 +90,8 @@ export function SalesPrepPanel({
   onPrepareOne,
   onPrepareBatch,
   onStage,
+  onVerify,
+  onContactStage,
 }: Props) {
   const [campaignId, setCampaignId] = useState("all");
   const [stage, setStage] = useState("all");
