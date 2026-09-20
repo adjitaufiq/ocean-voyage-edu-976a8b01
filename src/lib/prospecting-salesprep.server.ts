@@ -351,6 +351,12 @@ export type SalesPrepRow = {
   outreach_message: Record<string, string>;
   selected_asset: { key?: string; label?: string; url?: string; note?: string };
   ready_blockers: string[];
+  evidence: EvidenceItem[];
+  verification_checklist: VerificationChecklist;
+  verified: boolean;
+  verified_ready_at: string | null;
+  contact_stage: string | null;
+  google_maps_url: string | null;
   created_at: string;
 };
 
@@ -394,7 +400,7 @@ export async function buildSalesPrepBoard(
   let candidates = supabase
     .from("prospect_candidates")
     .select(
-      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, qc_status, duplicate_status, promoted_prospect_id, contact_data",
+      "id, campaign_id, business_name, category, city, phone, website, google_maps_url, lead_score, lead_temperature, sales_stage, validation_status, qc_status, duplicate_status, promoted_prospect_id, contact_data, verification_checklist, verified_ready_at, contact_stage",
     )
     .eq("qc_status", "approved")
     .order("lead_score", { ascending: false })
