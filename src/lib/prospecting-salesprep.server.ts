@@ -287,22 +287,17 @@ export async function setSalesStage(
   const from = String(row["sales_stage"] ?? "qualified");
 
   if (input.stage === "ready_outreach") {
-    const { data: prep } = await supabase
-      .from("sales_preparations")
-      .select("id")
-      .eq("candidate_id", input.id)
-      .eq("is_active", true)
-      .maybeSingle();
     const blockers = readyOutreachBlockers({
       validationStatus: (row["validation_status"] as string | null) ?? null,
       qcStatus: String(row["qc_status"] ?? "new"),
-      hasPreparation: Boolean(prep),
+      hasPreparation: await hasActivePreparation(supabase, input.id),
       contactData:
         (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
         {},
     });
     if (blockers.length > 0) return { ok: false, blockers };
   }
+
 
 
   const { error } = await supabase
