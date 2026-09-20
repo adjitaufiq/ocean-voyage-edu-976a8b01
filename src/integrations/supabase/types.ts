@@ -2217,6 +2217,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           approved_by_email: string | null
+          auto_qc_reason: string | null
           business_name: string
           business_name_normalized: string | null
           buying_signal_hypothesis: string | null
@@ -2224,7 +2225,9 @@ export type Database = {
           candidate_status: string
           category: string | null
           city: string | null
+          confidence_score: number | null
           contact_data: Json
+          contact_stage: string | null
           country: string
           created_at: string
           created_by: string | null
@@ -2274,6 +2277,7 @@ export type Database = {
           sales_prepared_at: string | null
           sales_priority: string | null
           sales_stage: string
+          screening_label: string | null
           source_keyword: string | null
           suggested_solution: string | null
           trust_breakdown: Json
@@ -2284,6 +2288,9 @@ export type Database = {
           validation_checks: Json
           validation_reason: string | null
           validation_status: string
+          verification_checklist: Json
+          verified_by: string | null
+          verified_ready_at: string | null
           website: string | null
           website_status: string
           why_match_icp: string | null
@@ -2294,6 +2301,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           approved_by_email?: string | null
+          auto_qc_reason?: string | null
           business_name: string
           business_name_normalized?: string | null
           buying_signal_hypothesis?: string | null
@@ -2301,7 +2309,9 @@ export type Database = {
           candidate_status?: string
           category?: string | null
           city?: string | null
+          confidence_score?: number | null
           contact_data?: Json
+          contact_stage?: string | null
           country?: string
           created_at?: string
           created_by?: string | null
@@ -2351,6 +2361,7 @@ export type Database = {
           sales_prepared_at?: string | null
           sales_priority?: string | null
           sales_stage?: string
+          screening_label?: string | null
           source_keyword?: string | null
           suggested_solution?: string | null
           trust_breakdown?: Json
@@ -2361,6 +2372,9 @@ export type Database = {
           validation_checks?: Json
           validation_reason?: string | null
           validation_status?: string
+          verification_checklist?: Json
+          verified_by?: string | null
+          verified_ready_at?: string | null
           website?: string | null
           website_status?: string
           why_match_icp?: string | null
@@ -2371,6 +2385,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           approved_by_email?: string | null
+          auto_qc_reason?: string | null
           business_name?: string
           business_name_normalized?: string | null
           buying_signal_hypothesis?: string | null
@@ -2378,7 +2393,9 @@ export type Database = {
           candidate_status?: string
           category?: string | null
           city?: string | null
+          confidence_score?: number | null
           contact_data?: Json
+          contact_stage?: string | null
           country?: string
           created_at?: string
           created_by?: string | null
@@ -2428,6 +2445,7 @@ export type Database = {
           sales_prepared_at?: string | null
           sales_priority?: string | null
           sales_stage?: string
+          screening_label?: string | null
           source_keyword?: string | null
           suggested_solution?: string | null
           trust_breakdown?: Json
@@ -2438,6 +2456,9 @@ export type Database = {
           validation_checks?: Json
           validation_reason?: string | null
           validation_status?: string
+          verification_checklist?: Json
+          verified_by?: string | null
+          verified_ready_at?: string | null
           website?: string | null
           website_status?: string
           why_match_icp?: string | null
@@ -2942,6 +2963,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           created_by_email: string | null
+          evidence: Json
           generated_by: string
           id: string
           is_active: boolean
@@ -2960,6 +2982,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
+          evidence?: Json
           generated_by?: string
           id?: string
           is_active?: boolean
@@ -2978,6 +3001,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
+          evidence?: Json
           generated_by?: string
           id?: string
           is_active?: boolean
