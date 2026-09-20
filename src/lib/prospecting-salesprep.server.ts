@@ -10,6 +10,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { ContactEntryLike, QualificationInput } from "@/lib/admin/qualification";
 import type { WebsiteStatus } from "@/lib/admin/discovery";
+import { buildEvidence, type EvidenceItem } from "@/lib/admin/evidence";
+import {
+  CONTACT_STAGES,
+  checklistComplete,
+  normalizeChecklist,
+  VERIFICATION_ITEMS,
+  type ContactStage,
+  type VerificationChecklist,
+  type VerificationItem,
+} from "@/lib/admin/verification";
 import {
   prepareSales,
   readyOutreachBlockers,
@@ -102,7 +112,8 @@ async function hasActivePreparation(supabase: Client, candidateId: string): Prom
 /** Generate + store one candidate's material. Throws on any database failure. */
 async function writePreparation(supabase: Client, row: Record<string, unknown>): Promise<void> {
   const id = String(row["id"]);
-  const prep = prepareSales(toInput(row));
+  const input = toInput(row);
+  const prep = prepareSales(input);
 
   const { error: deactivateError } = await supabase
     .from("sales_preparations")
@@ -120,6 +131,8 @@ async function writePreparation(supabase: Client, row: Record<string, unknown>):
     recommended_solution: prep.approach.recommendation,
     outreach_message: prep.outreach,
     selected_asset: prep.asset,
+    // Every claim shown to a sales agent carries its source and confidence.
+    evidence: buildEvidence(input),
     generated_by: "rules",
     is_active: true,
   } as never);
@@ -338,6 +351,12 @@ export type SalesPrepRow = {
   outreach_message: Record<string, string>;
   selected_asset: { key?: string; label?: string; url?: string; note?: string };
   ready_blockers: string[];
+  evidence: EvidenceItem[];
+  verification_checklist: VerificationChecklist;
+  verified: boolean;
+  verified_ready_at: string | null;
+  contact_stage: string | null;
+  google_maps_url: string | null;
   created_at: string;
 };
 
@@ -360,6 +379,10 @@ export type SalesPrepBoard = {
     ready: number;
     ineligible: number;
     eligible: number;
+    /** Ready Outreach rows whose human checklist is complete. */
+    verified: number;
+    /** Ready Outreach rows still waiting for the human checklist. */
+    pendingVerification: number;
   };
   rows: SalesPrepRow[];
   pending: SalesPrepPendingRow[];
@@ -381,7 +404,7 @@ export async function buildSalesPrepBoard(
   let candidates = supabase
     .from("prospect_candidates")
     .select(
-      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, qc_status, duplicate_status, promoted_prospect_id, contact_data",
+      "id, campaign_id, business_name, category, city, phone, website, google_maps_url, lead_score, lead_temperature, sales_stage, validation_status, qc_status, duplicate_status, promoted_prospect_id, contact_data, verification_checklist, verified_ready_at, contact_stage",
     )
     .eq("qc_status", "approved")
     .order("lead_score", { ascending: false })
@@ -407,7 +430,7 @@ export async function buildSalesPrepBoard(
     const { data: preps, error: prepError } = await supabase
       .from("sales_preparations")
       .select(
-        "id, candidate_id, business_brief, approach_category, approach_reason, recommended_solution, outreach_message, selected_asset, created_at",
+        "id, candidate_id, business_brief, approach_category, approach_reason, recommended_solution, outreach_message, selected_asset, evidence, created_at",
       )
       .in("candidate_id", ids)
       .eq("is_active", true);
@@ -424,6 +447,8 @@ export async function buildSalesPrepBoard(
     ready: 0,
     ineligible: 0,
     eligible: 0,
+    verified: 0,
+    pendingVerification: 0,
   };
   const board: SalesPrepRow[] = [];
   const pending: SalesPrepPendingRow[] = [];
@@ -465,8 +490,11 @@ export async function buildSalesPrepBoard(
       continue;
     }
 
-    if (stage === "ready_outreach") counts.ready += 1;
-    else counts.prepared += 1;
+    if (stage === "ready_outreach") {
+      counts.ready += 1;
+      if (checklistComplete(row["verification_checklist"])) counts.verified += 1;
+      else counts.pendingVerification += 1;
+    } else counts.prepared += 1;
 
     if (filter.stage && filter.stage !== "all" && stage !== filter.stage) continue;
     if (board.length >= limit) continue;
@@ -495,6 +523,12 @@ export async function buildSalesPrepBoard(
         hasPreparation: true,
         contactData,
       }),
+      evidence: Array.isArray(prep["evidence"]) ? (prep["evidence"] as EvidenceItem[]) : [],
+      verification_checklist: normalizeChecklist(row["verification_checklist"]),
+      verified: checklistComplete(row["verification_checklist"]),
+      verified_ready_at: (row["verified_ready_at"] as string | null) ?? null,
+      contact_stage: (row["contact_stage"] as string | null) ?? null,
+      google_maps_url: (row["google_maps_url"] as string | null) ?? null,
       created_at: String(prep["created_at"] ?? new Date().toISOString()),
     });
   }
@@ -548,4 +582,83 @@ export async function attachPreparationToProspect(
     label: "Materi persiapan penjualan",
     content: note.slice(0, 2000),
   } as never);
+}
+
+/* -------------------- Human verification gate + outreach ------------------ */
+
+/**
+ * A person ticks each checklist item before any message goes out. Ready
+ * Outreach alone is not permission to contact; a complete checklist is.
+ */
+export async function setVerificationItem(
+  supabase: Client,
+  input: { id: string; item: string; value: boolean },
+  actor: Actor,
+): Promise<{ ok: true; verified: boolean; checklist: VerificationChecklist }> {
+  if (!VERIFICATION_ITEMS.includes(input.item as VerificationItem))
+    throw new Error("Item verifikasi tidak dikenal.");
+
+  const { data, error } = await supabase
+    .from("prospect_candidates")
+    .select("verification_checklist")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Kandidat tidak ditemukan.");
+
+  const checklist = normalizeChecklist((data as Record<string, unknown>)["verification_checklist"]);
+  if (input.value) checklist[input.item as VerificationItem] = true;
+  else delete checklist[input.item as VerificationItem];
+
+  const verified = checklistComplete(checklist);
+  const { error: updateError } = await supabase
+    .from("prospect_candidates")
+    .update({
+      verification_checklist: checklist,
+      verified_ready_at: verified ? new Date().toISOString() : null,
+      verified_by: verified ? actor.userId : null,
+    } as never)
+    .eq("id", input.id);
+  if (updateError) throw new Error(updateError.message);
+
+  return { ok: true, verified, checklist };
+}
+
+/** CRM follow-up after the first contact. Only a person sets these. */
+export async function setContactStage(
+  supabase: Client,
+  input: { id: string; stage: string },
+  actor: Actor,
+): Promise<{ ok: true }> {
+  if (!CONTACT_STAGES.includes(input.stage as ContactStage))
+    throw new Error("Tahap kontak tidak dikenal.");
+
+  const { data } = await supabase
+    .from("prospect_candidates")
+    .select("contact_stage, verification_checklist")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (!data) throw new Error("Kandidat tidak ditemukan.");
+  const row = data as Record<string, unknown>;
+
+  if (!checklistComplete(row["verification_checklist"]))
+    throw new Error("Ceklis verifikasi belum lengkap, kandidat belum boleh dihubungi.");
+
+  const { error } = await supabase
+    .from("prospect_candidates")
+    .update({ contact_stage: input.stage } as never)
+    .eq("id", input.id);
+  if (error) throw new Error(error.message);
+
+  await supabase.from("candidate_status_history").insert({
+    candidate_id: input.id,
+    from_status: (row["contact_stage"] as string | null) ?? "ready_outreach",
+    to_status: input.stage,
+    actor_kind: "human",
+    actor_label: actor.email ?? null,
+    actor_id: actor.userId,
+    reason: `Tahap kontak: ${input.stage}`,
+  } as never);
+
+  return { ok: true };
 }
