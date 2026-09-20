@@ -54,67 +54,89 @@ function toInput(row: Record<string, unknown>): QualificationInput {
   };
 }
 
-export type SalesPrepRunResult = { scanned: number; prepared: number; skipped: number };
+export type SalesPrepRunResult = {
+  scanned: number;
+  prepared: number;
+  skipped: number;
+  failed: number;
+  /** Reason label -> how many candidates were skipped for it. */
+  skippedReasons: Record<string, number>;
+  errors: string[];
+  /** Batch cursor: offset for the next chunk, or null when finished. */
+  nextOffset: number | null;
+  /** Total QC-approved candidates in scope (batch mode only). */
+  total: number | null;
+};
 
-/**
- * Prepare sales material for qualified candidates in bounded batches.
- * Older preparations stay in the table; only the newest one is active.
- */
-export async function prepareSalesForCandidates(
-  supabase: Client,
-  input: { candidateId?: string; campaignId?: string; limit?: number } = {},
-): Promise<SalesPrepRunResult> {
-  const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
-  let query = supabase.from("prospect_candidates").select(PREP_COLUMNS).limit(limit);
-  if (input.candidateId) query = query.eq("id", input.candidateId);
-  if (input.campaignId) query = query.eq("campaign_id", input.campaignId);
-  if (!input.candidateId) query = query.eq("validation_status", "validated");
+function emptyRun(): SalesPrepRunResult {
+  return {
+    scanned: 0,
+    prepared: 0,
+    skipped: 0,
+    failed: 0,
+    skippedReasons: {},
+    errors: [],
+    nextOffset: null,
+    total: null,
+  };
+}
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
+function noteSkip(outcome: SalesPrepRunResult, blockers: SalesPrepBlocker[]) {
+  outcome.skipped += 1;
+  for (const blocker of blockers) {
+    const label = SALES_PREP_BLOCKER_LABELS[blocker];
+    outcome.skippedReasons[label] = (outcome.skippedReasons[label] ?? 0) + 1;
+  }
+}
 
-  const rows = (data ?? []) as unknown as Record<string, unknown>[];
-  const outcome: SalesPrepRunResult = { scanned: 0, prepared: 0, skipped: 0 };
+async function hasActivePreparation(supabase: Client, candidateId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("sales_preparations")
+    .select("id")
+    .eq("candidate_id", candidateId)
+    .eq("is_active", true)
+    .maybeSingle();
+  return Boolean(data);
+}
 
-  for (const row of rows) {
-    outcome.scanned += 1;
-    const id = String(row["id"]);
-    // Stage gate: sales material is only built for QC-approved candidates.
-    const qc = String(row["qc_status"] ?? "new");
-    if (qc !== "approved" || row["duplicate_status"] === "duplicate") {
-      outcome.skipped += 1;
-      continue;
-    }
+/** Generate + store one candidate's material. Throws on any database failure. */
+async function writePreparation(supabase: Client, row: Record<string, unknown>): Promise<void> {
+  const id = String(row["id"]);
+  const prep = prepareSales(toInput(row));
 
+  const { error: deactivateError } = await supabase
+    .from("sales_preparations")
+    .update({ is_active: false } as never)
+    .eq("candidate_id", id)
+    .eq("is_active", true);
+  if (deactivateError) throw new Error(deactivateError.message);
 
-    const prep = prepareSales(toInput(row));
+  const { error: insertError } = await supabase.from("sales_preparations").insert({
+    candidate_id: id,
+    campaign_id: (row["campaign_id"] as string | null) ?? null,
+    business_brief: prep.brief,
+    approach_category: prep.approach.category,
+    approach_reason: prep.approach.reason,
+    recommended_solution: prep.approach.recommendation,
+    outreach_message: prep.outreach,
+    selected_asset: prep.asset,
+    generated_by: "rules",
+    is_active: true,
+  } as never);
+  if (insertError) throw new Error(insertError.message);
 
-    await supabase
-      .from("sales_preparations")
-      .update({ is_active: false } as never)
-      .eq("candidate_id", id)
-      .eq("is_active", true);
+  const stage = String(row["sales_stage"] ?? "qualified");
+  if (stage !== "ready_outreach") {
+    const { error: stageError } = await supabase
+      .from("prospect_candidates")
+      .update({
+        sales_stage: "sales_prepared",
+        sales_prepared_at: new Date().toISOString(),
+      } as never)
+      .eq("id", id);
+    if (stageError) throw new Error(stageError.message);
 
-    const { error: insertError } = await supabase.from("sales_preparations").insert({
-      candidate_id: id,
-      campaign_id: (row["campaign_id"] as string | null) ?? null,
-      business_brief: prep.brief,
-      approach_category: prep.approach.category,
-      approach_reason: prep.approach.reason,
-      recommended_solution: prep.approach.recommendation,
-      outreach_message: prep.outreach,
-      selected_asset: prep.asset,
-      generated_by: "rules",
-      is_active: true,
-    } as never);
-    if (insertError) throw new Error(insertError.message);
-
-    const stage = String(row["sales_stage"] ?? "qualified");
-    if (stage === "qualified") {
-      await supabase
-        .from("prospect_candidates")
-        .update({ sales_stage: "sales_prepared", sales_prepared_at: new Date().toISOString() } as never)
-        .eq("id", id);
+    if (stage !== "sales_prepared") {
       await supabase.from("candidate_status_history").insert({
         candidate_id: id,
         from_status: stage,
@@ -124,11 +146,127 @@ export async function prepareSalesForCandidates(
         reason: prep.approach.recommendation.slice(0, 300),
       } as never);
     }
-    outcome.prepared += 1;
+  }
+}
+
+/**
+ * Manual mode: prepare (or regenerate) material for a single candidate.
+ * Regenerating deactivates the previous version but keeps it as history.
+ */
+export async function prepareSalesForCandidate(
+  supabase: Client,
+  candidateId: string,
+): Promise<SalesPrepRunResult> {
+  const outcome = emptyRun();
+  const { data, error } = await supabase
+    .from("prospect_candidates")
+    .select(PREP_COLUMNS)
+    .eq("id", candidateId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Kandidat tidak ditemukan.");
+
+  const row = data as unknown as Record<string, unknown>;
+  outcome.scanned = 1;
+
+  const blockers = salesPrepBlockers({
+    qcStatus: String(row["qc_status"] ?? "new"),
+    duplicateStatus: (row["duplicate_status"] as string | null) ?? null,
+    promotedProspectId: (row["promoted_prospect_id"] as string | null) ?? null,
+    // Manual regeneration is allowed on purpose (quality control).
+    hasActivePreparation: false,
+    contactData:
+      (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
+      {},
+  });
+  if (blockers.length > 0) {
+    noteSkip(outcome, blockers);
+    return outcome;
+  }
+
+  try {
+    await writePreparation(supabase, row);
+    outcome.prepared = 1;
+  } catch (err) {
+    outcome.failed = 1;
+    outcome.errors.push(err instanceof Error ? err.message : "Gagal menyimpan materi.");
+  }
+  return outcome;
+}
+
+/**
+ * Batch mode: one bounded chunk of QC-approved candidates per call, so a
+ * campaign with thousands of candidates never becomes one blocking request.
+ */
+export async function prepareSalesForCandidates(
+  supabase: Client,
+  input: { campaignId?: string; limit?: number; offset?: number } = {},
+): Promise<SalesPrepRunResult> {
+  const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
+  const offset = Math.max(input.offset ?? 0, 0);
+  const outcome = emptyRun();
+
+  let query = supabase
+    .from("prospect_candidates")
+    .select(PREP_COLUMNS, { count: "exact" })
+    .eq("qc_status", "approved")
+    .order("created_at", { ascending: true })
+    .range(offset, offset + limit - 1);
+  if (input.campaignId) query = query.eq("campaign_id", input.campaignId);
+
+  const { data, error, count } = await query;
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as unknown as Record<string, unknown>[];
+  outcome.total = count ?? null;
+  outcome.nextOffset = rows.length === limit ? offset + rows.length : null;
+
+  const ids = rows.map((row) => String(row["id"]));
+  const prepared = new Set<string>();
+  if (ids.length > 0) {
+    const { data: existing } = await supabase
+      .from("sales_preparations")
+      .select("candidate_id")
+      .in("candidate_id", ids)
+      .eq("is_active", true);
+    for (const item of (existing ?? []) as Record<string, unknown>[]) {
+      prepared.add(String(item["candidate_id"]));
+    }
+  }
+
+  for (const row of rows) {
+    outcome.scanned += 1;
+    const id = String(row["id"]);
+    const blockers = salesPrepBlockers({
+      qcStatus: String(row["qc_status"] ?? "new"),
+      duplicateStatus: (row["duplicate_status"] as string | null) ?? null,
+      promotedProspectId: (row["promoted_prospect_id"] as string | null) ?? null,
+      hasActivePreparation: prepared.has(id),
+      contactData:
+        (row["contact_data"] as Record<
+          string,
+          { value?: string | null; source?: string | null }
+        >) ?? {},
+    });
+    if (blockers.length > 0) {
+      noteSkip(outcome, blockers);
+      continue;
+    }
+
+    try {
+      await writePreparation(supabase, row);
+      outcome.prepared += 1;
+    } catch (err) {
+      outcome.failed += 1;
+      const message = err instanceof Error ? err.message : "Gagal menyimpan materi.";
+      if (outcome.errors.length < 5)
+        outcome.errors.push(`${String(row["business_name"] ?? id)}: ${message}`);
+    }
   }
 
   return outcome;
 }
+
 
 /** Human-driven stage change. Ready Outreach requires a reachable contact. */
 export async function setSalesStage(
