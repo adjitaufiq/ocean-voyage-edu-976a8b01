@@ -402,6 +402,137 @@ export function SalesPrepPanel({
                 )}
               </div>
 
+              {row.evidence.length > 0 ? (
+                <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
+                  <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Bukti data (data → sumber → keyakinan)
+                  </p>
+                  <div className="space-y-1">
+                    {row.evidence.map((item, index) => (
+                      <div
+                        key={`${item.field}-${index}`}
+                        className="flex flex-wrap items-center gap-x-2"
+                      >
+                        <span className="text-muted-foreground">{item.field}:</span>
+                        <span>{item.data}</span>
+                        <span className="text-muted-foreground">
+                          •{" "}
+                          {item.source_url ? (
+                            <a
+                              href={item.source_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline"
+                            >
+                              {item.source}
+                            </a>
+                          ) : (
+                            item.source
+                          )}{" "}
+                          • {item.confidence}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {row.sales_stage === "ready_outreach" ? (
+                <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
+                  <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Ceklis verifikasi manusia —{" "}
+                    {row.verified ? "Verified Ready Outreach" : "Pending Verification"}
+                  </p>
+                  <div className="grid gap-1 md:grid-cols-2">
+                    {VERIFICATION_ITEMS.map((item) => (
+                      <label key={item} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          disabled={busy}
+                          checked={row.verification_checklist[item] === true}
+                          onChange={(e) =>
+                            void act(() => onVerify(row.candidate_id, item, e.target.checked))
+                          }
+                        />
+                        <span>{VERIFICATION_ITEM_LABELS[item]}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {row.verified ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {whatsappLink(row.phone, composeOutreachMessage(row.outreach_message)) ? (
+                    <a
+                      href={
+                        whatsappLink(row.phone, composeOutreachMessage(row.outreach_message)) ?? "#"
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" /> Hubungi WhatsApp
+                    </a>
+                  ) : (
+                    <span className="text-xs text-amber-200">
+                      Nomor WhatsApp Indonesia tidak valid.
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void act(() =>
+                        navigator.clipboard.writeText(
+                          composeOutreachMessage(row.outreach_message),
+                        ),
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
+                  >
+                    <Copy className="h-3.5 w-3.5" /> Copy message
+                  </button>
+                  {row.google_maps_url ? (
+                    <a
+                      href={row.google_maps_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs"
+                    >
+                      <Search className="h-3.5 w-3.5" /> Lihat sumber
+                    </a>
+                  ) : null}
+                  <select
+                    className={cn(inputClass, "w-auto text-xs")}
+                    value={row.contact_stage ?? ""}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const value = e.target.value as ContactStage;
+                      if (!value) return;
+                      void act(() => onContactStage(row.candidate_id, value));
+                    }}
+                  >
+                    <option value="">Tahap CRM…</option>
+                    {CONTACT_STAGES.map((item) => (
+                      <option key={item} value={item}>
+                        {CONTACT_STAGE_LABELS[item]}
+                      </option>
+                    ))}
+                  </select>
+                  {row.contact_stage ? (
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[11px]",
+                        contactStageClass(row.contact_stage as ContactStage),
+                      )}
+                    >
+                      {CONTACT_STAGE_LABELS[row.contact_stage as ContactStage] ?? row.contact_stage}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+
               {row.ready_blockers.length > 0 ? (
                 <p className="text-xs text-amber-200">
                   Belum bisa Ready Outreach: {row.ready_blockers.join(" ")}
