@@ -15,9 +15,9 @@ Gerbang wajib tiap tahap:
 | Tahap | Syarat |
 | --- | --- |
 | Discovery | Tombol kampanye "Cari kandidat baru" menulis ke `prospect_candidates` |
-| Validation | `validation_status = validated` |
-| QC | `qc_status = approved` |
-| Sales preparation | Hanya kandidat QC approved yang dibuatkan materi |
+| Validation | `validation_status = validated` (sinyal kualitas, bukan gerbang Sales preparation) |
+| QC | `qc_status = approved` — satu-satunya pintu masuk Sales preparation |
+| Sales preparation | `qc_status = approved`, bukan duplikat, belum punya materi aktif, kontak bersumber, belum dipromosikan ke CRM |
 | Ready outreach | QC approved + materi persiapan aktif + kontak bersumber |
 | Promote CRM | `sales_stage = ready_outreach` (selain approval & anti-duplikat) |
 
