@@ -583,3 +583,82 @@ export async function attachPreparationToProspect(
     content: note.slice(0, 2000),
   } as never);
 }
+
+/* -------------------- Human verification gate + outreach ------------------ */
+
+/**
+ * A person ticks each checklist item before any message goes out. Ready
+ * Outreach alone is not permission to contact; a complete checklist is.
+ */
+export async function setVerificationItem(
+  supabase: Client,
+  input: { id: string; item: string; value: boolean },
+  actor: Actor,
+): Promise<{ ok: true; verified: boolean; checklist: VerificationChecklist }> {
+  if (!VERIFICATION_ITEMS.includes(input.item as VerificationItem))
+    throw new Error("Item verifikasi tidak dikenal.");
+
+  const { data, error } = await supabase
+    .from("prospect_candidates")
+    .select("verification_checklist")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Kandidat tidak ditemukan.");
+
+  const checklist = normalizeChecklist((data as Record<string, unknown>)["verification_checklist"]);
+  if (input.value) checklist[input.item as VerificationItem] = true;
+  else delete checklist[input.item as VerificationItem];
+
+  const verified = checklistComplete(checklist);
+  const { error: updateError } = await supabase
+    .from("prospect_candidates")
+    .update({
+      verification_checklist: checklist,
+      verified_ready_at: verified ? new Date().toISOString() : null,
+      verified_by: verified ? actor.userId : null,
+    } as never)
+    .eq("id", input.id);
+  if (updateError) throw new Error(updateError.message);
+
+  return { ok: true, verified, checklist };
+}
+
+/** CRM follow-up after the first contact. Only a person sets these. */
+export async function setContactStage(
+  supabase: Client,
+  input: { id: string; stage: string },
+  actor: Actor,
+): Promise<{ ok: true }> {
+  if (!CONTACT_STAGES.includes(input.stage as ContactStage))
+    throw new Error("Tahap kontak tidak dikenal.");
+
+  const { data } = await supabase
+    .from("prospect_candidates")
+    .select("contact_stage, verification_checklist")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (!data) throw new Error("Kandidat tidak ditemukan.");
+  const row = data as Record<string, unknown>;
+
+  if (!checklistComplete(row["verification_checklist"]))
+    throw new Error("Ceklis verifikasi belum lengkap, kandidat belum boleh dihubungi.");
+
+  const { error } = await supabase
+    .from("prospect_candidates")
+    .update({ contact_stage: input.stage } as never)
+    .eq("id", input.id);
+  if (error) throw new Error(error.message);
+
+  await supabase.from("candidate_status_history").insert({
+    candidate_id: input.id,
+    from_status: (row["contact_stage"] as string | null) ?? "ready_outreach",
+    to_status: input.stage,
+    actor_kind: "human",
+    actor_label: actor.email ?? null,
+    actor_id: actor.userId,
+    reason: `Tahap kontak: ${input.stage}`,
+  } as never);
+
+  return { ok: true };
+}
