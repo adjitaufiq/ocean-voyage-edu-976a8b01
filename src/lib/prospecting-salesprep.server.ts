@@ -14,7 +14,10 @@ import {
   prepareSales,
   readyOutreachBlockers,
   salesAssetByKey,
+  salesPrepBlockers,
+  SALES_PREP_BLOCKER_LABELS,
   SALES_STAGES,
+  type SalesPrepBlocker,
   type SalesStage,
 } from "@/lib/admin/sales-prep";
 
@@ -22,7 +25,8 @@ type Client = SupabaseClient<Database>;
 type Actor = { userId: string; email?: string | null };
 
 const PREP_COLUMNS =
-  "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status";
+  "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, promoted_prospect_id, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status";
+
 
 function toInput(row: Record<string, unknown>): QualificationInput {
   return {
@@ -50,67 +54,89 @@ function toInput(row: Record<string, unknown>): QualificationInput {
   };
 }
 
-export type SalesPrepRunResult = { scanned: number; prepared: number; skipped: number };
+export type SalesPrepRunResult = {
+  scanned: number;
+  prepared: number;
+  skipped: number;
+  failed: number;
+  /** Reason label -> how many candidates were skipped for it. */
+  skippedReasons: Record<string, number>;
+  errors: string[];
+  /** Batch cursor: offset for the next chunk, or null when finished. */
+  nextOffset: number | null;
+  /** Total QC-approved candidates in scope (batch mode only). */
+  total: number | null;
+};
 
-/**
- * Prepare sales material for qualified candidates in bounded batches.
- * Older preparations stay in the table; only the newest one is active.
- */
-export async function prepareSalesForCandidates(
-  supabase: Client,
-  input: { candidateId?: string; campaignId?: string; limit?: number } = {},
-): Promise<SalesPrepRunResult> {
-  const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
-  let query = supabase.from("prospect_candidates").select(PREP_COLUMNS).limit(limit);
-  if (input.candidateId) query = query.eq("id", input.candidateId);
-  if (input.campaignId) query = query.eq("campaign_id", input.campaignId);
-  if (!input.candidateId) query = query.eq("validation_status", "validated");
+function emptyRun(): SalesPrepRunResult {
+  return {
+    scanned: 0,
+    prepared: 0,
+    skipped: 0,
+    failed: 0,
+    skippedReasons: {},
+    errors: [],
+    nextOffset: null,
+    total: null,
+  };
+}
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
+function noteSkip(outcome: SalesPrepRunResult, blockers: SalesPrepBlocker[]) {
+  outcome.skipped += 1;
+  for (const blocker of blockers) {
+    const label = SALES_PREP_BLOCKER_LABELS[blocker];
+    outcome.skippedReasons[label] = (outcome.skippedReasons[label] ?? 0) + 1;
+  }
+}
 
-  const rows = (data ?? []) as unknown as Record<string, unknown>[];
-  const outcome: SalesPrepRunResult = { scanned: 0, prepared: 0, skipped: 0 };
+async function hasActivePreparation(supabase: Client, candidateId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("sales_preparations")
+    .select("id")
+    .eq("candidate_id", candidateId)
+    .eq("is_active", true)
+    .maybeSingle();
+  return Boolean(data);
+}
 
-  for (const row of rows) {
-    outcome.scanned += 1;
-    const id = String(row["id"]);
-    // Stage gate: sales material is only built for QC-approved candidates.
-    const qc = String(row["qc_status"] ?? "new");
-    if (qc !== "approved" || row["duplicate_status"] === "duplicate") {
-      outcome.skipped += 1;
-      continue;
-    }
+/** Generate + store one candidate's material. Throws on any database failure. */
+async function writePreparation(supabase: Client, row: Record<string, unknown>): Promise<void> {
+  const id = String(row["id"]);
+  const prep = prepareSales(toInput(row));
 
+  const { error: deactivateError } = await supabase
+    .from("sales_preparations")
+    .update({ is_active: false } as never)
+    .eq("candidate_id", id)
+    .eq("is_active", true);
+  if (deactivateError) throw new Error(deactivateError.message);
 
-    const prep = prepareSales(toInput(row));
+  const { error: insertError } = await supabase.from("sales_preparations").insert({
+    candidate_id: id,
+    campaign_id: (row["campaign_id"] as string | null) ?? null,
+    business_brief: prep.brief,
+    approach_category: prep.approach.category,
+    approach_reason: prep.approach.reason,
+    recommended_solution: prep.approach.recommendation,
+    outreach_message: prep.outreach,
+    selected_asset: prep.asset,
+    generated_by: "rules",
+    is_active: true,
+  } as never);
+  if (insertError) throw new Error(insertError.message);
 
-    await supabase
-      .from("sales_preparations")
-      .update({ is_active: false } as never)
-      .eq("candidate_id", id)
-      .eq("is_active", true);
+  const stage = String(row["sales_stage"] ?? "qualified");
+  if (stage !== "ready_outreach") {
+    const { error: stageError } = await supabase
+      .from("prospect_candidates")
+      .update({
+        sales_stage: "sales_prepared",
+        sales_prepared_at: new Date().toISOString(),
+      } as never)
+      .eq("id", id);
+    if (stageError) throw new Error(stageError.message);
 
-    const { error: insertError } = await supabase.from("sales_preparations").insert({
-      candidate_id: id,
-      campaign_id: (row["campaign_id"] as string | null) ?? null,
-      business_brief: prep.brief,
-      approach_category: prep.approach.category,
-      approach_reason: prep.approach.reason,
-      recommended_solution: prep.approach.recommendation,
-      outreach_message: prep.outreach,
-      selected_asset: prep.asset,
-      generated_by: "rules",
-      is_active: true,
-    } as never);
-    if (insertError) throw new Error(insertError.message);
-
-    const stage = String(row["sales_stage"] ?? "qualified");
-    if (stage === "qualified") {
-      await supabase
-        .from("prospect_candidates")
-        .update({ sales_stage: "sales_prepared", sales_prepared_at: new Date().toISOString() } as never)
-        .eq("id", id);
+    if (stage !== "sales_prepared") {
       await supabase.from("candidate_status_history").insert({
         candidate_id: id,
         from_status: stage,
@@ -120,11 +146,127 @@ export async function prepareSalesForCandidates(
         reason: prep.approach.recommendation.slice(0, 300),
       } as never);
     }
-    outcome.prepared += 1;
+  }
+}
+
+/**
+ * Manual mode: prepare (or regenerate) material for a single candidate.
+ * Regenerating deactivates the previous version but keeps it as history.
+ */
+export async function prepareSalesForCandidate(
+  supabase: Client,
+  candidateId: string,
+): Promise<SalesPrepRunResult> {
+  const outcome = emptyRun();
+  const { data, error } = await supabase
+    .from("prospect_candidates")
+    .select(PREP_COLUMNS)
+    .eq("id", candidateId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Kandidat tidak ditemukan.");
+
+  const row = data as unknown as Record<string, unknown>;
+  outcome.scanned = 1;
+
+  const blockers = salesPrepBlockers({
+    qcStatus: String(row["qc_status"] ?? "new"),
+    duplicateStatus: (row["duplicate_status"] as string | null) ?? null,
+    promotedProspectId: (row["promoted_prospect_id"] as string | null) ?? null,
+    // Manual regeneration is allowed on purpose (quality control).
+    hasActivePreparation: false,
+    contactData:
+      (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
+      {},
+  });
+  if (blockers.length > 0) {
+    noteSkip(outcome, blockers);
+    return outcome;
+  }
+
+  try {
+    await writePreparation(supabase, row);
+    outcome.prepared = 1;
+  } catch (err) {
+    outcome.failed = 1;
+    outcome.errors.push(err instanceof Error ? err.message : "Gagal menyimpan materi.");
+  }
+  return outcome;
+}
+
+/**
+ * Batch mode: one bounded chunk of QC-approved candidates per call, so a
+ * campaign with thousands of candidates never becomes one blocking request.
+ */
+export async function prepareSalesForCandidates(
+  supabase: Client,
+  input: { campaignId?: string; limit?: number; offset?: number } = {},
+): Promise<SalesPrepRunResult> {
+  const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
+  const offset = Math.max(input.offset ?? 0, 0);
+  const outcome = emptyRun();
+
+  let query = supabase
+    .from("prospect_candidates")
+    .select(PREP_COLUMNS, { count: "exact" })
+    .eq("qc_status", "approved")
+    .order("created_at", { ascending: true })
+    .range(offset, offset + limit - 1);
+  if (input.campaignId) query = query.eq("campaign_id", input.campaignId);
+
+  const { data, error, count } = await query;
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as unknown as Record<string, unknown>[];
+  outcome.total = count ?? null;
+  outcome.nextOffset = rows.length === limit ? offset + rows.length : null;
+
+  const ids = rows.map((row) => String(row["id"]));
+  const prepared = new Set<string>();
+  if (ids.length > 0) {
+    const { data: existing } = await supabase
+      .from("sales_preparations")
+      .select("candidate_id")
+      .in("candidate_id", ids)
+      .eq("is_active", true);
+    for (const item of (existing ?? []) as Record<string, unknown>[]) {
+      prepared.add(String(item["candidate_id"]));
+    }
+  }
+
+  for (const row of rows) {
+    outcome.scanned += 1;
+    const id = String(row["id"]);
+    const blockers = salesPrepBlockers({
+      qcStatus: String(row["qc_status"] ?? "new"),
+      duplicateStatus: (row["duplicate_status"] as string | null) ?? null,
+      promotedProspectId: (row["promoted_prospect_id"] as string | null) ?? null,
+      hasActivePreparation: prepared.has(id),
+      contactData:
+        (row["contact_data"] as Record<
+          string,
+          { value?: string | null; source?: string | null }
+        >) ?? {},
+    });
+    if (blockers.length > 0) {
+      noteSkip(outcome, blockers);
+      continue;
+    }
+
+    try {
+      await writePreparation(supabase, row);
+      outcome.prepared += 1;
+    } catch (err) {
+      outcome.failed += 1;
+      const message = err instanceof Error ? err.message : "Gagal menyimpan materi.";
+      if (outcome.errors.length < 5)
+        outcome.errors.push(`${String(row["business_name"] ?? id)}: ${message}`);
+    }
   }
 
   return outcome;
 }
+
 
 /** Human-driven stage change. Ready Outreach requires a reachable contact. */
 export async function setSalesStage(
@@ -145,22 +287,17 @@ export async function setSalesStage(
   const from = String(row["sales_stage"] ?? "qualified");
 
   if (input.stage === "ready_outreach") {
-    const { data: prep } = await supabase
-      .from("sales_preparations")
-      .select("id")
-      .eq("candidate_id", input.id)
-      .eq("is_active", true)
-      .maybeSingle();
     const blockers = readyOutreachBlockers({
       validationStatus: (row["validation_status"] as string | null) ?? null,
       qcStatus: String(row["qc_status"] ?? "new"),
-      hasPreparation: Boolean(prep),
+      hasPreparation: await hasActivePreparation(supabase, input.id),
       contactData:
         (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
         {},
     });
     if (blockers.length > 0) return { ok: false, blockers };
   }
+
 
 
   const { error } = await supabase
@@ -204,62 +341,139 @@ export type SalesPrepRow = {
   created_at: string;
 };
 
-export type SalesPrepBoard = {
-  counts: { qualified: number; prepared: number; ready: number };
-  rows: SalesPrepRow[];
+export type SalesPrepPendingRow = {
+  candidate_id: string;
+  business_name: string;
+  category: string | null;
+  city: string | null;
+  lead_score: number;
+  lead_temperature: string;
+  blockers: string[];
+  eligible: boolean;
 };
 
-/** Feeds the Sales preparation tab. */
+export type SalesPrepBoard = {
+  counts: {
+    awaitingQc: number;
+    qualified: number;
+    prepared: number;
+    ready: number;
+    ineligible: number;
+    eligible: number;
+  };
+  rows: SalesPrepRow[];
+  pending: SalesPrepPendingRow[];
+};
+
+const BOARD_SCAN_LIMIT = 1000;
+
+/**
+ * Feeds the Sales preparation tab. Counts and lists come from the same scan,
+ * so the numbers can never disagree with the cards.
+ */
 export async function buildSalesPrepBoard(
   supabase: Client,
   filter: { campaignId?: string; stage?: string; limit?: number } = {},
 ): Promise<SalesPrepBoard> {
   const limit = Math.min(Math.max(filter.limit ?? 100, 1), 300);
 
+  // QC approval is the gate: only approved candidates belong on this board.
   let candidates = supabase
     .from("prospect_candidates")
     .select(
-      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, qc_status, contact_data",
+      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, qc_status, duplicate_status, promoted_prospect_id, contact_data",
     )
+    .eq("qc_status", "approved")
     .order("lead_score", { ascending: false })
-    .limit(limit);
+    .limit(BOARD_SCAN_LIMIT);
   if (filter.campaignId) candidates = candidates.eq("campaign_id", filter.campaignId);
-  if (filter.stage && filter.stage !== "all") candidates = candidates.eq("sales_stage", filter.stage);
 
-  const { data: candidateData, error } = await candidates;
+  let awaiting = supabase
+    .from("prospect_candidates")
+    .select("id", { count: "exact", head: true })
+    .in("qc_status", ["new", "reviewed"]);
+  if (filter.campaignId) awaiting = awaiting.eq("campaign_id", filter.campaignId);
+
+  const [{ data: candidateData, error }, { count: awaitingCount }] = await Promise.all([
+    candidates,
+    awaiting,
+  ]);
   if (error) throw new Error(error.message);
   const rows = (candidateData ?? []) as unknown as Record<string, unknown>[];
 
   const ids = rows.map((row) => String(row["id"]));
   const prepByCandidate = new Map<string, Record<string, unknown>>();
   if (ids.length > 0) {
-    const { data: preps } = await supabase
+    const { data: preps, error: prepError } = await supabase
       .from("sales_preparations")
       .select(
         "id, candidate_id, business_brief, approach_category, approach_reason, recommended_solution, outreach_message, selected_asset, created_at",
       )
       .in("candidate_id", ids)
       .eq("is_active", true);
+    if (prepError) throw new Error(prepError.message);
     for (const prep of (preps ?? []) as Record<string, unknown>[]) {
       prepByCandidate.set(String(prep["candidate_id"]), prep);
     }
   }
 
-  const counts = { qualified: 0, prepared: 0, ready: 0 };
+  const counts = {
+    awaitingQc: awaitingCount ?? 0,
+    qualified: 0,
+    prepared: 0,
+    ready: 0,
+    ineligible: 0,
+    eligible: 0,
+  };
   const board: SalesPrepRow[] = [];
+  const pending: SalesPrepPendingRow[] = [];
 
   for (const row of rows) {
+    const id = String(row["id"]);
     const stage = String(row["sales_stage"] ?? "qualified");
-    if (stage === "ready_outreach") counts.ready += 1;
-    else if (stage === "sales_prepared") counts.prepared += 1;
-    else counts.qualified += 1;
+    const prep = prepByCandidate.get(id);
+    const contactData =
+      (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
+      {};
 
-    const prep = prepByCandidate.get(String(row["id"]));
-    if (!prep) continue;
+    if (!prep) {
+      const blockers = salesPrepBlockers({
+        qcStatus: String(row["qc_status"] ?? "new"),
+        duplicateStatus: (row["duplicate_status"] as string | null) ?? null,
+        promotedProspectId: (row["promoted_prospect_id"] as string | null) ?? null,
+        hasActivePreparation: false,
+        contactData,
+      });
+      if (blockers.length === 0) {
+        counts.qualified += 1;
+        counts.eligible += 1;
+      } else {
+        counts.ineligible += 1;
+      }
+      if (pending.length < limit) {
+        pending.push({
+          candidate_id: id,
+          business_name: String(row["business_name"] ?? ""),
+          category: (row["category"] as string | null) ?? null,
+          city: (row["city"] as string | null) ?? null,
+          lead_score: Number(row["lead_score"] ?? 0),
+          lead_temperature: String(row["lead_temperature"] ?? "cold"),
+          blockers: blockers.map((item) => SALES_PREP_BLOCKER_LABELS[item]),
+          eligible: blockers.length === 0,
+        });
+      }
+      continue;
+    }
+
+    if (stage === "ready_outreach") counts.ready += 1;
+    else counts.prepared += 1;
+
+    if (filter.stage && filter.stage !== "all" && stage !== filter.stage) continue;
+    if (board.length >= limit) continue;
 
     board.push({
       id: String(prep["id"]),
-      candidate_id: String(row["id"]),
+      candidate_id: id,
       business_name: String(row["business_name"] ?? ""),
       category: (row["category"] as string | null) ?? null,
       city: (row["city"] as string | null) ?? null,
@@ -279,18 +493,15 @@ export async function buildSalesPrepBoard(
         validationStatus: (row["validation_status"] as string | null) ?? null,
         qcStatus: String(row["qc_status"] ?? "new"),
         hasPreparation: true,
-        contactData:
-          (row["contact_data"] as Record<
-            string,
-            { value?: string | null; source?: string | null }
-          >) ?? {},
+        contactData,
       }),
       created_at: String(prep["created_at"] ?? new Date().toISOString()),
     });
   }
 
-  return { counts, rows: board };
+  return { counts, rows: board, pending };
 }
+
 
 /**
  * CRM handoff: when a candidate becomes a prospect, its active preparation
