@@ -115,6 +115,8 @@ import {
   prepareSalesOneFn,
   setSalesStageFn,
   salesPrepBoardFn,
+  setVerificationItemFn,
+  setContactStageFn,
 } from "@/lib/prospecting.functions";
 import {
   CANDIDATE_STATUS_LABELS,
