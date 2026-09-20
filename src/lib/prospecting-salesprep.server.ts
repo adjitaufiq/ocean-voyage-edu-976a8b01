@@ -490,8 +490,11 @@ export async function buildSalesPrepBoard(
       continue;
     }
 
-    if (stage === "ready_outreach") counts.ready += 1;
-    else counts.prepared += 1;
+    if (stage === "ready_outreach") {
+      counts.ready += 1;
+      if (checklistComplete(row["verification_checklist"])) counts.verified += 1;
+      else counts.pendingVerification += 1;
+    } else counts.prepared += 1;
 
     if (filter.stage && filter.stage !== "all" && stage !== filter.stage) continue;
     if (board.length >= limit) continue;
