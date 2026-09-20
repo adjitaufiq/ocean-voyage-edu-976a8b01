@@ -10,6 +10,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { ContactEntryLike, QualificationInput } from "@/lib/admin/qualification";
 import type { WebsiteStatus } from "@/lib/admin/discovery";
+import { buildEvidence, type EvidenceItem } from "@/lib/admin/evidence";
+import {
+  CONTACT_STAGES,
+  checklistComplete,
+  normalizeChecklist,
+  VERIFICATION_ITEMS,
+  type ContactStage,
+  type VerificationChecklist,
+  type VerificationItem,
+} from "@/lib/admin/verification";
 import {
   prepareSales,
   readyOutreachBlockers,
@@ -102,7 +112,8 @@ async function hasActivePreparation(supabase: Client, candidateId: string): Prom
 /** Generate + store one candidate's material. Throws on any database failure. */
 async function writePreparation(supabase: Client, row: Record<string, unknown>): Promise<void> {
   const id = String(row["id"]);
-  const prep = prepareSales(toInput(row));
+  const input = toInput(row);
+  const prep = prepareSales(input);
 
   const { error: deactivateError } = await supabase
     .from("sales_preparations")
@@ -120,6 +131,8 @@ async function writePreparation(supabase: Client, row: Record<string, unknown>):
     recommended_solution: prep.approach.recommendation,
     outreach_message: prep.outreach,
     selected_asset: prep.asset,
+    // Every claim shown to a sales agent carries its source and confidence.
+    evidence: buildEvidence(input),
     generated_by: "rules",
     is_active: true,
   } as never);
