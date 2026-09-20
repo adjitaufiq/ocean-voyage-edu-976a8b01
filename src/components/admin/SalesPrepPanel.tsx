@@ -1,5 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardCheck, Layers, RefreshCcw, Sparkles } from "lucide-react";
+import {
+  ClipboardCheck,
+  Copy,
+  Layers,
+  MessageCircle,
+  RefreshCcw,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -11,6 +19,17 @@ import {
   type ApproachCategory,
   type SalesStage,
 } from "@/lib/admin/sales-prep";
+import {
+  CONTACT_STAGE_LABELS,
+  CONTACT_STAGES,
+  VERIFICATION_ITEM_LABELS,
+  VERIFICATION_ITEMS,
+  composeOutreachMessage,
+  contactStageClass,
+  whatsappLink,
+  type ContactStage,
+  type VerificationItem,
+} from "@/lib/admin/verification";
 import type { SalesPrepBoard, SalesPrepRunResult } from "@/lib/prospecting-salesprep.server";
 import { cn } from "@/lib/utils";
 
