@@ -341,62 +341,139 @@ export type SalesPrepRow = {
   created_at: string;
 };
 
-export type SalesPrepBoard = {
-  counts: { qualified: number; prepared: number; ready: number };
-  rows: SalesPrepRow[];
+export type SalesPrepPendingRow = {
+  candidate_id: string;
+  business_name: string;
+  category: string | null;
+  city: string | null;
+  lead_score: number;
+  lead_temperature: string;
+  blockers: string[];
+  eligible: boolean;
 };
 
-/** Feeds the Sales preparation tab. */
+export type SalesPrepBoard = {
+  counts: {
+    awaitingQc: number;
+    qualified: number;
+    prepared: number;
+    ready: number;
+    ineligible: number;
+    eligible: number;
+  };
+  rows: SalesPrepRow[];
+  pending: SalesPrepPendingRow[];
+};
+
+const BOARD_SCAN_LIMIT = 1000;
+
+/**
+ * Feeds the Sales preparation tab. Counts and lists come from the same scan,
+ * so the numbers can never disagree with the cards.
+ */
 export async function buildSalesPrepBoard(
   supabase: Client,
   filter: { campaignId?: string; stage?: string; limit?: number } = {},
 ): Promise<SalesPrepBoard> {
   const limit = Math.min(Math.max(filter.limit ?? 100, 1), 300);
 
+  // QC approval is the gate: only approved candidates belong on this board.
   let candidates = supabase
     .from("prospect_candidates")
     .select(
-      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, qc_status, contact_data",
+      "id, campaign_id, business_name, category, city, phone, website, lead_score, lead_temperature, sales_stage, validation_status, qc_status, duplicate_status, promoted_prospect_id, contact_data",
     )
+    .eq("qc_status", "approved")
     .order("lead_score", { ascending: false })
-    .limit(limit);
+    .limit(BOARD_SCAN_LIMIT);
   if (filter.campaignId) candidates = candidates.eq("campaign_id", filter.campaignId);
-  if (filter.stage && filter.stage !== "all") candidates = candidates.eq("sales_stage", filter.stage);
 
-  const { data: candidateData, error } = await candidates;
+  let awaiting = supabase
+    .from("prospect_candidates")
+    .select("id", { count: "exact", head: true })
+    .in("qc_status", ["new", "reviewed"]);
+  if (filter.campaignId) awaiting = awaiting.eq("campaign_id", filter.campaignId);
+
+  const [{ data: candidateData, error }, { count: awaitingCount }] = await Promise.all([
+    candidates,
+    awaiting,
+  ]);
   if (error) throw new Error(error.message);
   const rows = (candidateData ?? []) as unknown as Record<string, unknown>[];
 
   const ids = rows.map((row) => String(row["id"]));
   const prepByCandidate = new Map<string, Record<string, unknown>>();
   if (ids.length > 0) {
-    const { data: preps } = await supabase
+    const { data: preps, error: prepError } = await supabase
       .from("sales_preparations")
       .select(
         "id, candidate_id, business_brief, approach_category, approach_reason, recommended_solution, outreach_message, selected_asset, created_at",
       )
       .in("candidate_id", ids)
       .eq("is_active", true);
+    if (prepError) throw new Error(prepError.message);
     for (const prep of (preps ?? []) as Record<string, unknown>[]) {
       prepByCandidate.set(String(prep["candidate_id"]), prep);
     }
   }
 
-  const counts = { qualified: 0, prepared: 0, ready: 0 };
+  const counts = {
+    awaitingQc: awaitingCount ?? 0,
+    qualified: 0,
+    prepared: 0,
+    ready: 0,
+    ineligible: 0,
+    eligible: 0,
+  };
   const board: SalesPrepRow[] = [];
+  const pending: SalesPrepPendingRow[] = [];
 
   for (const row of rows) {
+    const id = String(row["id"]);
     const stage = String(row["sales_stage"] ?? "qualified");
-    if (stage === "ready_outreach") counts.ready += 1;
-    else if (stage === "sales_prepared") counts.prepared += 1;
-    else counts.qualified += 1;
+    const prep = prepByCandidate.get(id);
+    const contactData =
+      (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
+      {};
 
-    const prep = prepByCandidate.get(String(row["id"]));
-    if (!prep) continue;
+    if (!prep) {
+      const blockers = salesPrepBlockers({
+        qcStatus: String(row["qc_status"] ?? "new"),
+        duplicateStatus: (row["duplicate_status"] as string | null) ?? null,
+        promotedProspectId: (row["promoted_prospect_id"] as string | null) ?? null,
+        hasActivePreparation: false,
+        contactData,
+      });
+      if (blockers.length === 0) {
+        counts.qualified += 1;
+        counts.eligible += 1;
+      } else {
+        counts.ineligible += 1;
+      }
+      if (pending.length < limit) {
+        pending.push({
+          candidate_id: id,
+          business_name: String(row["business_name"] ?? ""),
+          category: (row["category"] as string | null) ?? null,
+          city: (row["city"] as string | null) ?? null,
+          lead_score: Number(row["lead_score"] ?? 0),
+          lead_temperature: String(row["lead_temperature"] ?? "cold"),
+          blockers: blockers.map((item) => SALES_PREP_BLOCKER_LABELS[item]),
+          eligible: blockers.length === 0,
+        });
+      }
+      continue;
+    }
+
+    if (stage === "ready_outreach") counts.ready += 1;
+    else counts.prepared += 1;
+
+    if (filter.stage && filter.stage !== "all" && stage !== filter.stage) continue;
+    if (board.length >= limit) continue;
 
     board.push({
       id: String(prep["id"]),
-      candidate_id: String(row["id"]),
+      candidate_id: id,
       business_name: String(row["business_name"] ?? ""),
       category: (row["category"] as string | null) ?? null,
       city: (row["city"] as string | null) ?? null,
@@ -416,18 +493,15 @@ export async function buildSalesPrepBoard(
         validationStatus: (row["validation_status"] as string | null) ?? null,
         qcStatus: String(row["qc_status"] ?? "new"),
         hasPreparation: true,
-        contactData:
-          (row["contact_data"] as Record<
-            string,
-            { value?: string | null; source?: string | null }
-          >) ?? {},
+        contactData,
       }),
       created_at: String(prep["created_at"] ?? new Date().toISOString()),
     });
   }
 
-  return { counts, rows: board };
+  return { counts, rows: board, pending };
 }
+
 
 /**
  * CRM handoff: when a candidate becomes a prospect, its active preparation
