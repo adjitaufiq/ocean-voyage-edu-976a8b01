@@ -14,7 +14,10 @@ import {
   prepareSales,
   readyOutreachBlockers,
   salesAssetByKey,
+  salesPrepBlockers,
+  SALES_PREP_BLOCKER_LABELS,
   SALES_STAGES,
+  type SalesPrepBlocker,
   type SalesStage,
 } from "@/lib/admin/sales-prep";
 
@@ -22,7 +25,8 @@ type Client = SupabaseClient<Database>;
 type Actor = { userId: string; email?: string | null };
 
 const PREP_COLUMNS =
-  "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status";
+  "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, promoted_prospect_id, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status";
+
 
 function toInput(row: Record<string, unknown>): QualificationInput {
   return {
