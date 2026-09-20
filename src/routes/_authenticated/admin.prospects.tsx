@@ -908,6 +908,15 @@ function ProspectsPage() {
           onStage={(id, stage: SalesStage) =>
             run(setSalesStage({ data: { id, stage } }), "Tahap penjualan diperbarui.")
           }
+          onVerify={(id, item, value) =>
+            run(
+              setVerificationItem({ data: { id, item, value } }),
+              "Ceklis verifikasi diperbarui.",
+            )
+          }
+          onContactStage={(id, stage) =>
+            run(setContactStage({ data: { id, stage } }), "Tahap kontak diperbarui.")
+          }
         />
       ) : tab === "candidates" ? (
         <CandidateInbox
