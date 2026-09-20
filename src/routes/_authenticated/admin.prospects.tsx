@@ -328,6 +328,8 @@ function ProspectsPage() {
   const prepareSalesOne = useServerFn(prepareSalesOneFn);
   const setSalesStage = useServerFn(setSalesStageFn);
   const salesPrepBoard = useServerFn(salesPrepBoardFn);
+  const setVerificationItem = useServerFn(setVerificationItemFn);
+  const setContactStage = useServerFn(setContactStageFn);
 
   const list = useQuery({
     queryKey: ["admin", "prospects", status, tier, search, tab],
