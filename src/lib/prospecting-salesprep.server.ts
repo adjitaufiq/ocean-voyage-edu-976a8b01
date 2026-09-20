@@ -379,6 +379,10 @@ export type SalesPrepBoard = {
     ready: number;
     ineligible: number;
     eligible: number;
+    /** Ready Outreach rows whose human checklist is complete. */
+    verified: number;
+    /** Ready Outreach rows still waiting for the human checklist. */
+    pendingVerification: number;
   };
   rows: SalesPrepRow[];
   pending: SalesPrepPendingRow[];
@@ -443,6 +447,8 @@ export async function buildSalesPrepBoard(
     ready: 0,
     ineligible: 0,
     eligible: 0,
+    verified: 0,
+    pendingVerification: 0,
   };
   const board: SalesPrepRow[] = [];
   const pending: SalesPrepPendingRow[] = [];
