@@ -15,9 +15,9 @@ Gerbang wajib tiap tahap:
 | Tahap | Syarat |
 | --- | --- |
 | Discovery | Tombol kampanye "Cari kandidat baru" menulis ke `prospect_candidates` |
-| Validation | `validation_status = validated` |
-| QC | `qc_status = approved` |
-| Sales preparation | Hanya kandidat QC approved yang dibuatkan materi |
+| Validation | `validation_status = validated` (sinyal kualitas, bukan gerbang Sales preparation) |
+| QC | `qc_status = approved` — satu-satunya pintu masuk Sales preparation |
+| Sales preparation | `qc_status = approved`, bukan duplikat, belum punya materi aktif, kontak bersumber, belum dipromosikan ke CRM |
 | Ready outreach | QC approved + materi persiapan aktif + kontak bersumber |
 | Promote CRM | `sales_stage = ready_outreach` (selain approval & anti-duplikat) |
 
@@ -184,8 +184,23 @@ selain `new` dilewati.
 
 ## Sales preparation (tab Sales preparation)
 
-Setelah kandidat lolos kualifikasi (HOT/WARM, `validation_status = validated`), tim penjualan
-menyiapkan materi kontak lewat tab **Sales preparation**. Tidak ada pesan yang terkirim otomatis.
+Sales preparation **hanya** memproses kandidat dengan `qc_status = approved` (keputusan manusia).
+`validation_status` dipakai sebagai sinyal kualitas, bukan gerbang. Kandidat berstatus duplikat,
+sudah punya materi aktif, sudah dipromosikan ke CRM, atau tanpa kontak bersumber akan dilewati
+beserta alasannya. Tidak ada pesan yang terkirim otomatis.
+
+Dua mode tersedia di tab **Sales preparation**:
+
+- **Manual** — tombol "Siapkan penjualan" per kandidat, untuk QC dan pengujian; boleh membuat
+  ulang materi (versi aktif lama dinonaktifkan, tetap tersimpan sebagai riwayat).
+- **Massal** — tombol "Siapkan penjualan massal" per kampanye/filter, diproses bertahap per
+  potongan kecil dengan progres Total/Diproses/Berhasil/Gagal/Dilewati dan laporan akhir.
+
+Kartu angka papan: Menunggu QC review, Qualified (QC approved tanpa materi aktif), Sales prepared,
+Ready outreach, plus catatan kandidat belum memenuhi syarat. Semua angka berasal dari satu sumber
+query yang sama dengan daftar kartu. Pesan hasil mengikuti angka server — sukses tidak pernah
+ditampilkan bila `prepared = 0`.
+
 
 1. **Business brief otomatis** — `business_summary`, `current_digital_condition`,
    `potential_problem`, `opportunity`, disusun dari fakta kandidat (kategori, kota, rating,
