@@ -1,66 +1,49 @@
-# Perbaikan Status Pipeline Kandidat (Sales Preparation)
+# Perbaikan Pipeline Sales Preparation
 
-## Temuan dari data & kode
+Tujuan: alur Kandidat → QC → Sales Preparation → Ready Outreach jadi sinkron, angka akurat, dan aman untuk ratusan/ribuan kandidat. Tanpa tabel baru, tanpa migrasi, tanpa menyentuh Discovery, Candidate Inbox, atau data CRM lama.
 
-Data nyata sekarang (315 kandidat):
+## Aturan status (disepakati)
 
-| candidate_status | validation_status | qc_status | sales_stage | jumlah |
-| --- | --- | --- | --- | --- |
-| discovered | validated | new | qualified | 309 |
-| enriching | validated | new | qualified | 4 |
-| verified | validated | new | qualified | 1 |
-| discovered | validated | approved | qualified | 1 |
+- Status penemuan: urusan Discovery/enrichment saja.
+- Hasil validasi otomatis: sinyal kualitas, bukan pintu masuk Sales Preparation.
+- Keputusan QC (manusia): satu-satunya pintu masuk Sales Preparation.
+- Tahap penjualan: baru berarti setelah QC approved.
 
-Jadi hampir semua kandidat berhenti di QC "new". Halaman Sales Preparation menghitung "Qualified" dari `sales_stage` (default `qualified` untuk semua baris), sementara generator hanya membuat materi untuk kandidat `qc_status = approved`. Hasilnya: counter Qualified 100, prepared 0, dan tombol tetap memunculkan toast sukses walau `prepared = 0`.
+Sales Preparation hanya memproses kandidat yang: QC approved, bukan duplikat, belum punya materi aktif, dan punya kontak bersumber. Kandidat yang sudah dipromosikan ke CRM tidak dibuatkan materi baru.
 
-## 1. Source of truth
+## Yang akan berubah
 
-Tidak membuat status baru. Tetap empat field, tapi dengan peran yang tegas dan satu status turunan untuk tampilan:
+1. `src/lib/prospecting-salesprep.server.ts`
+   - Generator memakai QC approved sebagai gerbang (bukan hasil validasi), menolak duplikat, melewati kandidat tanpa kontak bersumber dan yang sudah punya materi aktif atau sudah jadi prospek CRM.
+   - Mengembalikan hasil rinci: `scanned`, `prepared`, `skipped`, `failed`, plus alasan per kandidat.
+   - Setiap kegagalan simpan/ubah status ditangkap dan dilaporkan; tidak ada hasil sukses semu.
+   - Papan dihitung ulang dari satu sumber query: Menunggu QC, Qualified (approved tanpa materi), Sales Prepared (punya materi aktif), Ready Outreach, dan Belum memenuhi syarat.
+   - Mode batch: pemrosesan bertahap per potongan kecil (misal 25 kandidat per panggilan) dengan penanda posisi, sehingga tidak ada satu permintaan besar yang menggantung.
 
-- `candidate_status` — status teknis penemuan/enrichment (discovered, enriching, verified, pending_review, approved, rejected).
-- `validation_status` — hasil validasi bisnis otomatis (pending / validated / rejected).
-- `qc_status` — keputusan manusia (new / reviewed / approved / rejected / duplicate).
-- `sales_stage` — hanya tahap penjualan setelah QC approved (qualified / sales_prepared / ready_outreach).
+2. `src/lib/prospecting.functions.ts`
+   - Fungsi manual (1 kandidat) dan fungsi batch (per kampanye/filter, satu potongan per panggilan) dipisah, keduanya mengembalikan ringkasan hasil.
 
-Aturan baru: `sales_stage` tidak lagi berarti apa-apa sebelum QC approved. Semua hitungan dan daftar di tab Sales Preparation disaring dulu dengan `qc_status = 'approved'`.
+3. `src/components/admin/SalesPrepPanel.tsx`
+   - Kartu angka jadi: Menunggu QC Review, Qualified, Sales Prepared, Ready Outreach (+ catatan kandidat belum memenuhi syarat).
+   - Daftar kandidat QC approved yang belum punya materi, dengan tombol manual "Siapkan penjualan" per kandidat.
+   - Tombol baru "Siapkan penjualan massal" untuk kampanye/filter terpilih: berjalan bertahap dengan tampilan progres (total, diproses, berhasil, gagal, dilewati) dan laporan ringkas saat selesai; bisa dihentikan.
+   - Tombol nonaktif bila tidak ada kandidat memenuhi syarat.
 
-## 2. State machine
+4. `src/routes/_authenticated/admin.prospects.tsx`
+   - Menyambungkan dua fungsi tersebut; pesan hasil mengikuti angka server ("25 materi persiapan berhasil dibuat." / "Tidak ada kandidat yang memenuhi syarat. Kandidat masih menunggu QC approval."), sukses tidak pernah ditampilkan saat hasil 0.
 
-```text
-discovered ──validasi──> validated ──QC manusia──> qc approved
-                 │                          │
-                 └──> rejected              ├─> qualified (siap dibuatkan materi)
-                                            ├─> sales_prepared (materi aktif ada)
-                                            └─> ready_outreach (kontak bersumber + materi)
-                                                        └─> promote ke prospects (CRM)
-```
+5. `src/lib/admin/sales-prep.ts` + pengujian
+   - Penambahan aturan kelayakan (kontak bersumber, sudah punya materi, sudah di CRM) beserta pengujiannya.
 
-Transisi `sales_stage` hanya boleh terjadi bila `qc_status = 'approved'`.
+6. `docs/OUTBOUND-SOP.md` — tabel gerbang tahap disesuaikan.
 
-## 3. Perubahan minimum yang aman
+## Risiko dan penanganannya
 
-Tanpa migrasi data destruktif; tidak ada kolom dihapus, tidak ada baris diubah massal.
-
-- `src/lib/prospecting-salesprep.server.ts`
-  - `buildSalesPrepBoard`: filter dasar `qc_status = 'approved'` dan bukan duplikat. Counter dihitung dari baris hasil filter itu: Qualified = approved tanpa materi aktif, Sales Prepared = punya materi aktif, Ready Outreach = `sales_stage = 'ready_outreach'`. Tambah counter `awaitingQc` supaya panel bisa menjelaskan kandidat yang tertahan di QC.
-  - `prepareSalesForCandidates`: query utama pakai `qc_status = 'approved'` (bukan hanya `validation_status`), dan kembalikan `skippedReasons` ringkas (belum QC approved / duplikat) agar UI punya pesan jelas.
-- `src/lib/prospecting.functions.ts`: teruskan field tambahan hasil di atas (tipe balikan saja).
-- `src/components/admin/SalesPrepPanel.tsx`
-  - Tombol "Siapkan penjualan" nonaktif jika tidak ada kandidat QC approved yang belum punya materi.
-  - Toast mengikuti hasil: `prepared > 0` → sukses dengan jumlah; `prepared = 0` → peringatan berisi alasan ("X kandidat menunggu QC review").
-  - Setelah mutation, refresh board (invalidate query) supaya kartu selalu sinkron dengan database.
-  - Tambah baris ringkas "Menunggu QC review: N" dengan tautan ke tab QC review.
-- `src/routes/_authenticated/admin.prospects.tsx`: blok Acquisition pipeline memakai angka yang sama dengan board (prepared/ready dari sumber yang sudah difilter), dan tombol "Siapkan penjualan" di tab QC review hanya muncul untuk baris approved.
-
-Migrasi kandidat lama: tidak perlu. 310 kandidat existing sudah `validated` + `qc_status = new`; setelah perbaikan mereka tampil sebagai "menunggu QC review" dan mengalir normal begitu di-approve di tab QC review. Satu kandidat yang sudah approved akan langsung muncul sebagai Qualified yang bisa disiapkan.
-
-## 4. Hasil yang dijamin
-
-- Counter dashboard dihitung dari query yang sama dengan daftar kartu — tidak bisa berbeda.
-- Tombol hanya aktif saat ada kandidat eligible.
-- Tidak ada toast sukses palsu: `prepared = 0` selalu memunculkan pesan alasan.
-- Kartu Sales Preparation selalu di-refresh dari database setelah aksi.
+- Angka Qualified akan turun drastis (saat ini 314 kandidat masih menunggu QC). Ini memang kondisi sebenarnya; kartu "Menunggu QC Review" membuatnya jelas, dan kandidat mengalir begitu di-approve di tab QC review.
+- Batch panjang: dibatasi per potongan dan diulang dari sisi tampilan, jadi tidak membebani server; progres terlihat dan bisa dihentikan.
+- Materi ganda: sebelum menyimpan versi baru, versi aktif lama dinonaktifkan (tetap tersimpan sebagai riwayat) dan kandidat yang sudah punya materi aktif dilewati kecuali diminta ulang secara manual.
+- Tidak ada perubahan skema, tidak ada penghapusan data, Discovery dan Candidate Inbox tidak disentuh.
 
 ## Verifikasi
 
-`bunx vitest run`, `bunx tsgo --noEmit`, `bun run build`, plus uji manual: approve satu kandidat di QC review → jumlah Qualified naik → klik Siapkan penjualan → kartu muncul dan Sales Prepared naik.
+Pengujian otomatis, pemeriksaan tipe, dan build; lalu uji alur satu kandidat (QC approve → siapkan → Ready Outreach) dan uji batch pada kampanye besar untuk memastikan progres dan jumlah berhasil sesuai.
