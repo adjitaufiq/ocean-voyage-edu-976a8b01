@@ -103,11 +103,20 @@ export type QualificationRunResult = {
   validated: number;
   rejected: number;
   hot: number;
+  /** Auto QC: approved by the rules without a human. */
+  autoApproved: number;
+  /** Auto QC: rejected by the rules. */
+  autoRejected: number;
+  /** Queued for a person because confidence was too low. */
+  needReview: number;
+  /** Sales material generated right after an automatic approval. */
+  autoPrepared: number;
 };
 
 /**
- * Qualify candidates in bounded batches. Human QC decisions are never
- * overwritten: rows already reviewed keep their qc_status.
+ * Qualify candidates in bounded batches, then let the rules screen and QC them
+ * so nobody reviews hundreds of rows by hand. A human decision (any qc_status
+ * other than "new") is never overwritten.
  */
 export async function qualifyCandidates(
   supabase: Client,
@@ -128,14 +137,42 @@ export async function qualifyCandidates(
   );
   const fallback: CampaignTargets = { categories: [], cities: [] };
 
-  const outcome: QualificationRunResult = { scanned: 0, validated: 0, rejected: 0, hot: 0 };
+  const outcome: QualificationRunResult = {
+    scanned: 0,
+    validated: 0,
+    rejected: 0,
+    hot: 0,
+    autoApproved: 0,
+    autoRejected: 0,
+    needReview: 0,
+    autoPrepared: 0,
+  };
   const history: Record<string, unknown>[] = [];
+  const autoApprovedIds: string[] = [];
 
   for (const row of rows) {
-    const result = qualifyCandidate(
-      toInput(row, (row.campaign_id ? targets.get(row.campaign_id) : null) ?? fallback),
+    const qualificationInput = toInput(
+      row,
+      (row.campaign_id ? targets.get(row.campaign_id) : null) ?? fallback,
     );
-    const patch = qualificationPatch(result);
+    const result = qualifyCandidate(qualificationInput);
+    const confidence = computeConfidence(qualificationInput);
+    const decision = autoQcDecision(qualificationInput, result, confidence);
+    const humanDecided = (row.qc_status ?? "new") !== "new";
+
+    const patch: Record<string, unknown> = {
+      ...qualificationPatch(result),
+      confidence_score: decision.confidence,
+      screening_label: decision.screeningLabel,
+      auto_qc_reason: decision.reason,
+    };
+    if (!humanDecided && decision.qcStatus !== "new") {
+      patch["qc_status"] = decision.qcStatus;
+      patch["qc_reason"] = decision.reason;
+      patch["qc_reviewed_at"] = new Date().toISOString();
+      if (decision.qcStatus === "rejected") patch["rejected_reason"] = decision.reason;
+    }
+
     const { error: updateError } = await supabase
       .from("prospect_candidates")
       .update(patch as never)
@@ -147,7 +184,13 @@ export async function qualifyCandidates(
     else outcome.validated += 1;
     if (result.temperature === "hot") outcome.hot += 1;
 
-    if ((row.qc_status ?? "new") === "new") {
+    if (!humanDecided) {
+      if (decision.qcStatus === "approved") {
+        outcome.autoApproved += 1;
+        autoApprovedIds.push(row.id);
+      } else if (decision.qcStatus === "rejected") outcome.autoRejected += 1;
+      else outcome.needReview += 1;
+
       history.push({
         candidate_id: row.id,
         from_status: row["validation_status"] ?? null,
@@ -156,12 +199,37 @@ export async function qualifyCandidates(
         actor_label: "qualification",
         reason: result.validation.reason.slice(0, 300),
       });
+      if (decision.qcStatus !== "new") {
+        history.push({
+          candidate_id: row.id,
+          from_status: String(row.qc_status ?? "new"),
+          to_status: decision.qcStatus,
+          actor_kind: "system",
+          actor_label: "auto_qc",
+          reason: decision.reason.slice(0, 300),
+        });
+      }
     }
   }
 
   if (history.length > 0) {
     await supabase.from("candidate_status_history").insert(history as never);
   }
+
+  // Auto-approved candidates get their sales material immediately, so a person
+  // only meets a candidate that is already ready to verify and contact.
+  if (autoApprovedIds.length > 0) {
+    const { prepareSalesForCandidate } = await import("./prospecting-salesprep.server");
+    for (const id of autoApprovedIds) {
+      try {
+        const run = await prepareSalesForCandidate(supabase, id);
+        outcome.autoPrepared += run.prepared;
+      } catch {
+        // Preparation can be retried from the Sales preparation tab.
+      }
+    }
+  }
+
   return outcome;
 }
 
