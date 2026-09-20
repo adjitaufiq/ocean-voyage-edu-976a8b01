@@ -210,6 +210,8 @@ export function SalesPrepPanel({
           <MetricTile label="Qualified" value={counts.qualified} />
           <MetricTile label="Sales prepared" value={counts.prepared} tone="primary" />
           <MetricTile label="Ready outreach" value={counts.ready} tone="hot" />
+          <MetricTile label="Pending verification" value={counts.pendingVerification} />
+          <MetricTile label="Verified ready outreach" value={counts.verified} tone="primary" />
         </div>
       ) : null}
 
