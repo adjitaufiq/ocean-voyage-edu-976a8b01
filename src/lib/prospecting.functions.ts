@@ -867,9 +867,21 @@ export const qualificationBoardFn = createServerFn({ method: "POST" })
 
 /* ------------------- Prompt 4.5 — Sales Preparation ---------------------- */
 
+/** Manual mode: one candidate (quality control / regeneration). */
+export const prepareSalesOneFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { candidateId: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { prepareSalesForCandidate } = await import("./prospecting-salesprep.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return prepareSalesForCandidate(context.supabase, data.candidateId);
+  });
+
+/** Batch mode: one bounded chunk per call, driven by the UI cursor. */
 export const prepareSalesFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { candidateId?: string; campaignId?: string; limit?: number }) => input)
+  .inputValidator((input: { campaignId?: string; limit?: number; offset?: number }) => input ?? {})
   .handler(async ({ data, context }) => {
     const { assertLeadWork } = await import("./admin.server");
     const { prepareSalesForCandidates } = await import("./prospecting-salesprep.server");
