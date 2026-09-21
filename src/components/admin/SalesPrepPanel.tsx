@@ -22,8 +22,7 @@ import {
 import {
   CONTACT_STAGE_LABELS,
   CONTACT_STAGES,
-  VERIFICATION_ITEM_LABELS,
-  VERIFICATION_ITEMS,
+  checklistWithEvidence,
   composeOutreachMessage,
   contactStageClass,
   whatsappLink,
