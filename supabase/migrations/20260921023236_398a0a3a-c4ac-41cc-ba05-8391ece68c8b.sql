@@ -1,0 +1,1 @@
+select cron.schedule('kerjaku-sales-pipeline','0 * * * *', $$select public.run_ops_hook('/api/public/hooks/sales-pipeline')$$);

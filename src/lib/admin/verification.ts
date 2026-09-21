@@ -123,3 +123,74 @@ export function composeOutreachMessage(draft: Record<string, string> | null | un
     .filter(Boolean)
     .join("\n\n");
 }
+
+/* ---------------- Evidence-backed checklist (client-safe) ---------------- */
+
+/** Which evidence row backs each checklist item. */
+const CHECKLIST_EVIDENCE_FIELD: Record<VerificationItem, string | null> = {
+  name_matches_source: "Nama bisnis",
+  location_matches: "Lokasi",
+  rating_matches: "Rating & ulasan",
+  website_check_valid: "Website",
+  whatsapp_valid: "Nomor telepon / WhatsApp",
+  opportunity_reasonable: null,
+  message_reviewed: null,
+};
+
+export type ChecklistEvidenceRow = {
+  item: VerificationItem;
+  label: string;
+  checked: boolean;
+  claim: string;
+  source: string;
+  sourceUrl: string | null;
+  confidence: number | null;
+};
+
+/**
+ * Pairs every checklist item with the AI claim, its source and confidence, so
+ * a human never confirms an item without seeing what backs it.
+ */
+export function checklistWithEvidence(
+  checklistRaw: unknown,
+  evidence: {
+    field: string;
+    data: string;
+    source: string;
+    source_url: string | null;
+    confidence: number;
+  }[],
+  fallback?: { opportunity?: string | null; message?: string | null },
+): ChecklistEvidenceRow[] {
+  const checklist = normalizeChecklist(checklistRaw);
+  const byField = new Map(evidence.map((row) => [row.field, row]));
+
+  return VERIFICATION_ITEMS.map((item) => {
+    const field = CHECKLIST_EVIDENCE_FIELD[item];
+    const row = field ? byField.get(field) : undefined;
+    if (row) {
+      return {
+        item,
+        label: VERIFICATION_ITEM_LABELS[item],
+        checked: checklist[item] === true,
+        claim: row.data,
+        source: row.source,
+        sourceUrl: row.source_url,
+        confidence: row.confidence,
+      };
+    }
+    const claim =
+      item === "opportunity_reasonable"
+        ? (fallback?.opportunity ?? "Belum ada ringkasan peluang.")
+        : (fallback?.message ?? "Belum ada draf pesan.");
+    return {
+      item,
+      label: VERIFICATION_ITEM_LABELS[item],
+      checked: checklist[item] === true,
+      claim,
+      source: "Analisis AI KERJAKU",
+      sourceUrl: null,
+      confidence: null,
+    };
+  });
+}
