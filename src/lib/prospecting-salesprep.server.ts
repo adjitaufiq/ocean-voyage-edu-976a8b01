@@ -403,9 +403,7 @@ export async function buildSalesPrepBoard(
   // QC approval is the gate: only approved candidates belong on this board.
   let candidates = supabase
     .from("prospect_candidates")
-    .select(
-      "id, campaign_id, business_name, category, city, phone, website, google_maps_url, lead_score, lead_temperature, sales_stage, validation_status, qc_status, duplicate_status, promoted_prospect_id, contact_data, verification_checklist, verified_ready_at, contact_stage",
-    )
+    .select(`${PREP_COLUMNS}, verification_checklist, verified_ready_at, contact_stage`)
     .eq("qc_status", "approved")
     .order("lead_score", { ascending: false })
     .limit(BOARD_SCAN_LIMIT);
