@@ -213,13 +213,39 @@ export async function runSalesPipelineCycle(
     return result;
   }
 
-  const { runDiscoveryBatch, retryFailedDiscoveryTasks } = await import(
+  const { runDiscoveryBatch, retryFailedDiscoveryTasks, planCampaignDiscovery } = await import(
     "./prospecting-discovery.server"
   );
   const { qualifyCandidates } = await import("./prospecting-qualification.server");
   const { prepareSalesForCandidates } = await import("./prospecting-salesprep.server");
 
   try {
+    // 0. Plan discovery tasks for active campaigns so no manual click is needed.
+    try {
+      let campaignQuery = supabase
+        .from("prospect_campaigns")
+        .select("id")
+        .eq("status", "active")
+        .limit(10);
+      if (input.campaignId) campaignQuery = campaignQuery.eq("id", input.campaignId);
+      const { data: campaigns } = await campaignQuery;
+      for (const row of (campaigns ?? []) as { id: string }[]) {
+        try {
+          const planned = await planCampaignDiscovery(supabase, { campaignId: row.id });
+          if (planned.created > 0) {
+            await emitSalesPipelineEvent({
+              event: "campaign.created",
+              title: `${planned.created} tugas discovery direncanakan — ${planned.campaign}`,
+            });
+          }
+        } catch (error) {
+          result.errors.push(`plan: ${error instanceof Error ? error.message : "gagal"}`);
+        }
+      }
+    } catch (error) {
+      result.errors.push(`plan: ${error instanceof Error ? error.message : "gagal"}`);
+    }
+
     // 1. Discovery — bounded batch, retries first.
     try {
       await retryFailedDiscoveryTasks(supabase, input.campaignId ? { campaignId: input.campaignId } : {});
