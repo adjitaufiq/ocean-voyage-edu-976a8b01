@@ -953,3 +953,25 @@ export const salesPrepBoardFn = createServerFn({ method: "POST" })
     await assertLeadWork(context.supabase, context.userId);
     return buildSalesPrepBoard(context.supabase, data);
   });
+
+/* ------------- Autonomous sales pipeline orchestration -------------------- */
+
+/** Runs one bounded pipeline cycle (discovery -> QC -> prep -> ready outreach). */
+export const runSalesPipelineFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        campaignId: z.string().uuid().optional(),
+        discoveryTasks: z.number().int().min(1).max(5).optional(),
+        qualifyLimit: z.number().int().min(1).max(200).optional(),
+        prepLimit: z.number().int().min(1).max(100).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertLeadWork } = await import("./admin.server");
+    const { runSalesPipelineCycle } = await import("./sales-pipeline.server");
+    await assertLeadWork(context.supabase, context.userId);
+    return runSalesPipelineCycle(context.supabase, data);
+  });
