@@ -505,6 +505,14 @@ export function SalesPrepPanel({
                       <Search className="h-3.5 w-3.5" /> Lihat sumber
                     </a>
                   ) : null}
+                  <button
+                    type="button"
+                    disabled={busy || row.contact_stage === "contacted"}
+                    onClick={() => void act(() => onContactStage(row.candidate_id, "contacted"))}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
+                  >
+                    <ClipboardCheck className="h-3.5 w-3.5" /> Tandai sudah dihubungi
+                  </button>
                   <select
                     className={cn(inputClass, "w-auto text-xs")}
                     value={row.contact_stage ?? ""}
