@@ -640,6 +640,282 @@ export type Database = {
           },
         ]
       }
+      business_consultant_analyses: {
+        Row: {
+          business_entity_id: string
+          business_model: Json
+          business_stage: Json
+          confidence: number | null
+          confirmed_problems: Json
+          consultant_reasoning: Json
+          core_solution: Json
+          created_at: string
+          engine_version: string | null
+          generated_at: string | null
+          id: string
+          industry_context: Json
+          input_hash: string | null
+          knowledge_version: string | null
+          objection_guidance: Json
+          observed_facts: Json
+          optional_features: Json
+          problem_hypotheses: Json
+          recommended_features: Json
+          recommended_package: Json
+          sales_angle: Json
+          source_revision: number
+          status: Database["public"]["Enums"]["business_analysis_status"]
+          superseded_at: string | null
+          updated_at: string
+          validation_questions: Json
+          version: number
+        }
+        Insert: {
+          business_entity_id: string
+          business_model?: Json
+          business_stage?: Json
+          confidence?: number | null
+          confirmed_problems?: Json
+          consultant_reasoning?: Json
+          core_solution?: Json
+          created_at?: string
+          engine_version?: string | null
+          generated_at?: string | null
+          id?: string
+          industry_context?: Json
+          input_hash?: string | null
+          knowledge_version?: string | null
+          objection_guidance?: Json
+          observed_facts?: Json
+          optional_features?: Json
+          problem_hypotheses?: Json
+          recommended_features?: Json
+          recommended_package?: Json
+          sales_angle?: Json
+          source_revision?: number
+          status?: Database["public"]["Enums"]["business_analysis_status"]
+          superseded_at?: string | null
+          updated_at?: string
+          validation_questions?: Json
+          version?: number
+        }
+        Update: {
+          business_entity_id?: string
+          business_model?: Json
+          business_stage?: Json
+          confidence?: number | null
+          confirmed_problems?: Json
+          consultant_reasoning?: Json
+          core_solution?: Json
+          created_at?: string
+          engine_version?: string | null
+          generated_at?: string | null
+          id?: string
+          industry_context?: Json
+          input_hash?: string | null
+          knowledge_version?: string | null
+          objection_guidance?: Json
+          observed_facts?: Json
+          optional_features?: Json
+          problem_hypotheses?: Json
+          recommended_features?: Json
+          recommended_package?: Json
+          sales_angle?: Json
+          source_revision?: number
+          status?: Database["public"]["Enums"]["business_analysis_status"]
+          superseded_at?: string | null
+          updated_at?: string
+          validation_questions?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_consultant_analyses_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_entities: {
+        Row: {
+          address: string | null
+          business_model: string | null
+          canonical_name: string
+          city: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          current_analysis_id: string | null
+          current_stage: string
+          email: string | null
+          google_place_id: string | null
+          id: string
+          industry: string | null
+          normalized_name: string | null
+          phone: string | null
+          province: string | null
+          source_revision: number
+          updated_at: string
+          website: string | null
+          website_domain: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_model?: string | null
+          canonical_name: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_analysis_id?: string | null
+          current_stage?: string
+          email?: string | null
+          google_place_id?: string | null
+          id?: string
+          industry?: string | null
+          normalized_name?: string | null
+          phone?: string | null
+          province?: string | null
+          source_revision?: number
+          updated_at?: string
+          website?: string | null
+          website_domain?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_model?: string | null
+          canonical_name?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_analysis_id?: string | null
+          current_stage?: string
+          email?: string | null
+          google_place_id?: string | null
+          id?: string
+          industry?: string | null
+          normalized_name?: string | null
+          phone?: string | null
+          province?: string | null
+          source_revision?: number
+          updated_at?: string
+          website?: string | null
+          website_domain?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_entities_current_analysis_fk"
+            columns: ["current_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "business_consultant_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_entity_links: {
+        Row: {
+          business_entity_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          legacy_id: string
+          legacy_type: Database["public"]["Enums"]["business_legacy_type"]
+        }
+        Insert: {
+          business_entity_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          legacy_id: string
+          legacy_type: Database["public"]["Enums"]["business_legacy_type"]
+        }
+        Update: {
+          business_entity_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          legacy_id?: string
+          legacy_type?: Database["public"]["Enums"]["business_legacy_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_entity_links_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_findings: {
+        Row: {
+          analysis_id: string | null
+          business_entity_id: string
+          confidence: number | null
+          created_at: string
+          evidence_reference: Json
+          id: string
+          kind: Database["public"]["Enums"]["business_finding_kind"]
+          source_type: string | null
+          statement: string
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+          validation_status: Database["public"]["Enums"]["business_finding_validation"]
+        }
+        Insert: {
+          analysis_id?: string | null
+          business_entity_id: string
+          confidence?: number | null
+          created_at?: string
+          evidence_reference?: Json
+          id?: string
+          kind: Database["public"]["Enums"]["business_finding_kind"]
+          source_type?: string | null
+          statement: string
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_status?: Database["public"]["Enums"]["business_finding_validation"]
+        }
+        Update: {
+          analysis_id?: string | null
+          business_entity_id?: string
+          confidence?: number | null
+          created_at?: string
+          evidence_reference?: Json
+          id?: string
+          kind?: Database["public"]["Enums"]["business_finding_kind"]
+          source_type?: string | null
+          statement?: string
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_status?: Database["public"]["Enums"]["business_finding_validation"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_findings_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "business_consultant_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_findings_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidate_sources: {
         Row: {
           candidate_id: string
@@ -3232,6 +3508,24 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "staff" | "user" | "owner" | "sales" | "viewer"
+      business_analysis_status:
+        | "pending"
+        | "running"
+        | "completed"
+        | "failed"
+        | "stale"
+      business_finding_kind: "fact" | "hypothesis"
+      business_finding_validation:
+        | "unvalidated"
+        | "confirmed"
+        | "rejected"
+        | "superseded"
+      business_legacy_type:
+        | "prospect_candidate"
+        | "prospect"
+        | "consultation"
+        | "ai_conversation"
+        | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3360,6 +3654,27 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "staff", "user", "owner", "sales", "viewer"],
+      business_analysis_status: [
+        "pending",
+        "running",
+        "completed",
+        "failed",
+        "stale",
+      ],
+      business_finding_kind: ["fact", "hypothesis"],
+      business_finding_validation: [
+        "unvalidated",
+        "confirmed",
+        "rejected",
+        "superseded",
+      ],
+      business_legacy_type: [
+        "prospect_candidate",
+        "prospect",
+        "consultation",
+        "ai_conversation",
+        "client",
+      ],
     },
   },
 } as const
