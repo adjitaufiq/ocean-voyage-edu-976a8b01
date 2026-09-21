@@ -1719,6 +1719,63 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_match_history: {
+        Row: {
+          candidate_entity_id: string | null
+          comparison: Json
+          confidence_score: number
+          created_at: string
+          id: string
+          matched_entity_id: string | null
+          matching_method: string
+          reason: string | null
+          source_id: string
+          source_type: Database["public"]["Enums"]["business_legacy_type"]
+          status: string
+        }
+        Insert: {
+          candidate_entity_id?: string | null
+          comparison?: Json
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          matched_entity_id?: string | null
+          matching_method: string
+          reason?: string | null
+          source_id: string
+          source_type: Database["public"]["Enums"]["business_legacy_type"]
+          status?: string
+        }
+        Update: {
+          candidate_entity_id?: string | null
+          comparison?: Json
+          confidence_score?: number
+          created_at?: string
+          id?: string
+          matched_entity_id?: string | null
+          matching_method?: string
+          reason?: string | null
+          source_id?: string
+          source_type?: Database["public"]["Enums"]["business_legacy_type"]
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_match_history_candidate_entity_id_fkey"
+            columns: ["candidate_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_match_history_matched_entity_id_fkey"
+            columns: ["matched_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
