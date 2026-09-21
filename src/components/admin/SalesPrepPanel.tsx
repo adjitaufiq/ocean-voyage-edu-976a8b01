@@ -439,29 +439,49 @@ export function SalesPrepPanel({
                 </div>
               ) : null}
 
-              {row.sales_stage === "ready_outreach" ? (
-                <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
-                  <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Ceklis verifikasi manusia —{" "}
-                    {row.verified ? "Verified Ready Outreach" : "Pending Verification"}
-                  </p>
-                  <div className="grid gap-1 md:grid-cols-2">
-                    {VERIFICATION_ITEMS.map((item) => (
-                      <label key={item} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          disabled={busy}
-                          checked={row.verification_checklist[item] === true}
-                          onChange={(e) =>
-                            void act(() => onVerify(row.candidate_id, item, e.target.checked))
-                          }
-                        />
-                        <span>{VERIFICATION_ITEM_LABELS[item]}</span>
-                      </label>
-                    ))}
-                  </div>
+              <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
+                <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Ceklis verifikasi manusia —{" "}
+                  {row.verified ? "Verified Ready Outreach" : "Pending Verification"}
+                </p>
+                <div className="space-y-1.5">
+                  {checklistWithEvidence(row.verification_checklist, row.evidence, {
+                    opportunity: row.business_brief?.["opportunity"] ?? row.recommended_solution,
+                    message: composeOutreachMessage(row.outreach_message),
+                  }).map((entry) => (
+                    <label key={entry.item} className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        disabled={busy}
+                        checked={entry.checked}
+                        onChange={(e) =>
+                          void act(() => onVerify(row.candidate_id, entry.item, e.target.checked))
+                        }
+                      />
+                      <span className="min-w-0">
+                        <span className="block">{entry.label}</span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          Data: {entry.claim} • Sumber:{" "}
+                          {entry.sourceUrl ? (
+                            <a
+                              href={entry.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline"
+                            >
+                              {entry.source}
+                            </a>
+                          ) : (
+                            entry.source
+                          )}
+                          {entry.confidence == null ? "" : ` • Keyakinan: ${entry.confidence}%`}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
                 </div>
-              ) : null}
+              </div>
 
               {row.verified ? (
                 <div className="flex flex-wrap items-center gap-2">
