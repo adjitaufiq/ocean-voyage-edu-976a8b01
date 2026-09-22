@@ -332,7 +332,12 @@ async function resolveOne(
   }
 
   if (ctx.dryRun) {
-    ctx.links.set(key, entityId ?? "dry-run");
+    // Simulate the new identity so later records in the same run can match it.
+    if (!entityId) {
+      entityId = `dry-${ctx.pool.length + 1}`;
+      ctx.pool.push({ ...signals, id: entityId });
+    }
+    ctx.links.set(key, entityId);
     return entityId;
   }
 
