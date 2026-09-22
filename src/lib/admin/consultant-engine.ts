@@ -586,6 +586,26 @@ export function buildConsultantAnalysis(input: ConsultantEngineInput): Consultan
   }
 
   const coreFeatures = coreFromPicks.length ? coreFromPicks : hypothesisFeatures.slice(0, 3);
+
+  // Bila customer belum menyebut masalah apa pun, fitur inti tetap harus
+  // mengikuti cara kerja industrinya — bukan paket generik yang sama untuk
+  // semua bisnis. Tetap ditandai "hypothesis" karena belum divalidasi.
+  if (!coreFromPicks.length && ctx) {
+    for (const hintId of MODEL_CORE_HINT[ctx.model] ?? []) {
+      if (coreFeatures.some((f) => f.id === hintId)) continue;
+      const feature = consultantFeature(hintId);
+      if (!feature) continue;
+      used.add(hintId);
+      coreFeatures.push({
+        id: feature.id,
+        name: feature.name,
+        reason: feature.benefit,
+        solves: `Pola kerja ${ctx.aka}: ${ctx.stages.slice(0, 3).join(" → ")}`,
+        basis: "hypothesis",
+      });
+    }
+  }
+
   const optionalPool = [
     ...growthFromPicks,
     ...hypothesisFeatures.filter((f) => !coreFeatures.some((c) => c.id === f.id)),
