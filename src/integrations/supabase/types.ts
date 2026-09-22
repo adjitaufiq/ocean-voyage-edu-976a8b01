@@ -643,7 +643,9 @@ export type Database = {
       business_consultant_analyses: {
         Row: {
           business_entity_id: string
+          business_goals: Json
           business_model: Json
+          business_profile: Json
           business_stage: Json
           confidence: number | null
           confirmed_problems: Json
@@ -659,6 +661,7 @@ export type Database = {
           objection_guidance: Json
           observed_facts: Json
           optional_features: Json
+          problem_evidence: Json
           problem_hypotheses: Json
           recommended_features: Json
           recommended_package: Json
@@ -672,7 +675,9 @@ export type Database = {
         }
         Insert: {
           business_entity_id: string
+          business_goals?: Json
           business_model?: Json
+          business_profile?: Json
           business_stage?: Json
           confidence?: number | null
           confirmed_problems?: Json
@@ -688,6 +693,7 @@ export type Database = {
           objection_guidance?: Json
           observed_facts?: Json
           optional_features?: Json
+          problem_evidence?: Json
           problem_hypotheses?: Json
           recommended_features?: Json
           recommended_package?: Json
@@ -701,7 +707,9 @@ export type Database = {
         }
         Update: {
           business_entity_id?: string
+          business_goals?: Json
           business_model?: Json
+          business_profile?: Json
           business_stage?: Json
           confidence?: number | null
           confirmed_problems?: Json
@@ -717,6 +725,7 @@ export type Database = {
           objection_guidance?: Json
           observed_facts?: Json
           optional_features?: Json
+          problem_evidence?: Json
           problem_hypotheses?: Json
           recommended_features?: Json
           recommended_package?: Json
