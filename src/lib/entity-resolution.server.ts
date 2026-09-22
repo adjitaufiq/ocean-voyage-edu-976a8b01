@@ -596,7 +596,7 @@ export type ReviewRow = {
   method: string;
   confidence: number;
   reason: string | null;
-  comparison: unknown;
+  comparison: Record<string, unknown>;
   businessA: string | null;
   businessB: string | null;
   createdAt: string;
@@ -635,7 +635,7 @@ export async function listMatchReviewQueue(client: Client, limit = 100) {
     method: row.matching_method,
     confidence: Number(row.confidence_score ?? 0),
     reason: row.reason,
-    comparison: row.comparison,
+    comparison: (row.comparison ?? {}) as Record<string, unknown>,
     businessA: row.matched_entity_id ? (names.get(row.matched_entity_id) ?? null) : null,
     businessB: row.candidate_entity_id ? (names.get(row.candidate_entity_id) ?? null) : null,
     createdAt: row.created_at,
