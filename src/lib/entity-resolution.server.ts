@@ -332,7 +332,12 @@ async function resolveOne(
   }
 
   if (ctx.dryRun) {
-    ctx.links.set(key, entityId ?? "dry-run");
+    // Simulate the new identity so later records in the same run can match it.
+    if (!entityId) {
+      entityId = `dry-${ctx.pool.length + 1}`;
+      ctx.pool.push({ ...signals, id: entityId });
+    }
+    ctx.links.set(key, entityId);
     return entityId;
   }
 
@@ -596,7 +601,7 @@ export type ReviewRow = {
   method: string;
   confidence: number;
   reason: string | null;
-  comparison: unknown;
+  comparison: string;
   businessA: string | null;
   businessB: string | null;
   createdAt: string;
@@ -635,7 +640,7 @@ export async function listMatchReviewQueue(client: Client, limit = 100) {
     method: row.matching_method,
     confidence: Number(row.confidence_score ?? 0),
     reason: row.reason,
-    comparison: row.comparison,
+    comparison: JSON.stringify(row.comparison ?? {}, null, 2),
     businessA: row.matched_entity_id ? (names.get(row.matched_entity_id) ?? null) : null,
     businessB: row.candidate_entity_id ? (names.get(row.candidate_entity_id) ?? null) : null,
     createdAt: row.created_at,

@@ -165,7 +165,7 @@ export function similarity(a: string | null, b: string | null): number {
 }
 
 export const FUZZY_REVIEW_MIN = 0.72;
-export const IDENTITY_SUGGEST_MIN = 0.86;
+export const IDENTITY_SUGGEST_MIN = 0.9;
 
 /**
  * Levels 1-5 in priority order. Returns the first decisive answer.
@@ -242,8 +242,23 @@ export function matchEntity(signals: EntitySignals, pool: EntityCandidateRow[]):
       category && normalizeText(row.category)
         ? similarity(category, normalizeText(row.category))
         : 0;
-    const score =
-      nameScore * 0.6 + cityScore * 0.22 + addressScore * 0.12 + categoryScore * 0.06;
+    // Weighted average over the signals both sides actually have, so a
+    // missing address never silently drags a strong name+city match down.
+    let weight = 0.6;
+    let sum = nameScore * 0.6;
+    if (city && normalizeText(row.city)) {
+      weight += 0.25;
+      sum += cityScore * 0.25;
+    }
+    if (address && normalizeText(row.address)) {
+      weight += 0.1;
+      sum += addressScore * 0.1;
+    }
+    if (category && normalizeText(row.category)) {
+      weight += 0.05;
+      sum += categoryScore * 0.05;
+    }
+    const score = sum / weight;
     if (!best || score > best.score) {
       best = {
         row,
