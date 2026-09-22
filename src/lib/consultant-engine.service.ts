@@ -138,17 +138,18 @@ export async function collectEngineInput(
 
     const { data: enrichments } = await supabase
       .from("prospect_enrichments")
-      .select("candidate_id, channel, value, source_url, verified_at")
-      .in("candidate_id", candidateIds)
+      .select("prospect_candidate_id, source_type, source_url, status, normalized_data")
+      .in("prospect_candidate_id", candidateIds)
       .limit(50);
     for (const row of enrichments ?? []) {
-      const channel = String(row.channel ?? "").toLowerCase();
-      const value = String(row.value ?? "").trim();
-      if (!value) continue;
-      if (channel.includes("instagram") || channel.includes("facebook") || channel.includes("tiktok")) {
-        input.socialProfiles!.push({ network: channel, url: row.source_url ?? value, active: Boolean(row.verified_at) });
-      } else if (channel.includes("website") && !input.website) {
-        input.website = value;
+      const sourceType = String(row.source_type ?? "").toLowerCase();
+      const normalized = (row.normalized_data ?? {}) as Record<string, unknown>;
+      const url = row.source_url ?? (typeof normalized["url"] === "string" ? (normalized["url"] as string) : null);
+      if (!url) continue;
+      if (/instagram|facebook|tiktok|social/.test(sourceType)) {
+        input.socialProfiles!.push({ network: sourceType, url, active: row.status === "completed" });
+      } else if (sourceType.includes("website") && !input.website) {
+        input.website = url;
       }
     }
   }
