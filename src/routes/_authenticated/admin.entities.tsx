@@ -186,7 +186,7 @@ function EntitiesPage() {
             </div>
             <p className="text-muted-foreground">{row.reason ?? "—"}</p>
             <pre className="max-h-32 overflow-auto rounded-lg bg-background/40 p-2 text-[10px] text-muted-foreground">
-              {JSON.stringify(row.comparison, null, 2)}
+              {row.comparison}
             </pre>
             <div className="flex gap-2">
               <button
