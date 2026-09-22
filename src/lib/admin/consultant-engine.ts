@@ -36,6 +36,18 @@ import { detectSelectedFeatures, recommendFeatures, findFeature } from "./featur
 import { decidePackageLevel, type PackageLevel } from "./package-decision-sop";
 import type { OrderBriefData } from "../order-brief";
 
+/** Fitur inti default per model bisnis, dipakai saat customer belum bicara. */
+const MODEL_CORE_HINT: Record<BusinessModel, string[]> = {
+  appointment: ["booking"],
+  "recurring-service": ["status-tracking"],
+  "custom-project": ["schedule-management"],
+  "product-sales": ["order-management"],
+  wholesale: ["inventory"],
+  rental: ["booking"],
+  event: ["schedule-management"],
+  membership: ["membership"],
+};
+
 export const ENGINE_VERSION = "consultant-engine@1.0.0";
 export const KNOWLEDGE_VERSION = "kerjaku-knowledge@2026-09";
 
@@ -586,6 +598,26 @@ export function buildConsultantAnalysis(input: ConsultantEngineInput): Consultan
   }
 
   const coreFeatures = coreFromPicks.length ? coreFromPicks : hypothesisFeatures.slice(0, 3);
+
+  // Bila customer belum menyebut masalah apa pun, fitur inti tetap harus
+  // mengikuti cara kerja industrinya — bukan paket generik yang sama untuk
+  // semua bisnis. Tetap ditandai "hypothesis" karena belum divalidasi.
+  if (!coreFromPicks.length && ctx) {
+    for (const hintId of MODEL_CORE_HINT[ctx.model] ?? []) {
+      if (coreFeatures.some((f) => f.id === hintId)) continue;
+      const feature = consultantFeature(hintId);
+      if (!feature) continue;
+      used.add(hintId);
+      coreFeatures.push({
+        id: feature.id,
+        name: feature.name,
+        reason: feature.benefit,
+        solves: `Pola kerja ${ctx.aka}: ${ctx.stages.slice(0, 3).join(" → ")}`,
+        basis: "hypothesis",
+      });
+    }
+  }
+
   const optionalPool = [
     ...growthFromPicks,
     ...hypothesisFeatures.filter((f) => !coreFeatures.some((c) => c.id === f.id)),
