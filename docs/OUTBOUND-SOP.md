@@ -240,3 +240,28 @@ terisi), **Copy message**, **Lihat sumber** (Google Maps), dan pilihan tahap CRM
 `Dihubungi → Dibalas → Demo dijadwalkan → Tertarik → Deal / Gagal`. Tahap kontak ditolak server
 bila ceklis belum lengkap, dan setiap perubahan dicatat di `candidate_status_history`
 (`actor_kind = human`).
+
+## Bisnis terpadu (/admin/entities)
+
+Sumber angka utama adalah **satu bisnis = satu baris** (`business_entities` lewat view
+`business_entity_overview`). Kandidat, prospek CRM, konsultasi, dan percakapan AI dibaca sebagai
+referensi melalui `business_entity_links` — tidak ada data lama yang disalin, dipindah, atau
+digabung. Bisnis yang ditemukan Google Maps, ditemukan ulang AI, lalu dipromosikan ke CRM tetap
+dihitung **satu**, bukan tiga.
+
+Corong 10 tahap: Ditemukan → Data diperkaya → Terverifikasi → Sesuai target → Dianalisis konsultan →
+Materi penjualan siap → Siap dihubungi → Sudah dihubungi → Meeting → Deal. Setiap batang bisa diklik
+untuk menyaring daftar.
+
+Filter: pencarian (nama, domain, nomor, kota, kategori, sumber), industri, tahap, sumber data,
+status analisis konsultan, status penjualan (materi aktif / belum ada materi / siap dihubungi),
+status kontak, dan hanya kemungkinan duplikat. Daftar dipaginasi 25 baris; seluruh perhitungan
+dilakukan di basis data (tidak memuat JSON enrichment).
+
+Detail bisnis (`/admin/entities/{id}`): profil, daftar sumber, bukti data → sumber → keyakinan,
+temuan fakta vs dugaan, pemahaman konsultan (versi + keyakinan), materi penjualan aktif dan tahap
+kontak, serta riwayat CRM gabungan (`candidate_status_history` + `prospect_activities`).
+
+Antrean tinjauan duplikat tetap manual: pasangan berkemiripan tinggi tidak pernah digabung otomatis;
+keputusan "Bisnis yang sama" / "Bisnis berbeda" dicatat di `entity_match_history`. CRM lama
+(`prospects`, aktivitas, tahap) tidak diubah sama sekali.
