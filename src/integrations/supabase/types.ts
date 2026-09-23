@@ -667,6 +667,7 @@ export type Database = {
           recommended_package: Json
           sales_angle: Json
           source_revision: number
+          stale_reason: string | null
           status: Database["public"]["Enums"]["business_analysis_status"]
           superseded_at: string | null
           updated_at: string
@@ -699,6 +700,7 @@ export type Database = {
           recommended_package?: Json
           sales_angle?: Json
           source_revision?: number
+          stale_reason?: string | null
           status?: Database["public"]["Enums"]["business_analysis_status"]
           superseded_at?: string | null
           updated_at?: string
@@ -731,6 +733,7 @@ export type Database = {
           recommended_package?: Json
           sales_angle?: Json
           source_revision?: number
+          stale_reason?: string | null
           status?: Database["public"]["Enums"]["business_analysis_status"]
           superseded_at?: string | null
           updated_at?: string
@@ -884,9 +887,12 @@ export type Database = {
           created_at: string
           evidence_reference: Json
           id: string
+          interaction_id: string | null
           kind: Database["public"]["Enums"]["business_finding_kind"]
           source_type: string | null
           statement: string
+          superseded_by_id: string | null
+          topic_key: string | null
           updated_at: string
           validated_at: string | null
           validated_by: string | null
@@ -899,9 +905,12 @@ export type Database = {
           created_at?: string
           evidence_reference?: Json
           id?: string
+          interaction_id?: string | null
           kind: Database["public"]["Enums"]["business_finding_kind"]
           source_type?: string | null
           statement: string
+          superseded_by_id?: string | null
+          topic_key?: string | null
           updated_at?: string
           validated_at?: string | null
           validated_by?: string | null
@@ -914,9 +923,12 @@ export type Database = {
           created_at?: string
           evidence_reference?: Json
           id?: string
+          interaction_id?: string | null
           kind?: Database["public"]["Enums"]["business_finding_kind"]
           source_type?: string | null
           statement?: string
+          superseded_by_id?: string | null
+          topic_key?: string | null
           updated_at?: string
           validated_at?: string | null
           validated_by?: string | null
@@ -942,6 +954,154 @@ export type Database = {
             columns: ["business_entity_id"]
             isOneToOne: false
             referencedRelation: "business_entity_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_findings_interaction_id_fkey"
+            columns: ["interaction_id"]
+            isOneToOne: false
+            referencedRelation: "business_interactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_findings_superseded_by_id_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "business_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_interactions: {
+        Row: {
+          analysis_id: string | null
+          business_entity_id: string
+          channel: string
+          content: string
+          created_at: string
+          direction: string
+          id: string
+          legacy_id: string | null
+          legacy_type: string | null
+          meta: Json
+          occurred_at: string
+          recorded_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_id?: string | null
+          business_entity_id: string
+          channel: string
+          content: string
+          created_at?: string
+          direction?: string
+          id?: string
+          legacy_id?: string | null
+          legacy_type?: string | null
+          meta?: Json
+          occurred_at?: string
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_id?: string | null
+          business_entity_id?: string
+          channel?: string
+          content?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          legacy_id?: string | null
+          legacy_type?: string | null
+          meta?: Json
+          occurred_at?: string
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_interactions_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "business_consultant_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_interactions_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_interactions_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_objections: {
+        Row: {
+          business_entity_id: string
+          category: string
+          confidence: number | null
+          created_at: string
+          id: string
+          interaction_id: string | null
+          quote: string | null
+          recorded_by: string | null
+          resolution: string
+          response: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_entity_id: string
+          category: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          interaction_id?: string | null
+          quote?: string | null
+          recorded_by?: string | null
+          resolution?: string
+          response?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_entity_id?: string
+          category?: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          interaction_id?: string | null
+          quote?: string | null
+          recorded_by?: string | null
+          resolution?: string
+          response?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_objections_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_objections_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_objections_interaction_id_fkey"
+            columns: ["interaction_id"]
+            isOneToOne: false
+            referencedRelation: "business_interactions"
             referencedColumns: ["id"]
           },
         ]
@@ -3326,6 +3486,82 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_context_snapshots: {
+        Row: {
+          active_hypotheses: Json
+          analysis_id: string | null
+          analysis_version: number
+          business_entity_id: string
+          business_summary: string | null
+          confidence: number | null
+          confirmed_facts: Json
+          created_at: string
+          generated_at: string
+          id: string
+          latest_customer_info: Json
+          objection_guidance: Json
+          recommended_questions: Json
+          recommended_solution: Json
+          snapshot_version: number
+        }
+        Insert: {
+          active_hypotheses?: Json
+          analysis_id?: string | null
+          analysis_version?: number
+          business_entity_id: string
+          business_summary?: string | null
+          confidence?: number | null
+          confirmed_facts?: Json
+          created_at?: string
+          generated_at?: string
+          id?: string
+          latest_customer_info?: Json
+          objection_guidance?: Json
+          recommended_questions?: Json
+          recommended_solution?: Json
+          snapshot_version?: number
+        }
+        Update: {
+          active_hypotheses?: Json
+          analysis_id?: string | null
+          analysis_version?: number
+          business_entity_id?: string
+          business_summary?: string | null
+          confidence?: number | null
+          confirmed_facts?: Json
+          created_at?: string
+          generated_at?: string
+          id?: string
+          latest_customer_info?: Json
+          objection_guidance?: Json
+          recommended_questions?: Json
+          recommended_solution?: Json
+          snapshot_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_context_snapshots_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "business_consultant_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_context_snapshots_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_context_snapshots_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
             referencedColumns: ["id"]
           },
         ]
