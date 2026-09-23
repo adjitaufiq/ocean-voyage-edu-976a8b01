@@ -331,7 +331,12 @@ export function SalesPrepPanel({
             penjualan”.
           </GlassCard>
         ) : (
-          board.data?.rows.map((row) => (
+          board.data?.rows.map((row) => {
+            const intel = row.intelligence;
+            // The consultative draft (built from the Consultant Analysis) wins
+            // when it exists; otherwise the older rules draft is used.
+            const message = intel?.whatsappDraft || composeOutreachMessage(row.outreach_message);
+            return (
             <GlassCard key={row.id} className="space-y-3 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
