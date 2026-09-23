@@ -331,288 +331,349 @@ export function SalesPrepPanel({
             penjualan”.
           </GlassCard>
         ) : (
-          board.data?.rows.map((row) => (
-            <GlassCard key={row.id} className="space-y-3 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-semibold">{row.business_name}</h3>
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 text-[11px]",
-                        leadTemperatureClass((row.lead_temperature as LeadTemperature) ?? "cold"),
-                      )}
-                    >
-                      {row.lead_score}
-                    </span>
-                    <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
-                      {SALES_STAGE_LABELS[(row.sales_stage as SalesStage) ?? "qualified"] ??
-                        row.sales_stage}
-                    </span>
-                    <span className="rounded-full border border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground">
-                      {APPROACH_LABELS[
-                        (row.approach_category as ApproachCategory) ?? "website_opportunity"
-                      ] ?? row.approach_category}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {[row.category, row.city].filter(Boolean).join(" • ") || "—"}
-                  </p>
-                </div>
-                {row.selected_asset?.url ? (
-                  <a
-                    href={row.selected_asset.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-xl border border-border/50 px-3 py-1.5 text-xs text-muted-foreground"
-                  >
-                    {row.selected_asset.label ?? "Aset"}
-                  </a>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2 text-xs md:grid-cols-2">
-                {briefFields.map(([key, label]) =>
-                  row.business_brief?.[key] ? (
-                    <p key={key}>
-                      <span className="text-muted-foreground">{label}: </span>
-                      {row.business_brief[key]}
-                    </p>
-                  ) : null,
-                )}
-                {row.recommended_solution ? (
-                  <p className="md:col-span-2">
-                    <span className="text-muted-foreground">Rekomendasi solusi: </span>
-                    {row.recommended_solution}
-                    {row.approach_reason ? ` — ${row.approach_reason}` : ""}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-1 rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Draf outreach (butuh persetujuan manusia)
-                </p>
-                {outreachFields.map(([key, label]) =>
-                  row.outreach_message?.[key] ? (
-                    <p key={key}>
-                      <span className="text-muted-foreground">{label}: </span>
-                      {row.outreach_message[key]}
-                    </p>
-                  ) : null,
-                )}
-              </div>
-
-              {row.evidence.length > 0 ? (
-                <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
-                  <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Bukti data (data → sumber → keyakinan)
-                  </p>
+          board.data?.rows.map((row) => {
+            const intel = row.intelligence;
+            // The consultative draft (built from the Consultant Analysis) wins
+            // when it exists; otherwise the older rules draft is used.
+            const message = intel?.whatsappDraft || composeOutreachMessage(row.outreach_message);
+            return (
+              <GlassCard key={row.id} className="space-y-3 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
-                    {row.evidence.map((item, index) => (
-                      <div
-                        key={`${item.field}-${index}`}
-                        className="flex flex-wrap items-center gap-x-2"
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-semibold">{row.business_name}</h3>
+                      <span
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 text-[11px]",
+                          leadTemperatureClass((row.lead_temperature as LeadTemperature) ?? "cold"),
+                        )}
                       >
-                        <span className="text-muted-foreground">{item.field}:</span>
-                        <span>{item.data}</span>
-                        <span className="text-muted-foreground">
-                          •{" "}
-                          {item.source_url ? (
-                            <a
-                              href={item.source_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline"
-                            >
-                              {item.source}
-                            </a>
-                          ) : (
-                            item.source
-                          )}{" "}
-                          • {item.confidence}%
+                        {row.lead_score}
+                      </span>
+                      <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                        {SALES_STAGE_LABELS[(row.sales_stage as SalesStage) ?? "qualified"] ??
+                          row.sales_stage}
+                      </span>
+                      <span className="rounded-full border border-border/50 px-2 py-0.5 text-[11px] text-muted-foreground">
+                        {APPROACH_LABELS[
+                          (row.approach_category as ApproachCategory) ?? "website_opportunity"
+                        ] ?? row.approach_category}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {[row.category, row.city].filter(Boolean).join(" • ") || "—"}
+                    </p>
+                  </div>
+                  {row.selected_asset?.url ? (
+                    <a
+                      href={row.selected_asset.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl border border-border/50 px-3 py-1.5 text-xs text-muted-foreground"
+                    >
+                      {row.selected_asset.label ?? "Aset"}
+                    </a>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-2 text-xs md:grid-cols-2">
+                  {briefFields.map(([key, label]) =>
+                    row.business_brief?.[key] ? (
+                      <p key={key}>
+                        <span className="text-muted-foreground">{label}: </span>
+                        {row.business_brief[key]}
+                      </p>
+                    ) : null,
+                  )}
+                  {row.recommended_solution ? (
+                    <p className="md:col-span-2">
+                      <span className="text-muted-foreground">Rekomendasi solusi: </span>
+                      {row.recommended_solution}
+                      {row.approach_reason ? ` — ${row.approach_reason}` : ""}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-1 rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Draf outreach (butuh persetujuan manusia)
+                  </p>
+                  {outreachFields.map(([key, label]) =>
+                    row.outreach_message?.[key] ? (
+                      <p key={key}>
+                        <span className="text-muted-foreground">{label}: </span>
+                        {row.outreach_message[key]}
+                      </p>
+                    ) : null,
+                  )}
+                </div>
+
+                {intel ? (
+                  <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Pemahaman konsultan (versi {intel.version} • keyakinan {intel.confidence}%)
+                      </p>
+                      {intel.stale ? (
+                        <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[11px] text-amber-200">
+                          Data bisnis berubah setelah analisis dibuat
                         </span>
+                      ) : null}
+                    </div>
+                    <p>{intel.businessSummary}</p>
+                    {intel.verifiedFacts.length > 0 ? (
+                      <div>
+                        <p className="text-muted-foreground">Fakta terverifikasi</p>
+                        <ul className="list-disc pl-4">
+                          {intel.verifiedFacts.slice(0, 5).map((fact, i) => (
+                            <li key={i}>{fact}</li>
+                          ))}
+                        </ul>
                       </div>
+                    ) : null}
+                    {intel.problemHypotheses.length > 0 ? (
+                      <div>
+                        <p className="text-muted-foreground">
+                          Dugaan masalah (belum dikonfirmasi customer)
+                        </p>
+                        <ul className="list-disc pl-4">
+                          {intel.problemHypotheses.slice(0, 4).map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    <p>
+                      <span className="text-muted-foreground">Arah solusi: </span>
+                      {intel.recommendedSolution.package}
+                      {intel.recommendedSolution.features.length > 0
+                        ? ` — ${intel.recommendedSolution.features.slice(0, 4).join(", ")}`
+                        : ""}
+                    </p>
+                    {intel.validationQuestions.length > 0 ? (
+                      <div>
+                        <p className="text-muted-foreground">Pertanyaan validasi</p>
+                        <ul className="list-disc pl-4">
+                          {intel.validationQuestions.slice(0, 4).map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {intel.objectionGuidance.length > 0 ? (
+                      <div>
+                        <p className="text-muted-foreground">Panduan keberatan</p>
+                        <ul className="list-disc pl-4">
+                          {intel.objectionGuidance.slice(0, 3).map((item, i) => (
+                            <li key={i}>
+                              {item.objection} → {item.response}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    <div className="rounded-lg border border-border/40 bg-background/40 p-2">
+                      <p className="mb-1 text-muted-foreground">Draf WhatsApp konsultatif</p>
+                      <p className="whitespace-pre-line">{intel.whatsappDraft}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {row.evidence.length > 0 ? (
+                  <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
+                    <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Bukti data (data → sumber → keyakinan)
+                    </p>
+                    <div className="space-y-1">
+                      {row.evidence.map((item, index) => (
+                        <div
+                          key={`${item.field}-${index}`}
+                          className="flex flex-wrap items-center gap-x-2"
+                        >
+                          <span className="text-muted-foreground">{item.field}:</span>
+                          <span>{item.data}</span>
+                          <span className="text-muted-foreground">
+                            •{" "}
+                            {item.source_url ? (
+                              <a
+                                href={item.source_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              >
+                                {item.source}
+                              </a>
+                            ) : (
+                              item.source
+                            )}{" "}
+                            • {item.confidence}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
+                  <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Ceklis verifikasi manusia —{" "}
+                    {row.verified ? "Verified Ready Outreach" : "Pending Verification"}
+                  </p>
+                  <div className="space-y-1.5">
+                    {checklistWithEvidence(row.verification_checklist, row.evidence, {
+                      opportunity: row.business_brief?.["opportunity"] ?? row.recommended_solution,
+                      message,
+                    }).map((entry) => (
+                      <label key={entry.item} className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          disabled={busy}
+                          checked={entry.checked}
+                          onChange={(e) =>
+                            void act(() => onVerify(row.candidate_id, entry.item, e.target.checked))
+                          }
+                        />
+                        <span className="min-w-0">
+                          <span className="block">{entry.label}</span>
+                          <span className="block text-[11px] text-muted-foreground">
+                            Data: {entry.claim} • Sumber:{" "}
+                            {entry.sourceUrl ? (
+                              <a
+                                href={entry.sourceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              >
+                                {entry.source}
+                              </a>
+                            ) : (
+                              entry.source
+                            )}
+                            {entry.confidence == null ? "" : ` • Keyakinan: ${entry.confidence}%`}
+                          </span>
+                        </span>
+                      </label>
                     ))}
                   </div>
                 </div>
-              ) : null}
 
-              <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
-                <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Ceklis verifikasi manusia —{" "}
-                  {row.verified ? "Verified Ready Outreach" : "Pending Verification"}
-                </p>
-                <div className="space-y-1.5">
-                  {checklistWithEvidence(row.verification_checklist, row.evidence, {
-                    opportunity: row.business_brief?.["opportunity"] ?? row.recommended_solution,
-                    message: composeOutreachMessage(row.outreach_message),
-                  }).map((entry) => (
-                    <label key={entry.item} className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        disabled={busy}
-                        checked={entry.checked}
-                        onChange={(e) =>
-                          void act(() => onVerify(row.candidate_id, entry.item, e.target.checked))
-                        }
-                      />
-                      <span className="min-w-0">
-                        <span className="block">{entry.label}</span>
-                        <span className="block text-[11px] text-muted-foreground">
-                          Data: {entry.claim} • Sumber:{" "}
-                          {entry.sourceUrl ? (
-                            <a
-                              href={entry.sourceUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline"
-                            >
-                              {entry.source}
-                            </a>
-                          ) : (
-                            entry.source
-                          )}
-                          {entry.confidence == null ? "" : ` • Keyakinan: ${entry.confidence}%`}
-                        </span>
+                {row.verified ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {whatsappLink(row.phone, message) ? (
+                      <a
+                        href={whatsappLink(row.phone, message) ?? "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> Hubungi WhatsApp
+                      </a>
+                    ) : (
+                      <span className="text-xs text-amber-200">
+                        Nomor WhatsApp Indonesia tidak valid.
                       </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {row.verified ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {whatsappLink(row.phone, composeOutreachMessage(row.outreach_message)) ? (
-                    <a
-                      href={
-                        whatsappLink(row.phone, composeOutreachMessage(row.outreach_message)) ?? "#"
-                      }
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200"
+                    )}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void act(() => navigator.clipboard.writeText(message))}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
                     >
-                      <MessageCircle className="h-3.5 w-3.5" /> Hubungi WhatsApp
-                    </a>
-                  ) : (
-                    <span className="text-xs text-amber-200">
-                      Nomor WhatsApp Indonesia tidak valid.
-                    </span>
-                  )}
+                      <Copy className="h-3.5 w-3.5" /> Copy message
+                    </button>
+                    {row.google_maps_url ? (
+                      <a
+                        href={row.google_maps_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs"
+                      >
+                        <Search className="h-3.5 w-3.5" /> Lihat sumber
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={busy || row.contact_stage === "contacted"}
+                      onClick={() => void act(() => onContactStage(row.candidate_id, "contacted"))}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
+                    >
+                      <ClipboardCheck className="h-3.5 w-3.5" /> Tandai sudah dihubungi
+                    </button>
+                    <select
+                      className={cn(inputClass, "w-auto text-xs")}
+                      value={row.contact_stage ?? ""}
+                      disabled={busy}
+                      onChange={(e) => {
+                        const value = e.target.value as ContactStage;
+                        if (!value) return;
+                        void act(() => onContactStage(row.candidate_id, value));
+                      }}
+                    >
+                      <option value="">Tahap CRM…</option>
+                      {CONTACT_STAGES.map((item) => (
+                        <option key={item} value={item}>
+                          {CONTACT_STAGE_LABELS[item]}
+                        </option>
+                      ))}
+                    </select>
+                    {row.contact_stage ? (
+                      <span
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 text-[11px]",
+                          contactStageClass(row.contact_stage as ContactStage),
+                        )}
+                      >
+                        {CONTACT_STAGE_LABELS[row.contact_stage as ContactStage] ??
+                          row.contact_stage}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {row.ready_blockers.length > 0 ? (
+                  <p className="text-xs text-amber-200">
+                    Belum bisa Ready Outreach: {row.ready_blockers.join(" ")}
+                  </p>
+                ) : null}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy || row.ready_blockers.length > 0}
+                    onClick={() => void act(() => onStage(row.candidate_id, "ready_outreach"))}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200 disabled:opacity-40"
+                  >
+                    <ClipboardCheck className="h-3.5 w-3.5" /> Tandai Ready Outreach
+                  </button>
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() =>
-                      void act(() =>
-                        navigator.clipboard.writeText(
-                          composeOutreachMessage(row.outreach_message),
-                        ),
-                      )
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
+                    onClick={() => void act(() => onStage(row.candidate_id, "sales_prepared"))}
+                    className="rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
                   >
-                    <Copy className="h-3.5 w-3.5" /> Copy message
+                    Kembalikan ke Sales Prepared
                   </button>
-                  {row.google_maps_url ? (
-                    <a
-                      href={row.google_maps_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs"
-                    >
-                      <Search className="h-3.5 w-3.5" /> Lihat sumber
-                    </a>
-                  ) : null}
                   <button
                     type="button"
-                    disabled={busy || row.contact_stage === "contacted"}
-                    onClick={() => void act(() => onContactStage(row.candidate_id, "contacted"))}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
-                  >
-                    <ClipboardCheck className="h-3.5 w-3.5" /> Tandai sudah dihubungi
-                  </button>
-                  <select
-                    className={cn(inputClass, "w-auto text-xs")}
-                    value={row.contact_stage ?? ""}
                     disabled={busy}
-                    onChange={(e) => {
-                      const value = e.target.value as ContactStage;
-                      if (!value) return;
-                      void act(() => onContactStage(row.candidate_id, value));
-                    }}
+                    onClick={() => void prepareOne(row.candidate_id, row.business_name)}
+                    className="rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
                   >
-                    <option value="">Tahap CRM…</option>
-                    {CONTACT_STAGES.map((item) => (
-                      <option key={item} value={item}>
-                        {CONTACT_STAGE_LABELS[item]}
-                      </option>
-                    ))}
-                  </select>
-                  {row.contact_stage ? (
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 text-[11px]",
-                        contactStageClass(row.contact_stage as ContactStage),
-                      )}
-                    >
-                      {CONTACT_STAGE_LABELS[row.contact_stage as ContactStage] ?? row.contact_stage}
-                    </span>
-                  ) : null}
+                    Buat ulang materi
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void act(() => navigator.clipboard.writeText(message))}
+                    className="rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
+                  >
+                    Salin draf
+                  </button>
                 </div>
-              ) : null}
-
-              {row.ready_blockers.length > 0 ? (
-                <p className="text-xs text-amber-200">
-                  Belum bisa Ready Outreach: {row.ready_blockers.join(" ")}
-                </p>
-              ) : null}
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={busy || row.ready_blockers.length > 0}
-                  onClick={() => void act(() => onStage(row.candidate_id, "ready_outreach"))}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200 disabled:opacity-40"
-                >
-                  <ClipboardCheck className="h-3.5 w-3.5" /> Tandai Ready Outreach
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void act(() => onStage(row.candidate_id, "sales_prepared"))}
-                  className="rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
-                >
-                  Kembalikan ke Sales Prepared
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void prepareOne(row.candidate_id, row.business_name)}
-                  className="rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
-                >
-                  Buat ulang materi
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() =>
-                    void act(() =>
-                      navigator.clipboard.writeText(
-                        outreachFields
-                          .map(([key]) => row.outreach_message?.[key])
-                          .filter(Boolean)
-                          .join("\n\n"),
-                      ),
-                    )
-                  }
-                  className="rounded-xl border border-border/50 px-3 py-1.5 text-xs disabled:opacity-50"
-                >
-                  Salin draf
-                </button>
-              </div>
-            </GlassCard>
-          ))
+              </GlassCard>
+            );
+          })
         )}
       </div>
     </div>

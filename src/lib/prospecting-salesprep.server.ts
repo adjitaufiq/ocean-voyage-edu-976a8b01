@@ -20,6 +20,7 @@ import {
   type VerificationChecklist,
   type VerificationItem,
 } from "@/lib/admin/verification";
+import { loadSalesIntelligence, type SalesIntelligence } from "@/lib/sales-intelligence.server";
 import {
   prepareSales,
   readyOutreachBlockers,
@@ -35,8 +36,7 @@ type Client = SupabaseClient<Database>;
 type Actor = { userId: string; email?: string | null };
 
 const PREP_COLUMNS =
-  "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, promoted_prospect_id, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status";
-
+  "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, promoted_prospect_id, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status, updated_at";
 
 function toInput(row: Record<string, unknown>): QualificationInput {
   return {
@@ -280,7 +280,6 @@ export async function prepareSalesForCandidates(
   return outcome;
 }
 
-
 /** Human-driven stage change. Ready Outreach requires a reachable contact. */
 export async function setSalesStage(
   supabase: Client,
@@ -305,13 +304,13 @@ export async function setSalesStage(
       qcStatus: String(row["qc_status"] ?? "new"),
       hasPreparation: await hasActivePreparation(supabase, input.id),
       contactData:
-        (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
-        {},
+        (row["contact_data"] as Record<
+          string,
+          { value?: string | null; source?: string | null }
+        >) ?? {},
     });
     if (blockers.length > 0) return { ok: false, blockers };
   }
-
-
 
   const { error } = await supabase
     .from("prospect_candidates")
@@ -358,6 +357,8 @@ export type SalesPrepRow = {
   contact_stage: string | null;
   google_maps_url: string | null;
   created_at: string;
+  /** Consultant Analysis for this business; sales never re-diagnoses. */
+  intelligence: SalesIntelligence | null;
 };
 
 export type SalesPrepPendingRow = {
@@ -533,12 +534,24 @@ export async function buildSalesPrepBoard(
       contact_stage: (row["contact_stage"] as string | null) ?? null,
       google_maps_url: (row["google_maps_url"] as string | null) ?? null,
       created_at: String(prep["created_at"] ?? new Date().toISOString()),
+      intelligence: null,
     });
   }
 
+  // Consultant intelligence for the visible page only: one batched read.
+  const rowByCandidate = new Map(rows.map((row) => [String(row["id"]), row]));
+  const intelligence = await loadSalesIntelligence(
+    supabase,
+    board.map((item) => ({
+      id: item.candidate_id,
+      businessName: item.business_name,
+      updatedAt: (rowByCandidate.get(item.candidate_id)?.["updated_at"] as string | null) ?? null,
+    })),
+  );
+  for (const item of board) item.intelligence = intelligence.get(item.candidate_id) ?? null;
+
   return { counts, rows: board, pending };
 }
-
 
 /**
  * CRM handoff: when a candidate becomes a prospect, its active preparation
