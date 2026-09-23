@@ -20,6 +20,7 @@ import {
   type VerificationChecklist,
   type VerificationItem,
 } from "@/lib/admin/verification";
+import { loadSalesIntelligence, type SalesIntelligence } from "@/lib/sales-intelligence.server";
 import {
   prepareSales,
   readyOutreachBlockers,
