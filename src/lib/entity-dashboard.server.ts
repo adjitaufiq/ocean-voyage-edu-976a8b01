@@ -12,11 +12,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Client = SupabaseClient<Database>;
 
-import {
-  FUNNEL_LABELS,
-  FUNNEL_STAGES,
-  type FunnelStage,
-} from "@/lib/entity-dashboard.shared";
+import { FUNNEL_LABELS, FUNNEL_STAGES, type FunnelStage } from "@/lib/entity-dashboard.shared";
 
 export { FUNNEL_LABELS, FUNNEL_STAGES, type FunnelStage };
 
@@ -116,7 +112,7 @@ function toRow(row: Record<string, unknown>): EntityListRow {
     industry: (row["industry"] as string | null) ?? null,
     city: (row["city"] as string | null) ?? null,
     website: (row["website"] as string | null) ?? null,
-    phone: ((row["phone"] as string | null) ?? (row["whatsapp"] as string | null)) ?? null,
+    phone: (row["phone"] as string | null) ?? (row["whatsapp"] as string | null) ?? null,
     sources: Number(row["source_count"] ?? 0),
     candidateLinks: Number(row["candidate_links"] ?? 0),
     prospectLinks: Number(row["prospect_links"] ?? 0),
@@ -129,8 +125,7 @@ function toRow(row: Record<string, unknown>): EntityListRow {
     activePreparations: Number(row["active_preparations"] ?? 0),
     contactStage: (row["contact_stage"] as string | null) ?? null,
     prospectStatus: (row["prospect_status"] as string | null) ?? null,
-    duplicateWarning:
-      Number(row["pending_reviews"] ?? 0) > 0 || row["duplicate_flag"] === true,
+    duplicateWarning: Number(row["pending_reviews"] ?? 0) > 0 || row["duplicate_flag"] === true,
   };
 }
 
@@ -214,7 +209,13 @@ export type EntityDetail = {
     googleMapsUrl: string | null;
   };
   sources: { type: string; id: string; label: string; detail: string | null }[];
-  evidence: { field: string; data: string; source: string; sourceUrl: string | null; confidence: number }[];
+  evidence: {
+    field: string;
+    data: string;
+    source: string;
+    sourceUrl: string | null;
+    confidence: number;
+  }[];
   findings: { kind: string; statement: string; status: string; confidence: number | null }[];
   consultant: {
     version: number;
@@ -274,12 +275,14 @@ export async function getEntityDetail(
   const candidateIds = idsOf("prospect_candidate");
   const prospectIds = idsOf("prospect");
 
-  const sources: EntityDetail["sources"] = ((links ?? []) as Record<string, unknown>[]).map((l) => ({
-    type: String(l["legacy_type"]),
-    id: String(l["legacy_id"]),
-    label: SOURCE_LABELS[String(l["legacy_type"])] ?? String(l["legacy_type"]),
-    detail: null,
-  }));
+  const sources: EntityDetail["sources"] = ((links ?? []) as Record<string, unknown>[]).map(
+    (l) => ({
+      type: String(l["legacy_type"]),
+      id: String(l["legacy_id"]),
+      label: SOURCE_LABELS[String(l["legacy_type"])] ?? String(l["legacy_type"]),
+      detail: null,
+    }),
+  );
 
   // Evidence + sales preparation come from the active candidate material.
   let evidence: EntityDetail["evidence"] = [];
@@ -345,9 +348,9 @@ export async function getEntityDetail(
         solution: String(
           (analysis["core_solution"] as Record<string, unknown> | null)?.["headline"] ?? "",
         ),
-        features: ((analysis["recommended_features"] as Record<string, unknown>[] | null) ?? []).map(
-          (f) => String(f["name"] ?? ""),
-        ),
+        features: (
+          (analysis["recommended_features"] as Record<string, unknown>[] | null) ?? []
+        ).map((f) => String(f["name"] ?? "")),
         package: String(
           (analysis["recommended_package"] as Record<string, unknown> | null)?.["name"] ?? "",
         ),

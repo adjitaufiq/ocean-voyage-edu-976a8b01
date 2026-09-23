@@ -15,10 +15,7 @@ import {
 
 export const Route = createFileRoute("/_authenticated/admin/entities/")({
   head: () => ({
-    meta: [
-      { title: "Bisnis terpadu — KERJAKU" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "Bisnis terpadu — KERJAKU" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: EntitiesPage,
 });

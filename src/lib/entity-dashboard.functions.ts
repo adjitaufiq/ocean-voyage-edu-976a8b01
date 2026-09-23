@@ -12,9 +12,7 @@ const filterSchema = z.object({
   search: z.string().max(120).optional(),
   industry: z.string().max(80).optional(),
   stage: z.enum(FUNNEL_STAGES).optional(),
-  source: z
-    .enum(["prospect_candidate", "prospect", "consultation", "ai_conversation"])
-    .optional(),
+  source: z.enum(["prospect_candidate", "prospect", "consultation", "ai_conversation"]).optional(),
   analysis: z.enum(["with", "without"]).optional(),
   sales: z.enum(["prepared", "not_prepared", "ready"]).optional(),
   contact: z.enum(["contacted", "not_contacted"]).optional(),

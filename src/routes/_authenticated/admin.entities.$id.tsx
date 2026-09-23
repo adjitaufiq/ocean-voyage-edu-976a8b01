@@ -8,10 +8,7 @@ import { FUNNEL_LABELS } from "@/lib/entity-dashboard.shared";
 
 export const Route = createFileRoute("/_authenticated/admin/entities/$id")({
   head: () => ({
-    meta: [
-      { title: "Detail bisnis — KERJAKU" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "Detail bisnis — KERJAKU" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: EntityDetailPage,
 });
@@ -45,7 +42,9 @@ function EntityDetailPage() {
     return <GlassCard className="p-4 text-sm text-muted-foreground">Memuat bisnis…</GlassCard>;
   }
   if (!detail.data) {
-    return <GlassCard className="p-4 text-sm text-muted-foreground">Bisnis tidak ditemukan.</GlassCard>;
+    return (
+      <GlassCard className="p-4 text-sm text-muted-foreground">Bisnis tidak ditemukan.</GlassCard>
+    );
   }
 
   const { profile, sources, evidence, findings, consultant, sales, crm } = detail.data;
@@ -89,7 +88,12 @@ function EntityDetailPage() {
           </p>
           {profile.googleMapsUrl ? (
             <p className="md:col-span-2">
-              <a href={profile.googleMapsUrl} target="_blank" rel="noreferrer" className="underline">
+              <a
+                href={profile.googleMapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
                 Lihat di Google Maps
               </a>
             </p>
@@ -143,7 +147,8 @@ function EntityDetailPage() {
             {findings.map((item, index) => (
               <li key={index}>
                 <span className="text-muted-foreground">
-                  {FINDING_KIND[item.kind] ?? item.kind} • {FINDING_STATUS[item.status] ?? item.status}
+                  {FINDING_KIND[item.kind] ?? item.kind} •{" "}
+                  {FINDING_STATUS[item.status] ?? item.status}
                   {item.confidence == null ? "" : ` • ${item.confidence}%`}:{" "}
                 </span>
                 {item.statement}
@@ -239,7 +244,9 @@ function EntityDetailPage() {
                   {new Date(item.at).toLocaleString("id-ID")} • {item.kind}:{" "}
                 </span>
                 {item.label}
-                {item.detail ? <span className="text-muted-foreground"> — {item.detail}</span> : null}
+                {item.detail ? (
+                  <span className="text-muted-foreground"> — {item.detail}</span>
+                ) : null}
               </li>
             ))}
           </ul>
