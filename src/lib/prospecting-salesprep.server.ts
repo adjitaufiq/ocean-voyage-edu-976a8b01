@@ -38,7 +38,6 @@ type Actor = { userId: string; email?: string | null };
 const PREP_COLUMNS =
   "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, promoted_prospect_id, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status, updated_at";
 
-
 function toInput(row: Record<string, unknown>): QualificationInput {
   return {
     businessName: String(row["business_name"] ?? ""),
@@ -281,7 +280,6 @@ export async function prepareSalesForCandidates(
   return outcome;
 }
 
-
 /** Human-driven stage change. Ready Outreach requires a reachable contact. */
 export async function setSalesStage(
   supabase: Client,
@@ -306,13 +304,13 @@ export async function setSalesStage(
       qcStatus: String(row["qc_status"] ?? "new"),
       hasPreparation: await hasActivePreparation(supabase, input.id),
       contactData:
-        (row["contact_data"] as Record<string, { value?: string | null; source?: string | null }>) ??
-        {},
+        (row["contact_data"] as Record<
+          string,
+          { value?: string | null; source?: string | null }
+        >) ?? {},
     });
     if (blockers.length > 0) return { ok: false, blockers };
   }
-
-
 
   const { error } = await supabase
     .from("prospect_candidates")
@@ -554,7 +552,6 @@ export async function buildSalesPrepBoard(
 
   return { counts, rows: board, pending };
 }
-
 
 /**
  * CRM handoff: when a candidate becomes a prospect, its active preparation
