@@ -12,7 +12,13 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Client = SupabaseClient<Database>;
 
-export { FUNNEL_STAGES, FUNNEL_LABELS, type FunnelStage } from "@/lib/entity-dashboard.shared";
+import {
+  FUNNEL_LABELS,
+  FUNNEL_STAGES,
+  type FunnelStage,
+} from "@/lib/entity-dashboard.shared";
+
+export { FUNNEL_LABELS, FUNNEL_STAGES, type FunnelStage };
 
 const STAGE_COLUMN: Record<FunnelStage, string> = {
   found: "stage_found",
