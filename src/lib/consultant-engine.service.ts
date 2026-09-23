@@ -205,6 +205,23 @@ export async function collectEngineInput(
     }
   }
 
+  // E. Temuan hasil respons customer (Phase 6). Fakta terkonfirmasi ikut
+  // menjadi masukan; dugaan yang sudah ditolak customer tidak dipakai lagi.
+  const { data: findings } = await supabase
+    .from("business_findings")
+    .select("kind, statement, validation_status")
+    .eq("business_entity_id", entityId)
+    .in("validation_status", ["confirmed", "unvalidated"])
+    .limit(60);
+  for (const row of findings ?? []) {
+    if (row.validation_status === "confirmed") {
+      if (/^belum memiliki/i.test(row.statement)) input.statedProblems!.push(row.statement);
+      else input.notes!.push(row.statement);
+    } else if (row.kind === "hypothesis") {
+      input.notes!.push(`Dugaan belum divalidasi: ${row.statement}`);
+    }
+  }
+
   return { input, entityName: entity.canonical_name };
 }
 
