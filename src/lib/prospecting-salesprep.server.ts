@@ -35,7 +35,7 @@ type Client = SupabaseClient<Database>;
 type Actor = { userId: string; email?: string | null };
 
 const PREP_COLUMNS =
-  "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, promoted_prospect_id, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status";
+  "id, campaign_id, business_name, industry, category, address, city, province, country, latitude, longitude, phone, website, website_status, rating, review_count, place_id, google_maps_url, permanently_closed, duplicate_status, promoted_prospect_id, contact_data, lead_score, lead_temperature, validation_status, sales_stage, qc_status, updated_at";
 
 
 function toInput(row: Record<string, unknown>): QualificationInput {
@@ -358,6 +358,8 @@ export type SalesPrepRow = {
   contact_stage: string | null;
   google_maps_url: string | null;
   created_at: string;
+  /** Consultant Analysis for this business; sales never re-diagnoses. */
+  intelligence: SalesIntelligence | null;
 };
 
 export type SalesPrepPendingRow = {
