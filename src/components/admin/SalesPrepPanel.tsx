@@ -408,6 +408,77 @@ export function SalesPrepPanel({
                 )}
               </div>
 
+              {intel ? (
+                <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Pemahaman konsultan (versi {intel.version} • keyakinan {intel.confidence}%)
+                    </p>
+                    {intel.stale ? (
+                      <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[11px] text-amber-200">
+                        Data bisnis berubah setelah analisis dibuat
+                      </span>
+                    ) : null}
+                  </div>
+                  <p>{intel.businessSummary}</p>
+                  {intel.verifiedFacts.length > 0 ? (
+                    <div>
+                      <p className="text-muted-foreground">Fakta terverifikasi</p>
+                      <ul className="list-disc pl-4">
+                        {intel.verifiedFacts.slice(0, 5).map((fact, i) => (
+                          <li key={i}>{fact}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {intel.problemHypotheses.length > 0 ? (
+                    <div>
+                      <p className="text-muted-foreground">
+                        Dugaan masalah (belum dikonfirmasi customer)
+                      </p>
+                      <ul className="list-disc pl-4">
+                        {intel.problemHypotheses.slice(0, 4).map((item, i) => (
+                          <li key={i}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <p>
+                    <span className="text-muted-foreground">Arah solusi: </span>
+                    {intel.recommendedSolution.package}
+                    {intel.recommendedSolution.features.length > 0
+                      ? ` — ${intel.recommendedSolution.features.slice(0, 4).join(", ")}`
+                      : ""}
+                  </p>
+                  {intel.validationQuestions.length > 0 ? (
+                    <div>
+                      <p className="text-muted-foreground">Pertanyaan validasi</p>
+                      <ul className="list-disc pl-4">
+                        {intel.validationQuestions.slice(0, 4).map((item, i) => (
+                          <li key={i}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {intel.objectionGuidance.length > 0 ? (
+                    <div>
+                      <p className="text-muted-foreground">Panduan keberatan</p>
+                      <ul className="list-disc pl-4">
+                        {intel.objectionGuidance.slice(0, 3).map((item, i) => (
+                          <li key={i}>
+                            {item.objection} → {item.response}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <div className="rounded-lg border border-border/40 bg-background/40 p-2">
+                    <p className="mb-1 text-muted-foreground">Draf WhatsApp konsultatif</p>
+                    <p className="whitespace-pre-line">{intel.whatsappDraft}</p>
+                  </div>
+                </div>
+              ) : null}
+
               {row.evidence.length > 0 ? (
                 <div className="rounded-xl border border-border/40 bg-background/30 p-3 text-xs">
                   <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
