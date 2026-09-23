@@ -50,6 +50,7 @@ import { Route as AuthenticatedAdminProposalsIndexRouteImport } from './routes/_
 import { Route as AuthenticatedAdminProjectsIndexRouteImport } from './routes/_authenticated/admin.projects.index'
 import { Route as AuthenticatedAdminLeadsIndexRouteImport } from './routes/_authenticated/admin.leads.index'
 import { Route as AuthenticatedAdminInvoicesIndexRouteImport } from './routes/_authenticated/admin.invoices.index'
+import { Route as AuthenticatedAdminEntitiesIndexRouteImport } from './routes/_authenticated/admin.entities.index'
 import { Route as AuthenticatedAdminClientsIndexRouteImport } from './routes/_authenticated/admin.clients.index'
 import { Route as AuthenticatedAdminAssistantIndexRouteImport } from './routes/_authenticated/admin.assistant.index'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
@@ -63,6 +64,7 @@ import { Route as AuthenticatedAdminProposalsIdRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminProjectsIdRouteImport } from './routes/_authenticated/admin.projects.$id'
 import { Route as AuthenticatedAdminLeadsIdRouteImport } from './routes/_authenticated/admin.leads.$id'
 import { Route as AuthenticatedAdminInvoicesIdRouteImport } from './routes/_authenticated/admin.invoices.$id'
+import { Route as AuthenticatedAdminEntitiesIdRouteImport } from './routes/_authenticated/admin.entities.$id'
 import { Route as AuthenticatedAdminClientsIdRouteImport } from './routes/_authenticated/admin.clients.$id'
 import { Route as AuthenticatedAdminAssistantThreadIdRouteImport } from './routes/_authenticated/admin.assistant.$threadId'
 
@@ -287,6 +289,12 @@ const AuthenticatedAdminInvoicesIndexRoute =
     path: '/invoices/',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEntitiesIndexRoute =
+  AuthenticatedAdminEntitiesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminEntitiesRoute,
+  } as any)
 const AuthenticatedAdminClientsIndexRoute =
   AuthenticatedAdminClientsIndexRouteImport.update({
     id: '/clients/',
@@ -363,6 +371,12 @@ const AuthenticatedAdminInvoicesIdRoute =
     path: '/invoices/$id',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEntitiesIdRoute =
+  AuthenticatedAdminEntitiesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminEntitiesRoute,
+  } as any)
 const AuthenticatedAdminClientsIdRoute =
   AuthenticatedAdminClientsIdRouteImport.update({
     id: '/clients/$id',
@@ -404,7 +418,7 @@ export interface FileRoutesByFullPath {
   '/admin/assistant': typeof AuthenticatedAdminAssistantRouteWithChildren
   '/admin/automation': typeof AuthenticatedAdminAutomationRoute
   '/admin/conversations': typeof AuthenticatedAdminConversationsRoute
-  '/admin/entities': typeof AuthenticatedAdminEntitiesRoute
+  '/admin/entities': typeof AuthenticatedAdminEntitiesRouteWithChildren
   '/admin/memory': typeof AuthenticatedAdminMemoryRoute
   '/admin/pipeline': typeof AuthenticatedAdminPipelineRoute
   '/admin/portfolio': typeof AuthenticatedAdminPortfolioRoute
@@ -415,6 +429,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/assistant/$threadId': typeof AuthenticatedAdminAssistantThreadIdRoute
   '/admin/clients/$id': typeof AuthenticatedAdminClientsIdRoute
+  '/admin/entities/$id': typeof AuthenticatedAdminEntitiesIdRoute
   '/admin/invoices/$id': typeof AuthenticatedAdminInvoicesIdRoute
   '/admin/leads/$id': typeof AuthenticatedAdminLeadsIdRoute
   '/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
@@ -428,6 +443,7 @@ export interface FileRoutesByFullPath {
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/admin/assistant/': typeof AuthenticatedAdminAssistantIndexRoute
   '/admin/clients/': typeof AuthenticatedAdminClientsIndexRoute
+  '/admin/entities/': typeof AuthenticatedAdminEntitiesIndexRoute
   '/admin/invoices/': typeof AuthenticatedAdminInvoicesIndexRoute
   '/admin/leads/': typeof AuthenticatedAdminLeadsIndexRoute
   '/admin/projects/': typeof AuthenticatedAdminProjectsIndexRoute
@@ -459,7 +475,6 @@ export interface FileRoutesByTo {
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/admin/automation': typeof AuthenticatedAdminAutomationRoute
   '/admin/conversations': typeof AuthenticatedAdminConversationsRoute
-  '/admin/entities': typeof AuthenticatedAdminEntitiesRoute
   '/admin/memory': typeof AuthenticatedAdminMemoryRoute
   '/admin/pipeline': typeof AuthenticatedAdminPipelineRoute
   '/admin/portfolio': typeof AuthenticatedAdminPortfolioRoute
@@ -470,6 +485,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/assistant/$threadId': typeof AuthenticatedAdminAssistantThreadIdRoute
   '/admin/clients/$id': typeof AuthenticatedAdminClientsIdRoute
+  '/admin/entities/$id': typeof AuthenticatedAdminEntitiesIdRoute
   '/admin/invoices/$id': typeof AuthenticatedAdminInvoicesIdRoute
   '/admin/leads/$id': typeof AuthenticatedAdminLeadsIdRoute
   '/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
@@ -483,6 +499,7 @@ export interface FileRoutesByTo {
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/admin/assistant': typeof AuthenticatedAdminAssistantIndexRoute
   '/admin/clients': typeof AuthenticatedAdminClientsIndexRoute
+  '/admin/entities': typeof AuthenticatedAdminEntitiesIndexRoute
   '/admin/invoices': typeof AuthenticatedAdminInvoicesIndexRoute
   '/admin/leads': typeof AuthenticatedAdminLeadsIndexRoute
   '/admin/projects': typeof AuthenticatedAdminProjectsIndexRoute
@@ -518,7 +535,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/assistant': typeof AuthenticatedAdminAssistantRouteWithChildren
   '/_authenticated/admin/automation': typeof AuthenticatedAdminAutomationRoute
   '/_authenticated/admin/conversations': typeof AuthenticatedAdminConversationsRoute
-  '/_authenticated/admin/entities': typeof AuthenticatedAdminEntitiesRoute
+  '/_authenticated/admin/entities': typeof AuthenticatedAdminEntitiesRouteWithChildren
   '/_authenticated/admin/memory': typeof AuthenticatedAdminMemoryRoute
   '/_authenticated/admin/pipeline': typeof AuthenticatedAdminPipelineRoute
   '/_authenticated/admin/portfolio': typeof AuthenticatedAdminPortfolioRoute
@@ -529,6 +546,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/assistant/$threadId': typeof AuthenticatedAdminAssistantThreadIdRoute
   '/_authenticated/admin/clients/$id': typeof AuthenticatedAdminClientsIdRoute
+  '/_authenticated/admin/entities/$id': typeof AuthenticatedAdminEntitiesIdRoute
   '/_authenticated/admin/invoices/$id': typeof AuthenticatedAdminInvoicesIdRoute
   '/_authenticated/admin/leads/$id': typeof AuthenticatedAdminLeadsIdRoute
   '/_authenticated/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
@@ -542,6 +560,7 @@ export interface FileRoutesById {
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/_authenticated/admin/assistant/': typeof AuthenticatedAdminAssistantIndexRoute
   '/_authenticated/admin/clients/': typeof AuthenticatedAdminClientsIndexRoute
+  '/_authenticated/admin/entities/': typeof AuthenticatedAdminEntitiesIndexRoute
   '/_authenticated/admin/invoices/': typeof AuthenticatedAdminInvoicesIndexRoute
   '/_authenticated/admin/leads/': typeof AuthenticatedAdminLeadsIndexRoute
   '/_authenticated/admin/projects/': typeof AuthenticatedAdminProjectsIndexRoute
@@ -588,6 +607,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/assistant/$threadId'
     | '/admin/clients/$id'
+    | '/admin/entities/$id'
     | '/admin/invoices/$id'
     | '/admin/leads/$id'
     | '/admin/projects/$id'
@@ -601,6 +621,7 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook'
     | '/admin/assistant/'
     | '/admin/clients/'
+    | '/admin/entities/'
     | '/admin/invoices/'
     | '/admin/leads/'
     | '/admin/projects/'
@@ -632,7 +653,6 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/automation'
     | '/admin/conversations'
-    | '/admin/entities'
     | '/admin/memory'
     | '/admin/pipeline'
     | '/admin/portfolio'
@@ -643,6 +663,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/assistant/$threadId'
     | '/admin/clients/$id'
+    | '/admin/entities/$id'
     | '/admin/invoices/$id'
     | '/admin/leads/$id'
     | '/admin/projects/$id'
@@ -656,6 +677,7 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook'
     | '/admin/assistant'
     | '/admin/clients'
+    | '/admin/entities'
     | '/admin/invoices'
     | '/admin/leads'
     | '/admin/projects'
@@ -701,6 +723,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/admin/assistant/$threadId'
     | '/_authenticated/admin/clients/$id'
+    | '/_authenticated/admin/entities/$id'
     | '/_authenticated/admin/invoices/$id'
     | '/_authenticated/admin/leads/$id'
     | '/_authenticated/admin/projects/$id'
@@ -714,6 +737,7 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook'
     | '/_authenticated/admin/assistant/'
     | '/_authenticated/admin/clients/'
+    | '/_authenticated/admin/entities/'
     | '/_authenticated/admin/invoices/'
     | '/_authenticated/admin/leads/'
     | '/_authenticated/admin/projects/'
@@ -1043,6 +1067,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminInvoicesIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/entities/': {
+      id: '/_authenticated/admin/entities/'
+      path: '/'
+      fullPath: '/admin/entities/'
+      preLoaderRoute: typeof AuthenticatedAdminEntitiesIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminEntitiesRoute
+    }
     '/_authenticated/admin/clients/': {
       id: '/_authenticated/admin/clients/'
       path: '/clients'
@@ -1134,6 +1165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminInvoicesIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/entities/$id': {
+      id: '/_authenticated/admin/entities/$id'
+      path: '/$id'
+      fullPath: '/admin/entities/$id'
+      preLoaderRoute: typeof AuthenticatedAdminEntitiesIdRouteImport
+      parentRoute: typeof AuthenticatedAdminEntitiesRoute
+    }
     '/_authenticated/admin/clients/$id': {
       id: '/_authenticated/admin/clients/$id'
       path: '/clients/$id'
@@ -1169,12 +1207,28 @@ const AuthenticatedAdminAssistantRouteWithChildren =
     AuthenticatedAdminAssistantRouteChildren,
   )
 
+interface AuthenticatedAdminEntitiesRouteChildren {
+  AuthenticatedAdminEntitiesIdRoute: typeof AuthenticatedAdminEntitiesIdRoute
+  AuthenticatedAdminEntitiesIndexRoute: typeof AuthenticatedAdminEntitiesIndexRoute
+}
+
+const AuthenticatedAdminEntitiesRouteChildren: AuthenticatedAdminEntitiesRouteChildren =
+  {
+    AuthenticatedAdminEntitiesIdRoute: AuthenticatedAdminEntitiesIdRoute,
+    AuthenticatedAdminEntitiesIndexRoute: AuthenticatedAdminEntitiesIndexRoute,
+  }
+
+const AuthenticatedAdminEntitiesRouteWithChildren =
+  AuthenticatedAdminEntitiesRoute._addFileChildren(
+    AuthenticatedAdminEntitiesRouteChildren,
+  )
+
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAnalyticsRoute: typeof AuthenticatedAdminAnalyticsRoute
   AuthenticatedAdminAssistantRoute: typeof AuthenticatedAdminAssistantRouteWithChildren
   AuthenticatedAdminAutomationRoute: typeof AuthenticatedAdminAutomationRoute
   AuthenticatedAdminConversationsRoute: typeof AuthenticatedAdminConversationsRoute
-  AuthenticatedAdminEntitiesRoute: typeof AuthenticatedAdminEntitiesRoute
+  AuthenticatedAdminEntitiesRoute: typeof AuthenticatedAdminEntitiesRouteWithChildren
   AuthenticatedAdminMemoryRoute: typeof AuthenticatedAdminMemoryRoute
   AuthenticatedAdminPipelineRoute: typeof AuthenticatedAdminPipelineRoute
   AuthenticatedAdminPortfolioRoute: typeof AuthenticatedAdminPortfolioRoute
@@ -1200,7 +1254,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminAssistantRouteWithChildren,
   AuthenticatedAdminAutomationRoute: AuthenticatedAdminAutomationRoute,
   AuthenticatedAdminConversationsRoute: AuthenticatedAdminConversationsRoute,
-  AuthenticatedAdminEntitiesRoute: AuthenticatedAdminEntitiesRoute,
+  AuthenticatedAdminEntitiesRoute: AuthenticatedAdminEntitiesRouteWithChildren,
   AuthenticatedAdminMemoryRoute: AuthenticatedAdminMemoryRoute,
   AuthenticatedAdminPipelineRoute: AuthenticatedAdminPipelineRoute,
   AuthenticatedAdminPortfolioRoute: AuthenticatedAdminPortfolioRoute,
