@@ -745,6 +745,13 @@ export type Database = {
             referencedRelation: "business_entities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "business_consultant_analyses_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
+            referencedColumns: ["id"]
+          },
         ]
       }
       business_entities: {
@@ -860,6 +867,13 @@ export type Database = {
             referencedRelation: "business_entities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "business_entity_links_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
+            referencedColumns: ["id"]
+          },
         ]
       }
       business_findings: {
@@ -921,6 +935,13 @@ export type Database = {
             columns: ["business_entity_id"]
             isOneToOne: false
             referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_findings_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
             referencedColumns: ["id"]
           },
         ]
@@ -1777,10 +1798,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "entity_match_history_candidate_entity_id_fkey"
+            columns: ["candidate_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "entity_match_history_matched_entity_id_fkey"
             columns: ["matched_entity_id"]
             isOneToOne: false
             referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_match_history_matched_entity_id_fkey"
+            columns: ["matched_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
             referencedColumns: ["id"]
           },
         ]
@@ -3514,6 +3549,57 @@ export type Database = {
       }
     }
     Views: {
+      business_entity_overview: {
+        Row: {
+          active_preparations: number | null
+          candidate_links: number | null
+          canonical_name: string | null
+          city: string | null
+          confidence_score: number | null
+          consultation_links: number | null
+          contact_stage: string | null
+          conversation_links: number | null
+          created_at: string | null
+          current_analysis_id: string | null
+          current_stage: string | null
+          discovery_sources: string | null
+          duplicate_flag: boolean | null
+          email: string | null
+          google_maps_url: string | null
+          id: string | null
+          industry: string | null
+          lead_score: number | null
+          pending_reviews: number | null
+          phone: string | null
+          prospect_links: number | null
+          prospect_status: string | null
+          province: string | null
+          source_count: number | null
+          stage_analyzed: boolean | null
+          stage_contacted: boolean | null
+          stage_deal: boolean | null
+          stage_enriched: boolean | null
+          stage_found: boolean | null
+          stage_meeting: boolean | null
+          stage_qualified: boolean | null
+          stage_ready_outreach: boolean | null
+          stage_sales_prepared: boolean | null
+          stage_verified: boolean | null
+          updated_at: string | null
+          website: string | null
+          website_domain: string | null
+          whatsapp: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_entities_current_analysis_fk"
+            columns: ["current_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "business_consultant_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_cta_performance: {
         Row: {
           clicks: number | null
