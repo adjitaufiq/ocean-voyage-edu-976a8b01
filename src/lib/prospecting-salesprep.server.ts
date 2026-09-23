@@ -536,8 +536,21 @@ export async function buildSalesPrepBoard(
       contact_stage: (row["contact_stage"] as string | null) ?? null,
       google_maps_url: (row["google_maps_url"] as string | null) ?? null,
       created_at: String(prep["created_at"] ?? new Date().toISOString()),
+      intelligence: null,
     });
   }
+
+  // Consultant intelligence for the visible page only: one batched read.
+  const rowByCandidate = new Map(rows.map((row) => [String(row["id"]), row]));
+  const intelligence = await loadSalesIntelligence(
+    supabase,
+    board.map((item) => ({
+      id: item.candidate_id,
+      businessName: item.business_name,
+      updatedAt: (rowByCandidate.get(item.candidate_id)?.["updated_at"] as string | null) ?? null,
+    })),
+  );
+  for (const item of board) item.intelligence = intelligence.get(item.candidate_id) ?? null;
 
   return { counts, rows: board, pending };
 }
