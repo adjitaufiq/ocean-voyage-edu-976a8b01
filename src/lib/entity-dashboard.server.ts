@@ -12,32 +12,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Client = SupabaseClient<Database>;
 
-export const FUNNEL_STAGES = [
-  "found",
-  "enriched",
-  "verified",
-  "qualified",
-  "analyzed",
-  "sales_prepared",
-  "ready_outreach",
-  "contacted",
-  "meeting",
-  "deal",
-] as const;
-export type FunnelStage = (typeof FUNNEL_STAGES)[number];
-
-export const FUNNEL_LABELS: Record<FunnelStage, string> = {
-  found: "Ditemukan",
-  enriched: "Data diperkaya",
-  verified: "Terverifikasi",
-  qualified: "Sesuai target",
-  analyzed: "Dianalisis konsultan",
-  sales_prepared: "Materi penjualan siap",
-  ready_outreach: "Siap dihubungi",
-  contacted: "Sudah dihubungi",
-  meeting: "Meeting",
-  deal: "Deal",
-};
+export { FUNNEL_STAGES, FUNNEL_LABELS, type FunnelStage } from "@/lib/entity-dashboard.shared";
 
 const STAGE_COLUMN: Record<FunnelStage, string> = {
   found: "stage_found",
