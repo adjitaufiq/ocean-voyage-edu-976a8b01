@@ -53,7 +53,7 @@ export async function emitSalesPipelineEvent(input: {
 
 /* --------------------------- Ready Outreach gate --------------------------- */
 
-export type AdvanceResult = { advanced: number; blocked: number };
+export type AdvanceResult = { advanced: number; blocked: number; unifiedBlocked?: Record<string, number> };
 
 /**
  * Moves prepared candidates into Ready Outreach automatically.
@@ -84,12 +84,20 @@ export async function advanceReadyOutreach(
   const ids = rows.map((row) => String(row["id"]));
   const { data: preps } = await supabase
     .from("sales_preparations")
-    .select("candidate_id")
+    .select("candidate_id, analysis_id, analysis_version")
     .eq("is_active", true)
     .in("candidate_id", ids);
-  const prepared = new Set(
-    ((preps ?? []) as { candidate_id: string }[]).map((row) => row.candidate_id),
-  );
+  const prepRows = (preps ?? []) as { candidate_id: string; analysis_id: string | null; analysis_version: number | null }[];
+  const prepared = new Set(prepRows.map((row) => row.candidate_id));
+  const prepByCandidate = new Map(prepRows.map((row) => [row.candidate_id, row]));
+
+  // Phase A: in unified mode ON the gate is BLOCKING, not a warning.
+  const { getUnifiedMode, entityIdsForCandidates, loadActiveAnalyses } = await import("./unified-pipeline.server");
+  const { unifiedReadyBlockers } = await import("@/lib/admin/unified-cutover");
+  const mode = await getUnifiedMode(supabase);
+  const entities = mode === "on" ? await entityIdsForCandidates(supabase, ids) : new Map<string, string>();
+  const analyses = mode === "on" ? await loadActiveAnalyses(supabase, [...entities.values()]) : new Map();
+  result.unifiedBlocked = {};
 
   for (const row of rows) {
     const id = String(row["id"]);
@@ -106,6 +114,20 @@ export async function advanceReadyOutreach(
     if (blockers.length > 0) {
       result.blocked += 1;
       continue;
+    }
+    if (mode === "on") {
+      const entityId = entities.get(id) ?? null;
+      const prep = prepByCandidate.get(id);
+      const unified = unifiedReadyBlockers({
+        entityId,
+        analysis: entityId ? analyses.get(entityId) ?? null : null,
+        preparation: prep ? { analysisId: prep.analysis_id, analysisVersion: prep.analysis_version } : null,
+      });
+      if (unified.length > 0) {
+        result.blocked += 1;
+        for (const key of unified) result.unifiedBlocked[key] = (result.unifiedBlocked[key] ?? 0) + 1;
+        continue;
+      }
     }
 
     const { error: updateError } = await supabase
@@ -186,6 +208,8 @@ export type SalesPipelineCycleResult = {
   discovery: { tasks: number; saved: number; failed: number };
   qualification: { scanned: number; autoApproved: number; needReview: number; autoPrepared: number };
   preparation: { scanned: number; prepared: number; skipped: number; failed: number };
+  consultant: { mode: string; scanned: number; generated: number; reused: number; failed: number; linked: number };
+  decisionSources: Record<string, number>;
   readyOutreach: AdvanceResult;
   errors: string[];
 };
@@ -203,6 +227,8 @@ export async function runSalesPipelineCycle(
     discovery: { tasks: 0, saved: 0, failed: 0 },
     qualification: { scanned: 0, autoApproved: 0, needReview: 0, autoPrepared: 0 },
     preparation: { scanned: 0, prepared: 0, skipped: 0, failed: 0 },
+    consultant: { mode: "off", scanned: 0, generated: 0, reused: 0, failed: 0, linked: 0 },
+    decisionSources: {},
     readyOutreach: { advanced: 0, blocked: 0 },
     errors: [],
   };
@@ -296,6 +322,19 @@ export async function runSalesPipelineCycle(
       result.errors.push(`qualification: ${error instanceof Error ? error.message : "gagal"}`);
     }
 
+    // 2b. Phase A: Consultant Engine after QC, before Sales Preparation.
+    const cycleStartedAt = new Date().toISOString();
+    try {
+      const { getUnifiedMode } = await import("./unified-pipeline.server");
+      const mode = await getUnifiedMode(supabase);
+      result.consultant.mode = mode;
+      if (mode !== "off") {
+        await runConsultantStep(supabase, result, input.campaignId);
+      }
+    } catch (error) {
+      result.errors.push(`consultant: ${error instanceof Error ? error.message : "gagal"}`);
+    }
+
     // 3. Sales preparation for any approved candidate still without material.
     try {
       const prep = await prepareSalesForCandidates(supabase, {
@@ -319,6 +358,31 @@ export async function runSalesPipelineCycle(
       result.errors.push(`preparation: ${error instanceof Error ? error.message : "gagal"}`);
     }
 
+    // 3b. Phase A: decision source logging for materials made this cycle.
+    try {
+      const { data: made } = await supabase
+        .from("sales_preparations")
+        .select("decision_source")
+        .gte("created_at", cycleStartedAt)
+        .limit(1000);
+      for (const row of (made ?? []) as { decision_source: string | null }[]) {
+        const key = row.decision_source ?? "legacy_rules";
+        result.decisionSources[key] = (result.decisionSources[key] ?? 0) + 1;
+      }
+      await logAutomation({
+        ruleKey: "outbound.auto_pipeline",
+        event: "decision_source.summary",
+        title: `Sumber keputusan materi (mode ${result.consultant.mode})`,
+        detail: Object.entries(result.decisionSources).map(([k, v]) => `${k}: ${v}`).join(" • ") || "tidak ada materi baru",
+        status: "success",
+        entityType: "prospect_candidate",
+        entityId: null,
+        meta: { pipeline: "sales", mode: result.consultant.mode, consultant: result.consultant, decision_sources: result.decisionSources },
+      });
+    } catch (error) {
+      result.errors.push(`decision_log: ${error instanceof Error ? error.message : "gagal"}`);
+    }
+
     // 4. Ready Outreach queue.
     try {
       result.readyOutreach = await advanceReadyOutreach(
@@ -332,7 +396,7 @@ export async function runSalesPipelineCycle(
     await releaseLease(
       supabase,
       result.errors.length > 0 ? "partial" : "done",
-      `discovery ${result.discovery.saved} • qc ${result.qualification.autoApproved} • prep ${result.preparation.prepared} • ready ${result.readyOutreach.advanced}`,
+      `mode ${result.consultant.mode} • discovery ${result.discovery.saved} • qc ${result.qualification.autoApproved} • analisis ${result.consultant.generated}+${result.consultant.reused} • prep ${result.preparation.prepared} • ready ${result.readyOutreach.advanced} • diblokir ${result.readyOutreach.blocked}`,
     );
   } catch (error) {
     result.errors.push(error instanceof Error ? error.message : "Pipeline gagal.");
@@ -340,4 +404,58 @@ export async function runSalesPipelineCycle(
   }
 
   return result;
+}
+
+/**
+ * Phase A: QC-approved candidates get linked to their Business Entity and a
+ * current Consultant Analysis (reused when fingerprint unchanged; stale ones
+ * regenerated). Bounded per cycle.
+ */
+async function runConsultantStep(
+  supabase: Client,
+  result: SalesPipelineCycleResult,
+  campaignId?: string,
+): Promise<void> {
+  let query = supabase
+    .from("prospect_candidates")
+    .select("id")
+    .eq("qc_status", "approved")
+    .is("promoted_prospect_id", null)
+    .order("updated_at", { ascending: false })
+    .limit(60);
+  if (campaignId) query = query.eq("campaign_id", campaignId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  const ids = ((data ?? []) as { id: string }[]).map((row) => row.id);
+  if (!ids.length) return;
+
+  const { ensureBusinessEntities } = await import("./entity-resolution.server");
+  const { loadActiveAnalyses } = await import("./unified-pipeline.server");
+  const { generateAnalysis } = await import("./consultant-engine.service");
+  const ensured = await ensureBusinessEntities(supabase, "prospect_candidate", ids);
+  const entityIds = [...new Set(Object.values(ensured.linked))];
+  result.consultant.linked = entityIds.length;
+  const active = await loadActiveAnalyses(supabase, entityIds);
+  // Only entities with no analysis or a stale one need work; max 20 per cycle.
+  const todo = entityIds.filter((id) => !active.get(id) || active.get(id)!.stale).slice(0, 20);
+  result.consultant.scanned = todo.length;
+  for (const entityId of todo) {
+    try {
+      const stale = active.get(entityId)?.stale ?? false;
+      const out = await generateAnalysis(supabase, { entityId, force: stale });
+      if (out.status === "generated") result.consultant.generated += 1;
+      else if (out.status === "reused") result.consultant.reused += 1;
+    } catch (error) {
+      result.consultant.failed += 1;
+      if (result.errors.length < 10) result.errors.push(`consultant: ${error instanceof Error ? error.message : "gagal"}`);
+    }
+  }
+  if (result.consultant.generated > 0) {
+    await emitSalesPipelineEvent({
+      event: "qc.approved",
+      title: `${result.consultant.generated} analisis konsultan dibuat`,
+      detail: `dipakai ulang ${result.consultant.reused} • gagal ${result.consultant.failed}`,
+      meta: { step: "consultant_analysis" },
+    });
+  }
 }

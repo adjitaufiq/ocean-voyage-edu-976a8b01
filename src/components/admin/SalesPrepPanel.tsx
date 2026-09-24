@@ -559,7 +559,16 @@ export function SalesPrepPanel({
                   </div>
                 </div>
 
-                {row.verified ? (
+                {row.unified_blockers.length > 0 ? (
+                  <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-xs text-amber-100">
+                    <p className="font-medium">WhatsApp dikunci — perlu diperbarui sebelum follow up:</p>
+                    <ul className="mt-1 list-disc pl-4">
+                      {row.unified_blockers.map((label) => (
+                        <li key={label}>{label}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : row.verified ? (
                   <div className="flex flex-wrap items-center gap-2">
                     {whatsappLink(row.phone, message) ? (
                       <a
