@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 import { Chip, SectionCard } from "@/components/admin/ui";
 import { syncOpsCronSecret } from "@/lib/ops.functions";
+import { getUnifiedModeFn, setUnifiedModeFn } from "@/lib/prospecting.functions";
+import { UNIFIED_MODES, UNIFIED_MODE_LABELS, type UnifiedMode } from "@/lib/admin/unified-cutover";
 import {
   deleteWorkspaceMember,
   getAdminAccess,
@@ -190,6 +192,48 @@ export const Route = createFileRoute("/_authenticated/admin/settings")({
   component: SettingsPage,
 });
 
+function UnifiedModeCard({ canManage }: { canManage: boolean }) {
+  const queryClient = useQueryClient();
+  const getMode = useServerFn(getUnifiedModeFn);
+  const setMode = useServerFn(setUnifiedModeFn);
+  const mode = useQuery({ queryKey: ["admin", "unified-mode"], queryFn: () => getMode() });
+  const mutation = useMutation({
+    mutationFn: (next: UnifiedMode) => setMode({ data: { mode: next } }),
+    onSuccess: (res) => {
+      toast.success(`Mode diubah: ${UNIFIED_MODE_LABELS[res.mode]}`);
+      void queryClient.invalidateQueries({ queryKey: ["admin", "unified-mode"] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Gagal mengubah mode."),
+  });
+  const current = mode.data?.mode ?? "off";
+  return (
+    <SectionCard
+      title="Pipeline penjualan terpadu"
+      description="Menentukan apakah materi penjualan memakai analisis konsultan. Mati = kembali ke aturan lama kapan saja."
+    >
+      <div className="flex flex-wrap gap-2">
+        {UNIFIED_MODES.map((item) => (
+          <button
+            key={item}
+            type="button"
+            disabled={!canManage || mutation.isPending || item === current}
+            onClick={() => mutation.mutate(item)}
+            className={`rounded-xl border px-3 py-2 text-xs disabled:cursor-not-allowed ${
+              item === current ? "border-primary bg-primary/15 text-foreground" : "border-border/50 text-muted-foreground"
+            }`}
+          >
+            {UNIFIED_MODE_LABELS[item]}
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Saat Aktif: bisnis tanpa analisis terkini tidak masuk Ready Outreach dan tombol WhatsApp dikunci.
+        {canManage ? "" : " Hanya Owner/Admin yang bisa mengubah."}
+      </p>
+    </SectionCard>
+  );
+}
+
 function SettingsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -267,6 +311,8 @@ function SettingsPage() {
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">Akun, akses tim, dan sesi workspace.</p>
       </div>
+
+      <UnifiedModeCard canManage={canManage} />
 
       <SectionCard title="Akun" description="Sesi yang sedang aktif.">
         <dl className="grid gap-3 sm:grid-cols-2">

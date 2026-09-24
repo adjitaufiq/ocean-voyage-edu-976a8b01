@@ -975,3 +975,40 @@ export const runSalesPipelineFn = createServerFn({ method: "POST" })
     await assertLeadWork(context.supabase, context.userId);
     return runSalesPipelineCycle(context.supabase, data);
   });
+
+/* ---------------------- Phase A: unified pipeline mode ---------------------- */
+
+export const getUnifiedModeFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { assertWorkspace } = await import("./admin.server");
+    const { getUnifiedMode } = await import("./unified-pipeline.server");
+    await assertWorkspace(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return { mode: await getUnifiedMode(supabaseAdmin) };
+  });
+
+export const setUnifiedModeFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ mode: z.enum(["off", "shadow", "on"]) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertManage } = await import("./admin.server");
+    const { setUnifiedMode } = await import("./unified-pipeline.server");
+    await assertManage(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await setUnifiedMode(supabaseAdmin, data.mode, actorEmail(context.claims) ?? context.userId);
+    const { logAutomation } = await import("./automation.server");
+    await logAutomation({
+      ruleKey: "outbound.auto_pipeline",
+      event: "unified_mode.changed",
+      title: `Mode pipeline terpadu: ${data.mode}`,
+      detail: actorEmail(context.claims),
+      status: "success",
+      entityType: null,
+      entityId: null,
+      meta: { mode: data.mode },
+    });
+    return { mode: data.mode };
+  });
