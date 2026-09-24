@@ -431,6 +431,10 @@ export type SalesPrepRow = {
   created_at: string;
   /** Consultant Analysis for this business; sales never re-diagnoses. */
   intelligence: SalesIntelligence | null;
+  /** Phase A: where problem/solution/package came from. */
+  decision_source: string;
+  /** Phase A: unified-mode ON hard blockers (labels). Non-empty = WhatsApp locked. */
+  unified_blockers: string[];
 };
 
 export type SalesPrepPendingRow = {
@@ -501,7 +505,7 @@ export async function buildSalesPrepBoard(
     const { data: preps, error: prepError } = await supabase
       .from("sales_preparations")
       .select(
-        "id, candidate_id, business_brief, approach_category, approach_reason, recommended_solution, outreach_message, selected_asset, evidence, created_at",
+        "id, candidate_id, business_brief, approach_category, approach_reason, recommended_solution, outreach_message, selected_asset, evidence, created_at, analysis_id, analysis_version, decision_source",
       )
       .in("candidate_id", ids)
       .eq("is_active", true);
@@ -607,7 +611,11 @@ export async function buildSalesPrepBoard(
       google_maps_url: (row["google_maps_url"] as string | null) ?? null,
       created_at: String(prep["created_at"] ?? new Date().toISOString()),
       intelligence: null,
-    });
+      decision_source: String(prep["decision_source"] ?? "legacy_rules"),
+      unified_blockers: [],
+      _analysis_id: (prep["analysis_id"] as string | null) ?? null,
+      _analysis_version: prep["analysis_version"] == null ? null : Number(prep["analysis_version"]),
+    } as SalesPrepRow);
   }
 
   // Consultant intelligence for the visible page only: one batched read.
@@ -621,6 +629,24 @@ export async function buildSalesPrepBoard(
     })),
   );
   for (const item of board) item.intelligence = intelligence.get(item.candidate_id) ?? null;
+
+  // Phase A: hard guard in unified mode ON (entity, active analysis, not stale, same version).
+  const { getUnifiedMode, entityIdsForCandidates, loadActiveAnalyses } = await import("./unified-pipeline.server");
+  const { unifiedReadyBlockers, UNIFIED_BLOCKER_LABELS } = await import("@/lib/admin/unified-cutover");
+  if ((await getUnifiedMode(supabase)) === "on" && board.length) {
+    const entities = await entityIdsForCandidates(supabase, board.map((item) => item.candidate_id));
+    const analyses = await loadActiveAnalyses(supabase, [...entities.values()]);
+    for (const item of board) {
+      const entityId = entities.get(item.candidate_id) ?? null;
+      const analysis = entityId ? analyses.get(entityId) ?? null : null;
+      const extra = item as SalesPrepRow & { _analysis_id?: string | null; _analysis_version?: number | null };
+      item.unified_blockers = unifiedReadyBlockers({
+        entityId,
+        analysis,
+        preparation: { analysisId: extra._analysis_id ?? null, analysisVersion: extra._analysis_version ?? null },
+      }).map((key) => UNIFIED_BLOCKER_LABELS[key]);
+    }
+  }
 
   return { counts, rows: board, pending };
 }
