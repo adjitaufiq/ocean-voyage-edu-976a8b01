@@ -696,6 +696,7 @@ export async function promoteCandidateToProspect(
       websiteSource: maps.website ? "google_maps" : null,
       websiteSourceUrl: maps.website ? maps.google_maps_url : null,
       googleMapsUrl: maps.google_maps_url,
+      skipEntityLink: true,
     },
     actor,
   );
