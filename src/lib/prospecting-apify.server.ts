@@ -696,6 +696,7 @@ export async function promoteCandidateToProspect(
       websiteSource: maps.website ? "google_maps" : null,
       websiteSourceUrl: maps.website ? maps.google_maps_url : null,
       googleMapsUrl: maps.google_maps_url,
+      skipEntityLink: true,
     },
     actor,
   );
@@ -708,6 +709,13 @@ export async function promoteCandidateToProspect(
       trust_score: verdict.trustScore,
     } as never)
     .eq("id", candidateId);
+
+  // Phase A: promoted prospect shares the candidate's Business Entity.
+  {
+    const { ensureBusinessEntity } = await import("./entity-resolution.server");
+    const entityId = await ensureBusinessEntity(supabase, "prospect_candidate", candidateId);
+    if (entityId) await ensureBusinessEntity(supabase, "prospect", created.id, { forcedEntityId: entityId });
+  }
 
   const { attachPreparationToProspect } = await import("./prospecting-salesprep.server");
   await attachPreparationToProspect(supabase, candidateId, created.id);

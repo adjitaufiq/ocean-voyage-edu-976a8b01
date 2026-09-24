@@ -445,6 +445,11 @@ export async function discoverCandidates(
         };
       });
       if (events.length) await supabase.from("prospect_candidate_events").insert(events as never);
+      // Phase A: canonical entry — legacy AI discovery links to Business Entity too.
+      if (saved.length) {
+        const { ensureBusinessEntities } = await import("./entity-resolution.server");
+        await ensureBusinessEntities(supabase, "prospect_candidate", saved.map((row) => row.id));
+      }
     }
   }
   skipped += duplicates;
@@ -701,6 +706,10 @@ export async function createManualCandidate(
     .single();
   if (error) throw new Error(error.message);
   const id = (data as { id: string }).id;
+  {
+    const { ensureBusinessEntity } = await import("./entity-resolution.server");
+    await ensureBusinessEntity(supabase, "prospect_candidate", id);
+  }
   await logCandidateEvent(supabase, {
     candidateId: id,
     event: "created_manual",

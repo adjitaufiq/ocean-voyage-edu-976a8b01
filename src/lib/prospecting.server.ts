@@ -215,6 +215,8 @@ export async function fetchProspect(supabase: Client, id: string) {
 /* -------------------------------- Writes ---------------------------------- */
 
 export type ProspectInput = {
+  /** Phase A: caller links the entity itself (candidate promotion). */
+  skipEntityLink?: boolean;
   businessName: string;
   industry?: string | null;
   city?: string | null;
@@ -366,6 +368,13 @@ export async function createProspect(
     userId: actor.userId,
     userEmail: actor.email ?? null,
   });
+
+  // Phase A: canonical entry — manual/imported/promoted prospects get an entity.
+  // Promotion re-links to the candidate's entity afterwards (forced link).
+  if (!input.skipEntityLink) {
+    const { ensureBusinessEntity } = await import("./entity-resolution.server");
+    await ensureBusinessEntity(supabase, "prospect", data.id);
+  }
 
   return { status: "created", id: data.id, fitScore: scored.total };
 }

@@ -115,6 +115,68 @@ async function writePreparation(supabase: Client, row: Record<string, unknown>):
   const input = toInput(row);
   const prep = prepareSales(input);
 
+  // Phase A: Sales Preparation is a communication adapter. Problem, solution,
+  // features and package come from the current Consultant Analysis; legacy
+  // rules are only a temporary fallback. Provenance is always recorded.
+  const { ensureBusinessEntity } = await import("./entity-resolution.server");
+  const { getUnifiedMode, loadActiveAnalyses } = await import("./unified-pipeline.server");
+  const { decisionFromAnalysis } = await import("@/lib/admin/unified-cutover");
+  const mode = await getUnifiedMode(supabase);
+  const entityId = await ensureBusinessEntity(supabase, "prospect_candidate", id);
+  const analysis = entityId ? (await loadActiveAnalyses(supabase, [entityId])).get(entityId) ?? null : null;
+  const usable = Boolean(analysis && !analysis.stale);
+  let decisionSource: "consultant_analysis" | "legacy_rules" | "legacy_fallback" = "legacy_rules";
+  let approachReason = prep.approach.reason;
+  let recommendation = prep.approach.recommendation;
+  let findingIds: string[] = [];
+  if (entityId && mode !== "off") {
+    const { data: findings } = await supabase
+      .from("business_findings")
+      .select("id")
+      .eq("business_entity_id", entityId)
+      .in("validation_status", ["confirmed", "unvalidated"])
+      .limit(30);
+    findingIds = (findings ?? []).map((row) => row.id);
+  }
+  if (mode === "on") {
+    if (usable && analysis) {
+      const decision = decisionFromAnalysis(analysis.row);
+      decisionSource = "consultant_analysis";
+      approachReason = [decision.problem, decision.reason].filter(Boolean).join(" — ").slice(0, 1000) || approachReason;
+      recommendation =
+        [
+          decision.solution,
+          decision.features.length ? `Fitur inti: ${decision.features.join(", ")}` : null,
+          decision.packageName ? `Paket: ${decision.packageName}` : null,
+        ]
+          .filter(Boolean)
+          .join(". ")
+          .slice(0, 1000) || recommendation;
+    } else {
+      decisionSource = "legacy_fallback";
+    }
+  }
+  const evidence = buildEvidence(input);
+  const provenance = {
+    mode,
+    decision_source: decisionSource,
+    chain: {
+      sales_preparation: "this",
+      consultant_analysis: analysis ? { id: analysis.id, version: analysis.version, stale: analysis.stale } : null,
+      findings: findingIds,
+      evidence_count: evidence.length,
+    },
+    fallback_reason:
+      decisionSource === "legacy_fallback"
+        ? !entityId
+          ? "no_entity"
+          : !analysis
+            ? "no_active_analysis"
+            : "analysis_stale"
+        : null,
+    recorded_at: new Date().toISOString(),
+  };
+
   const { error: deactivateError } = await supabase
     .from("sales_preparations")
     .update({ is_active: false } as never)
@@ -127,14 +189,24 @@ async function writePreparation(supabase: Client, row: Record<string, unknown>):
     campaign_id: (row["campaign_id"] as string | null) ?? null,
     business_brief: prep.brief,
     approach_category: prep.approach.category,
-    approach_reason: prep.approach.reason,
-    recommended_solution: prep.approach.recommendation,
+    approach_reason: approachReason,
+    recommended_solution: recommendation,
     outreach_message: prep.outreach,
     selected_asset: prep.asset,
     // Every claim shown to a sales agent carries its source and confidence.
-    evidence: buildEvidence(input),
-    generated_by: "rules",
+    evidence,
+    generated_by: decisionSource === "consultant_analysis" ? "consultant_engine" : "rules",
     is_active: true,
+    business_entity_id: entityId,
+    consultant_analysis_id: analysis?.id ?? null,
+    analysis_id: analysis?.id ?? null,
+    analysis_version: analysis?.version ?? null,
+    engine_version: analysis?.engineVersion ?? null,
+    source_revision: analysis?.sourceRevision ?? null,
+    generated_from_analysis: decisionSource === "consultant_analysis",
+    generated_from_revision: analysis?.sourceRevision ?? null,
+    decision_source: decisionSource,
+    provenance,
   } as never);
   if (insertError) throw new Error(insertError.message);
 
@@ -156,7 +228,7 @@ async function writePreparation(supabase: Client, row: Record<string, unknown>):
         to_status: "sales_prepared",
         actor_kind: "system",
         actor_label: "sales_preparation",
-        reason: prep.approach.recommendation.slice(0, 300),
+        reason: recommendation.slice(0, 300),
       } as never);
     }
   }
