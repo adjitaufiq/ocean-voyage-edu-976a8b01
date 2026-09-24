@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as JasaPembuatanWebsiteAplikasiLandingPageRouteImport } from './routes/jasa-pembuatan-website-aplikasi-landing-page'
 import { Route as JasaPembuatanWebsiteRouteImport } from './routes/jasa-pembuatan-website'
 import { Route as JasaPembuatanAplikasiCustomRouteImport } from './routes/jasa-pembuatan-aplikasi-custom'
@@ -33,6 +34,7 @@ import { Route as DSlugRouteImport } from './routes/d.$slug'
 import { Route as BuildSlugRouteImport } from './routes/build.$slug'
 import { Route as ApiAssistantChatRouteImport } from './routes/api/assistant-chat'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as ApiPublicConsultantChatRouteImport } from './routes/api/public/consultant-chat'
 import { Route as AuthenticatedAdminTeamRouteImport } from './routes/_authenticated/admin.team'
@@ -46,6 +48,7 @@ import { Route as AuthenticatedAdminConversationsRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminAutomationRouteImport } from './routes/_authenticated/admin.automation'
 import { Route as AuthenticatedAdminAssistantRouteImport } from './routes/_authenticated/admin.assistant'
 import { Route as AuthenticatedAdminAnalyticsRouteImport } from './routes/_authenticated/admin.analytics'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedAdminProposalsIndexRouteImport } from './routes/_authenticated/admin.proposals.index'
 import { Route as AuthenticatedAdminProjectsIndexRouteImport } from './routes/_authenticated/admin.projects.index'
 import { Route as AuthenticatedAdminLeadsIndexRouteImport } from './routes/_authenticated/admin.leads.index'
@@ -81,6 +84,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
   id: '/privacy-policy',
   path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JasaPembuatanWebsiteAplikasiLandingPageRoute =
@@ -190,6 +198,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -265,6 +279,11 @@ const AuthenticatedAdminAnalyticsRoute =
     path: '/analytics',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminProposalsIndexRoute =
   AuthenticatedAdminProposalsIndexRouteImport.update({
     id: '/proposals/',
@@ -399,9 +418,11 @@ export interface FileRoutesByFullPath {
   '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
   '/jasa-pembuatan-website': typeof JasaPembuatanWebsiteRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/mcp': typeof McpRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/build/$slug': typeof BuildSlugRoute
@@ -414,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/build/': typeof BuildIndexRoute
   '/insight/': typeof InsightIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/admin/assistant': typeof AuthenticatedAdminAssistantRouteWithChildren
   '/admin/automation': typeof AuthenticatedAdminAutomationRoute
@@ -458,9 +480,11 @@ export interface FileRoutesByTo {
   '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
   '/jasa-pembuatan-website': typeof JasaPembuatanWebsiteRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/mcp': typeof McpRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/build/$slug': typeof BuildSlugRoute
   '/d/$slug': typeof DSlugRoute
@@ -472,6 +496,7 @@ export interface FileRoutesByTo {
   '/build': typeof BuildIndexRoute
   '/insight': typeof InsightIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/admin/automation': typeof AuthenticatedAdminAutomationRoute
   '/admin/conversations': typeof AuthenticatedAdminConversationsRoute
@@ -516,9 +541,11 @@ export interface FileRoutesById {
   '/jasa-pembuatan-aplikasi-custom': typeof JasaPembuatanAplikasiCustomRoute
   '/jasa-pembuatan-website': typeof JasaPembuatanWebsiteRoute
   '/jasa-pembuatan-website-aplikasi-landing-page': typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  '/mcp': typeof McpRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/api/assistant-chat': typeof ApiAssistantChatRoute
   '/build/$slug': typeof BuildSlugRoute
@@ -531,6 +558,7 @@ export interface FileRoutesById {
   '/build/': typeof BuildIndexRoute
   '/insight/': typeof InsightIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/_authenticated/admin/assistant': typeof AuthenticatedAdminAssistantRouteWithChildren
   '/_authenticated/admin/automation': typeof AuthenticatedAdminAutomationRoute
@@ -577,9 +605,11 @@ export interface FileRouteTypes {
     | '/jasa-pembuatan-aplikasi-custom'
     | '/jasa-pembuatan-website'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/mcp'
     | '/privacy-policy'
     | '/sitemap.xml'
     | '/terms'
+    | '/.well-known/oauth-protected-resource'
     | '/admin'
     | '/api/assistant-chat'
     | '/build/$slug'
@@ -592,6 +622,7 @@ export interface FileRouteTypes {
     | '/build/'
     | '/insight/'
     | '/products/'
+    | '/.lovable/oauth/consent'
     | '/admin/analytics'
     | '/admin/assistant'
     | '/admin/automation'
@@ -636,9 +667,11 @@ export interface FileRouteTypes {
     | '/jasa-pembuatan-aplikasi-custom'
     | '/jasa-pembuatan-website'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/mcp'
     | '/privacy-policy'
     | '/sitemap.xml'
     | '/terms'
+    | '/.well-known/oauth-protected-resource'
     | '/api/assistant-chat'
     | '/build/$slug'
     | '/d/$slug'
@@ -650,6 +683,7 @@ export interface FileRouteTypes {
     | '/build'
     | '/insight'
     | '/products'
+    | '/.lovable/oauth/consent'
     | '/admin/analytics'
     | '/admin/automation'
     | '/admin/conversations'
@@ -693,9 +727,11 @@ export interface FileRouteTypes {
     | '/jasa-pembuatan-aplikasi-custom'
     | '/jasa-pembuatan-website'
     | '/jasa-pembuatan-website-aplikasi-landing-page'
+    | '/mcp'
     | '/privacy-policy'
     | '/sitemap.xml'
     | '/terms'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
     | '/api/assistant-chat'
     | '/build/$slug'
@@ -708,6 +744,7 @@ export interface FileRouteTypes {
     | '/build/'
     | '/insight/'
     | '/products/'
+    | '/.lovable/oauth/consent'
     | '/_authenticated/admin/analytics'
     | '/_authenticated/admin/assistant'
     | '/_authenticated/admin/automation'
@@ -754,9 +791,11 @@ export interface RootRouteChildren {
   JasaPembuatanAplikasiCustomRoute: typeof JasaPembuatanAplikasiCustomRoute
   JasaPembuatanWebsiteRoute: typeof JasaPembuatanWebsiteRoute
   JasaPembuatanWebsiteAplikasiLandingPageRoute: typeof JasaPembuatanWebsiteAplikasiLandingPageRoute
+  McpRoute: typeof McpRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiAssistantChatRoute: typeof ApiAssistantChatRoute
   BuildSlugRoute: typeof BuildSlugRoute
   DSlugRoute: typeof DSlugRoute
@@ -768,6 +807,7 @@ export interface RootRouteChildren {
   BuildIndexRoute: typeof BuildIndexRoute
   InsightIndexRoute: typeof InsightIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicConsultantChatRoute: typeof ApiPublicConsultantChatRoute
   ApiPublicHooksAutomationScanRoute: typeof ApiPublicHooksAutomationScanRoute
   ApiPublicHooksDiscoveryWorkerRoute: typeof ApiPublicHooksDiscoveryWorkerRoute
@@ -799,6 +839,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy-policy'
       fullPath: '/privacy-policy'
       preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jasa-pembuatan-website-aplikasi-landing-page': {
@@ -948,6 +995,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -1038,6 +1092,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/analytics'
       preLoaderRoute: typeof AuthenticatedAdminAnalyticsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/proposals/': {
       id: '/_authenticated/admin/proposals/'
@@ -1299,9 +1360,12 @@ const rootRouteChildren: RootRouteChildren = {
   JasaPembuatanWebsiteRoute: JasaPembuatanWebsiteRoute,
   JasaPembuatanWebsiteAplikasiLandingPageRoute:
     JasaPembuatanWebsiteAplikasiLandingPageRoute,
+  McpRoute: McpRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiAssistantChatRoute: ApiAssistantChatRoute,
   BuildSlugRoute: BuildSlugRoute,
   DSlugRoute: DSlugRoute,
@@ -1313,6 +1377,7 @@ const rootRouteChildren: RootRouteChildren = {
   BuildIndexRoute: BuildIndexRoute,
   InsightIndexRoute: InsightIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicConsultantChatRoute: ApiPublicConsultantChatRoute,
   ApiPublicHooksAutomationScanRoute: ApiPublicHooksAutomationScanRoute,
   ApiPublicHooksDiscoveryWorkerRoute: ApiPublicHooksDiscoveryWorkerRoute,
