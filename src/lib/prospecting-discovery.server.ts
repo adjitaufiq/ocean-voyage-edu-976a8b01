@@ -466,6 +466,12 @@ async function saveCandidates(
   const insertedRows = (inserted ?? []) as { id: string; place_id: string | null }[];
   outcome.saved = insertedRows.length;
 
+  // Phase A: canonical entry — link every new candidate to its Business Entity.
+  {
+    const { ensureBusinessEntities } = await import("./entity-resolution.server");
+    await ensureBusinessEntities(supabase, "prospect_candidate", insertedRows.map((row) => row.id));
+  }
+
   for (const row of insertedRows) {
     const index = rows.findIndex((item) => item["place_id"] === row.place_id);
     sources.push({

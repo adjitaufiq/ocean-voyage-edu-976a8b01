@@ -709,6 +709,13 @@ export async function promoteCandidateToProspect(
     } as never)
     .eq("id", candidateId);
 
+  // Phase A: promoted prospect shares the candidate's Business Entity.
+  {
+    const { ensureBusinessEntity } = await import("./entity-resolution.server");
+    const entityId = await ensureBusinessEntity(supabase, "prospect_candidate", candidateId);
+    if (entityId) await ensureBusinessEntity(supabase, "prospect", created.id, { forcedEntityId: entityId });
+  }
+
   const { attachPreparationToProspect } = await import("./prospecting-salesprep.server");
   await attachPreparationToProspect(supabase, candidateId, created.id);
 

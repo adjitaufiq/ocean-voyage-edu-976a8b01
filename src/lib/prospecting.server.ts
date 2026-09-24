@@ -367,6 +367,13 @@ export async function createProspect(
     userEmail: actor.email ?? null,
   });
 
+  // Phase A: canonical entry — manual/imported/promoted prospects get an entity.
+  // Promotion re-links to the candidate's entity afterwards (forced link).
+  if (!input.skipEntityLink) {
+    const { ensureBusinessEntity } = await import("./entity-resolution.server");
+    await ensureBusinessEntity(supabase, "prospect", data.id);
+  }
+
   return { status: "created", id: data.id, fitScore: scored.total };
 }
 
