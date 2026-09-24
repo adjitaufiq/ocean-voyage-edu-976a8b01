@@ -103,10 +103,17 @@ export const reanalyzeStaleFn = createServerFn({ method: "POST" })
 
 export const getBusinessIntelligenceFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ entityId: z.string().uuid() }).parse(data))
+  .inputValidator((data: unknown) =>
+    z
+      .object({ entityId: z.string().uuid().optional(), candidateId: z.string().uuid().optional() })
+      .parse(data),
+  )
   .handler(async ({ data, context }) => {
     const { assertLeadWork } = await import("./admin.server");
-    const { getBusinessIntelligence } = await import("./crm-intelligence.server");
+    const { getBusinessIntelligence, entityIdForCandidate } = await import("./crm-intelligence.server");
     await assertLeadWork(context.supabase, context.userId);
-    return getBusinessIntelligence(context.supabase, data.entityId);
+    const entityId =
+      data.entityId ?? (data.candidateId ? await entityIdForCandidate(context.supabase, data.candidateId) : null);
+    if (!entityId) return null;
+    return { entityId, ...(await getBusinessIntelligence(context.supabase, entityId)) };
   });

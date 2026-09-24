@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { CustomerFeedbackBox } from "@/components/admin/CustomerFeedbackBox";
 import { GlassCard, MetricTile, SectionCard } from "@/components/admin/ui";
 import { leadTemperatureClass, type LeadTemperature } from "@/lib/admin/discovery";
 import {
@@ -630,6 +631,8 @@ export function SalesPrepPanel({
                     ) : null}
                   </div>
                 ) : null}
+
+                <CustomerFeedbackBox candidateId={row.candidate_id} />
 
                 {row.ready_blockers.length > 0 ? (
                   <p className="text-xs text-amber-200">
