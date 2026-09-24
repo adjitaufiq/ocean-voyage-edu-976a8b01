@@ -215,6 +215,8 @@ export async function fetchProspect(supabase: Client, id: string) {
 /* -------------------------------- Writes ---------------------------------- */
 
 export type ProspectInput = {
+  /** Phase A: caller links the entity itself (candidate promotion). */
+  skipEntityLink?: boolean;
   businessName: string;
   industry?: string | null;
   city?: string | null;
