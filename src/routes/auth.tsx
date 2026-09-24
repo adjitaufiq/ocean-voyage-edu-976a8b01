@@ -34,6 +34,11 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const goNext = () => {
+    const next = new URLSearchParams(window.location.search).get("next");
+    if (next && next.startsWith("/") && !next.startsWith("//")) window.location.assign(next);
+    else navigate({ to: "/admin", replace: true });
+  };
   const provision = useServerFn(provisionWorkspaceAccess);
   const access = useServerFn(getAdminAccess);
   const [email, setEmail] = useState("");
@@ -50,7 +55,7 @@ function AuthPage() {
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/admin", replace: true });
+      if (data.user) goNext();
     });
   }, [navigate]);
 
@@ -98,7 +103,7 @@ function AuthPage() {
         }
       }
 
-      navigate({ to: "/admin", replace: true });
+      goNext();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal masuk.");
     } finally {
@@ -125,7 +130,7 @@ function AuthPage() {
         });
       }
       await provision().catch(() => undefined);
-      navigate({ to: "/admin", replace: true });
+      goNext();
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       // Cancelled or failed biometric prompt: stay quiet, form is right below.
@@ -145,7 +150,7 @@ function AuthPage() {
       toast.error(error instanceof Error ? error.message : "Pendaftaran biometrik gagal.");
     } finally {
       setEnrollOffer(null);
-      navigate({ to: "/admin", replace: true });
+      goNext();
     }
   }
 
@@ -173,7 +178,7 @@ function AuthPage() {
               type="button"
               onClick={() => {
                 setEnrollOffer(null);
-                navigate({ to: "/admin", replace: true });
+                goNext();
               }}
               className="w-full rounded-xl border border-border/60 px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground"
             >
