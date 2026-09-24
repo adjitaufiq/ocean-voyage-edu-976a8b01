@@ -265,3 +265,9 @@ kontak, serta riwayat CRM gabungan (`candidate_status_history` + `prospect_activ
 Antrean tinjauan duplikat tetap manual: pasangan berkemiripan tinggi tidak pernah digabung otomatis;
 keputusan "Bisnis yang sama" / "Bisnis berbeda" dicatat di `entity_match_history`. CRM lama
 (`prospects`, aktivitas, tahap) tidak diubah sama sekali.
+
+## Phase 6 — Umpan balik customer
+- Setiap balasan customer (WhatsApp, email, catatan sales/konsultasi/CRM, percakapan AI) dicatat lewat "Respons customer & keberatan" di kartu Ready Outreach atau halaman detail bisnis.
+- Sistem menurunkan temuan (fakta/dugaan) dan keberatan. Dugaan yang dibantah jadi "Ditolak", tidak dihapus.
+- Bila ada fakta baru, analisis ditandai perlu diperbarui: "Analisis bisnis sudah berubah, perlu diperbarui sebelum follow up." Tekan "Perbarui analisis" sebelum follow up.
+- Aktivitas CRM biasa (ubah tahap, follow up) tidak memicu analisis ulang.
