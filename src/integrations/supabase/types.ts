@@ -3568,60 +3568,84 @@ export type Database = {
       }
       sales_preparations: {
         Row: {
+          analysis_id: string | null
+          analysis_version: number | null
           approach_category: string
           approach_reason: string | null
           business_brief: Json
+          business_entity_id: string | null
           campaign_id: string | null
           candidate_id: string | null
           created_at: string
           created_by: string | null
           created_by_email: string | null
+          decision_source: string
+          engine_version: string | null
           evidence: Json
           generated_by: string
+          generated_from_analysis: boolean
           id: string
           is_active: boolean
           outreach_message: Json
           prospect_id: string | null
+          provenance: Json
           recommended_solution: string | null
           selected_asset: Json
+          source_revision: number | null
           updated_at: string
         }
         Insert: {
+          analysis_id?: string | null
+          analysis_version?: number | null
           approach_category?: string
           approach_reason?: string | null
           business_brief?: Json
+          business_entity_id?: string | null
           campaign_id?: string | null
           candidate_id?: string | null
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
+          decision_source?: string
+          engine_version?: string | null
           evidence?: Json
           generated_by?: string
+          generated_from_analysis?: boolean
           id?: string
           is_active?: boolean
           outreach_message?: Json
           prospect_id?: string | null
+          provenance?: Json
           recommended_solution?: string | null
           selected_asset?: Json
+          source_revision?: number | null
           updated_at?: string
         }
         Update: {
+          analysis_id?: string | null
+          analysis_version?: number | null
           approach_category?: string
           approach_reason?: string | null
           business_brief?: Json
+          business_entity_id?: string | null
           campaign_id?: string | null
           candidate_id?: string | null
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
+          decision_source?: string
+          engine_version?: string | null
           evidence?: Json
           generated_by?: string
+          generated_from_analysis?: boolean
           id?: string
           is_active?: boolean
           outreach_message?: Json
           prospect_id?: string | null
+          provenance?: Json
           recommended_solution?: string | null
           selected_asset?: Json
+          source_revision?: number | null
           updated_at?: string
         }
         Relationships: [
