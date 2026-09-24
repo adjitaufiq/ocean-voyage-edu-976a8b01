@@ -690,3 +690,108 @@ export async function resolveReviewItem(
   if (updateError) throw new Error(`Gagal menyimpan keputusan: ${updateError.message}`);
   return { status: "linked" as const };
 }
+
+/* ------------------------- canonical entry helper ------------------------- */
+
+const ENSURE_COLUMNS: Record<LegacyType, { table: "prospect_candidates" | "prospects" | "consultations" | "ai_conversations"; columns: string; toSignals: (row: Record<string, unknown>) => EntitySignals; stage: string } | undefined> = {
+  prospect_candidate: {
+    table: "prospect_candidates",
+    columns: "id, business_name, city, province, address, category, industry, website, place_id, phone, contact_data, promoted_prospect_id",
+    toSignals: candidateSignals,
+    stage: "candidate",
+  },
+  prospect: {
+    table: "prospects",
+    columns: "id, business_name, city, industry, website, contact_phone, contact_whatsapp, contact_email",
+    toSignals: prospectSignals,
+    stage: "prospect",
+  },
+  consultation: {
+    table: "consultations",
+    columns: "id, business_name, company, name, email, whatsapp, ai_business_category, project_type",
+    toSignals: consultationSignals,
+    stage: "consultation",
+  },
+  ai_conversation: {
+    table: "ai_conversations",
+    columns: "id, contact_name, contact_email, contact_whatsapp, business_category",
+    toSignals: conversationSignals,
+    stage: "conversation",
+  },
+  client: undefined,
+};
+
+/**
+ * Canonical entry point (Phase A): every new business record goes through
+ * here so it is linked to a Business Entity immediately — no manual
+ * backfill needed. Idempotent, additive, never throws (returns errors).
+ * `forcedEntityId` links a promoted prospect to its candidate's entity.
+ */
+export async function ensureBusinessEntities(
+  client: Client,
+  legacyType: LegacyType,
+  ids: string[],
+  options: { forcedEntityId?: string | null } = {},
+): Promise<{ linked: Record<string, string>; created: number; errors: string[] }> {
+  const out = { linked: {} as Record<string, string>, created: 0, errors: [] as string[] };
+  const spec = ENSURE_COLUMNS[legacyType];
+  const unique = [...new Set(ids.filter(Boolean))].slice(0, 500);
+  if (!spec || unique.length === 0) return out;
+  try {
+    const { data: existing } = await client
+      .from("business_entity_links")
+      .select("business_entity_id, legacy_id")
+      .eq("legacy_type", legacyType)
+      .eq("is_active", true)
+      .in("legacy_id", unique);
+    const links = new Map<string, string>();
+    for (const row of existing ?? []) {
+      links.set(`${legacyType}:${row.legacy_id}`, row.business_entity_id);
+      out.linked[row.legacy_id] = row.business_entity_id;
+    }
+    const missing = unique.filter((id) => !links.has(`${legacyType}:${id}`));
+    if (missing.length === 0) return out;
+
+    const { data: rows, error } = await client.from(spec.table).select(spec.columns).in("id", missing);
+    if (error) throw new Error(error.message);
+    const pool = await loadPool(client);
+    const report = { ...EMPTY };
+    const ctx: ResolveContext = { pool, links, dryRun: false, report, errors: out.errors };
+
+    // A candidate promoted earlier shares its prospect's entity (and vice versa).
+    for (const raw of (rows ?? []) as unknown as Record<string, unknown>[]) {
+      const id = String(raw["id"]);
+      try {
+        let forced = options.forcedEntityId ?? null;
+        const promoted = raw["promoted_prospect_id"] as string | null | undefined;
+        if (!forced && promoted) {
+          const { data: link } = await client
+            .from("business_entity_links")
+            .select("business_entity_id")
+            .eq("legacy_type", "prospect")
+            .eq("legacy_id", promoted)
+            .eq("is_active", true)
+            .maybeSingle();
+          forced = link?.business_entity_id ?? null;
+        }
+        out.linked[id] = await resolveOne(client, ctx, legacyType, id, spec.toSignals(raw), spec.stage, forced);
+      } catch (err) {
+        if (out.errors.length < 10) out.errors.push(err instanceof Error ? err.message : String(err));
+      }
+    }
+    out.created = report.created + report.reviewRequired;
+  } catch (err) {
+    out.errors.push(err instanceof Error ? err.message : String(err));
+  }
+  return out;
+}
+
+export async function ensureBusinessEntity(
+  client: Client,
+  legacyType: LegacyType,
+  id: string,
+  options: { forcedEntityId?: string | null } = {},
+): Promise<string | null> {
+  const result = await ensureBusinessEntities(client, legacyType, [id], options);
+  return result.linked[id] ?? null;
+}
