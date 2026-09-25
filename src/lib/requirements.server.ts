@@ -199,5 +199,26 @@ export async function saveRequirementVersion(
     console.error("[requirements] insert failed", error.message);
     return null;
   }
+  // Observability (write-only, never throws): new Order Brief version saved.
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: leadId ? "consultation" : "ai_conversation",
+      legacyId: leadId ?? conversationId,
+      module: "order_brief",
+      decisionType: "order_brief_version",
+      decision: {
+        version,
+        problems: payload.problems,
+        features: payload.features,
+        recommended_package: payload.packageName,
+        source: payload.source ?? "ai",
+      },
+      evidence: { conversation_id: conversationId },
+      confidence: typeof payload.score === "number" ? payload.score : null,
+      actorKind: createdBy ? "user" : "ai",
+      actorId: createdBy ?? null,
+    });
+  }
   return { version, finalPrompt };
 }
