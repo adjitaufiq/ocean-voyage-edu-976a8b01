@@ -149,6 +149,7 @@ export async function qualifyCandidates(
   };
   const history: Record<string, unknown>[] = [];
   const autoApprovedIds: string[] = [];
+  const qcTraces: import("./decision-trace.server").DecisionTraceInput[] = [];
 
   for (const row of rows) {
     const qualificationInput = toInput(
@@ -209,11 +210,33 @@ export async function qualifyCandidates(
           reason: decision.reason.slice(0, 300),
         });
       }
+      qcTraces.push({
+        legacyType: "prospect_candidate",
+        legacyId: row.id,
+        module: "auto_qc",
+        decisionType: decision.qcStatus === "new" ? "qc_needs_review" : `qc_${decision.qcStatus}`,
+        decision: {
+          qc_status: decision.qcStatus,
+          screening_label: decision.screeningLabel,
+          lead_score: result.score,
+          temperature: result.temperature,
+          validation_status: result.validation.status,
+        },
+        evidence: { validation_reason: result.validation.reason, auto_qc_reason: decision.reason },
+        confidence: decision.confidence,
+        actorKind: "system",
+      });
     }
   }
 
   if (history.length > 0) {
     await supabase.from("candidate_status_history").insert(history as never);
+  }
+
+  // Observability (write-only, never throws): automatic QC decisions.
+  if (qcTraces.length > 0) {
+    const { recordDecisionTraces } = await import("./decision-trace.server");
+    await recordDecisionTraces(qcTraces);
   }
 
   // Auto-approved candidates get their sales material immediately, so a person
