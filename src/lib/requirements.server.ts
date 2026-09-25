@@ -189,6 +189,26 @@ export async function saveRequirementVersion(
       console.error("[requirements] update failed", updateError.message);
       return null;
     }
+    // Observability (write-only, never throws): chatbot refreshed the same version.
+    {
+      const { recordDecisionTrace } = await import("./decision-trace.server");
+      await recordDecisionTrace({
+        legacyType: leadId ? "consultation" : "ai_conversation",
+        legacyId: leadId ?? conversationId,
+        module: "order_brief",
+        decisionType: "order_brief_refresh",
+        decision: {
+          version: last.version,
+          problems: payload.problems,
+          features: payload.features,
+          recommended_package: payload.packageName,
+          source: "ai",
+        },
+        evidence: { conversation_id: conversationId },
+        confidence: typeof payload.score === "number" ? payload.score : null,
+        actorKind: "ai",
+      });
+    }
     return { version: last.version, finalPrompt: keptPrompt };
   }
 

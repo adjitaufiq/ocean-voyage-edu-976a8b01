@@ -516,6 +516,28 @@ export async function logCandidateEvent(
     reason: input.reason ?? null,
     meta: (input.meta ?? {}) as never,
   } as never);
+
+  // Observability (write-only, never throws): every human change is an override.
+  if (input.actorKind === "human") {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: "prospect_candidate",
+      legacyId: input.candidateId,
+      module: "human_override",
+      decisionType: input.field ? `override_${input.field}` : `override_${input.event}`,
+      decision: { event: input.event, field: input.field ?? null, to: input.newValue ?? null },
+      evidence: { data_source: input.dataSource ?? null, meta: input.meta ?? null },
+      actorKind: "user",
+      actorId: input.actorId ?? null,
+      override: {
+        original: input.oldValue ?? null,
+        changed: input.newValue ?? null,
+        actor: input.actorLabel ?? input.actorId ?? null,
+        reason: input.reason ?? null,
+        at: new Date().toISOString(),
+      },
+    });
+  }
 }
 
 export async function fetchCandidateEvents(
