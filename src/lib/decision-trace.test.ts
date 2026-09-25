@@ -42,6 +42,8 @@ describe("decision trace", () => {
     const row = buildTraceRow({ module: "m", decisionType: "d", decision: {}, confidence: NaN }, null);
     expect(row.confidence).toBeNull();
     expect(row.actor_kind).toBe("system");
+    // evidence_source is NOT NULL in the table — never send null.
+    expect(row.evidence_source).toEqual([]);
   });
 
   it("never throws when the database fails", async () => {

@@ -39,7 +39,7 @@ export function buildTraceRow(input: DecisionTraceInput, entityId: string | null
     analysis_id: input.analysisId ?? null,
     analysis_version: input.analysisVersion ?? null,
     engine_version: input.engineVersion ?? null,
-    evidence_source: (input.evidence ?? null) as never,
+    evidence_source: (input.evidence ?? []) as never,
     confidence,
     actor_kind: input.actorKind ?? "system",
     actor_id: input.actorId ?? null,
