@@ -651,7 +651,7 @@ export async function listMatchReviewQueue(client: Client, limit = 100) {
 /** Human decision on a review item — link it, or mark it as a distinct business. */
 export async function resolveReviewItem(
   client: Client,
-  input: { id: string; decision: "link" | "reject" },
+  input: { id: string; decision: "link" | "reject"; actorId?: string | null },
 ) {
   const { data, error } = await client
     .from("entity_match_history")
@@ -673,6 +673,14 @@ export async function resolveReviewItem(
   const target = data.candidate_entity_id;
   if (!target) throw new Error("Tidak ada bisnis pembanding untuk ditautkan.");
 
+  const { data: previousLink } = await client
+    .from("business_entity_links")
+    .select("business_entity_id")
+    .eq("legacy_type", data.source_type)
+    .eq("legacy_id", data.source_id)
+    .eq("is_active", true)
+    .maybeSingle();
+
   // Move the active link to the reviewed business; history rows stay intact.
   const { error: deactivateError } = await client
     .from("business_entity_links")
@@ -688,6 +696,29 @@ export async function resolveReviewItem(
     .update({ status: "auto_matched", matched_entity_id: target })
     .eq("id", input.id);
   if (updateError) throw new Error(`Gagal menyimpan keputusan: ${updateError.message}`);
+
+  // Observability (write-only, never throws): manual relink from review tools.
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      entityId: target,
+      legacyType: data.source_type as import("./decision-trace.server").LegacyType,
+      legacyId: data.source_id,
+      module: "entity_resolution",
+      decisionType: "entity_relinked_manual",
+      decision: { business_entity_id: target, legacy_type: data.source_type, legacy_id: data.source_id },
+      evidence: { match_history_id: input.id },
+      actorKind: "user",
+      actorId: input.actorId ?? null,
+      override: {
+        original: previousLink?.business_entity_id ?? null,
+        changed: target,
+        actor: input.actorId ?? null,
+        reason: "entity_review",
+        at: new Date().toISOString(),
+      },
+    });
+  }
   return { status: "linked" as const };
 }
 
@@ -780,6 +811,24 @@ export async function ensureBusinessEntities(
       }
     }
     out.created = report.created + report.reviewRequired;
+
+    // Observability (write-only, never throws): new legacy → entity links.
+    const newlyLinked = missing.filter((id) => out.linked[id]);
+    if (newlyLinked.length > 0) {
+      const { recordDecisionTraces } = await import("./decision-trace.server");
+      await recordDecisionTraces(
+        newlyLinked.map((id) => ({
+          entityId: out.linked[id],
+          legacyType,
+          legacyId: id,
+          module: "entity_resolution",
+          decisionType: options.forcedEntityId ? "entity_linked_promotion" : "entity_linked",
+          decision: { business_entity_id: out.linked[id], legacy_type: legacyType, legacy_id: id },
+          evidence: { forced_entity_id: options.forcedEntityId ?? null },
+          actorKind: "system" as const,
+        })),
+      );
+    }
   } catch (err) {
     out.errors.push(err instanceof Error ? err.message : String(err));
   }

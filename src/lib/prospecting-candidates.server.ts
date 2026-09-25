@@ -518,7 +518,20 @@ export async function logCandidateEvent(
   } as never);
 
   // Observability (write-only, never throws): every human change is an override.
-  if (input.actorKind === "human") {
+  if (input.actorKind === "human" && input.event === "created_manual") {
+    // Manual business creation is a creation, not an override.
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: "prospect_candidate",
+      legacyId: input.candidateId,
+      module: "business_identity",
+      decisionType: "business_created_manual",
+      decision: { event: input.event, reason: input.reason ?? null },
+      evidence: { data_source: input.dataSource ?? null, meta: input.meta ?? null },
+      actorKind: "user",
+      actorId: input.actorId ?? null,
+    });
+  } else if (input.actorKind === "human") {
     const { recordDecisionTrace } = await import("./decision-trace.server");
     await recordDecisionTrace({
       legacyType: "prospect_candidate",
