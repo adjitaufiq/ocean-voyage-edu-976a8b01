@@ -150,18 +150,23 @@ export async function recordCustomerResponse(
     if (error) throw new Error(`Gagal menandai temuan lama: ${error.message}`);
   }
 
+  let objectionIds: string[] = [];
   if (analyzed.objections.length) {
-    const { error } = await supabase.from("business_objections").insert(
-      analyzed.objections.map((objection) => ({
-        business_entity_id: input.entityId,
-        interaction_id: interaction.id,
-        category: objection.category,
-        quote: objection.quote,
-        confidence: objection.confidence,
-        recorded_by: userId,
-      })),
-    );
+    const { data: objectionRows, error } = await supabase
+      .from("business_objections")
+      .insert(
+        analyzed.objections.map((objection) => ({
+          business_entity_id: input.entityId,
+          interaction_id: interaction.id,
+          category: objection.category,
+          quote: objection.quote,
+          confidence: objection.confidence,
+          recorded_by: userId,
+        })),
+      )
+      .select("id");
     if (error) throw new Error(`Gagal menyimpan keberatan customer: ${error.message}`);
+    objectionIds = (objectionRows ?? []).map((row) => row.id);
   }
 
   if (plan.staleReason && current) {
@@ -170,6 +175,55 @@ export async function recordCustomerResponse(
       .update({ stale_reason: plan.staleReason })
       .eq("id", current.id);
     if (error) throw new Error(`Gagal menandai analisis perlu diperbarui: ${error.message}`);
+  }
+
+  // Observability (write-only, never throws): feedback intelligence events.
+  {
+    const { recordDecisionTraces } = await import("./decision-trace.server");
+    const base = {
+      entityId: input.entityId,
+      module: "feedback_intelligence",
+      analysisId: current?.id ?? null,
+      actorKind: "user" as const,
+      actorId: userId,
+    };
+    const ev = (extra: Record<string, unknown>) => ({ interaction_id: interaction.id, channel: input.channel, ...extra });
+    await recordDecisionTraces([
+      {
+        ...base,
+        decisionType: "customer_interaction_recorded",
+        decision: { direction: input.direction ?? "inbound", excerpt: content.slice(0, 500) },
+        evidence: ev({}),
+      },
+      ...analyzed.objections.map((objection, i) => ({
+        ...base,
+        decisionType: "objection_detected",
+        decision: { category: objection.category, quote: objection.quote },
+        evidence: ev({ objection_id: objectionIds[i] ?? null }),
+        confidence: objection.confidence,
+      })),
+      ...plan.insert.map((item, i) => ({
+        ...base,
+        decisionType: item.validationStatus === "confirmed" ? "finding_confirmed" : "finding_created",
+        decision: { kind: item.kind, statement: item.statement, topic_key: item.topicKey, validation_status: item.validationStatus },
+        evidence: ev({ finding_id: insertedIds[i] ?? null }),
+        confidence: item.confidence,
+      })),
+      ...plan.reject.map((item) => ({
+        ...base,
+        decisionType: "finding_rejected",
+        decision: { finding_id: item.id, replaced_by: replacement },
+        evidence: ev({ finding_id: item.id }),
+        override: { original: "unvalidated", changed: "rejected", actor: userId, reason: "customer_response", at: now },
+      })),
+      ...plan.supersede.map((item) => ({
+        ...base,
+        decisionType: "finding_superseded",
+        decision: { finding_id: item.id, replaced_by: replacement },
+        evidence: ev({ finding_id: item.id }),
+        override: { original: "active", changed: "superseded", actor: userId, reason: "customer_response", at: now },
+      })),
+    ]);
   }
 
   return {
