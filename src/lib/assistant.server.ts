@@ -171,6 +171,29 @@ export async function appendMessage(
     .from("assistant_threads")
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", input.threadId);
+
+  // Observability (write-only, never throws): Sales Assistant recommendations.
+  if (input.role === "assistant") {
+    try {
+      const { classifyAssistantReply } = await import("./admin/decision-classify");
+      const kinds = classifyAssistantReply(input.content);
+      if (kinds.length > 0) {
+        const { recordDecisionTraces } = await import("./decision-trace.server");
+        await recordDecisionTraces(
+          kinds.map((kind) => ({
+            module: "sales_assistant",
+            decisionType: kind,
+            decision: { excerpt: input.content.slice(0, 2000) },
+            evidence: { thread_id: input.threadId },
+            actorKind: "ai" as const,
+            actorId: input.userId,
+          })),
+        );
+      }
+    } catch (traceError) {
+      console.warn("[decision-trace] assistant skipped", (traceError as Error).message);
+    }
+  }
 }
 
 /* --------------------------- Business OS snapshot -------------------------- */

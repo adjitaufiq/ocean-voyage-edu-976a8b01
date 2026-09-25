@@ -425,6 +425,8 @@ export async function setSalesStage(
     reason: `Tahap penjualan: ${input.stage}`,
   } as never);
 
+  await traceHumanOverride(input.id, "sales_stage", from, input.stage, actor, `Tahap penjualan: ${input.stage}`);
+
   return { ok: true };
 }
 
@@ -760,6 +762,15 @@ export async function setVerificationItem(
     .eq("id", input.id);
   if (updateError) throw new Error(updateError.message);
 
+  await traceHumanOverride(
+    input.id,
+    `verification.${input.item}`,
+    String(!input.value),
+    String(input.value),
+    actor,
+    verified ? "Ceklis verifikasi lengkap" : null,
+  );
+
   return { ok: true, verified, checklist };
 }
 
@@ -799,5 +810,36 @@ export async function setContactStage(
     reason: `Tahap kontak: ${input.stage}`,
   } as never);
 
+  await traceHumanOverride(
+    input.id,
+    "contact_stage",
+    (row["contact_stage"] as string | null) ?? "ready_outreach",
+    input.stage,
+    actor,
+    `Tahap kontak: ${input.stage}`,
+  );
+
   return { ok: true };
+}
+
+/** Observability (write-only, never throws): a person changed a pipeline decision. */
+async function traceHumanOverride(
+  candidateId: string,
+  field: string,
+  original: string | null,
+  changed: string,
+  actor: { userId: string; email?: string | null },
+  reason: string | null,
+) {
+  const { recordDecisionTrace } = await import("./decision-trace.server");
+  await recordDecisionTrace({
+    legacyType: "prospect_candidate",
+    legacyId: candidateId,
+    module: "human_override",
+    decisionType: `override_${field}`,
+    decision: { field, to: changed },
+    actorKind: "user",
+    actorId: actor.userId,
+    override: { original, changed, actor: actor.email ?? actor.userId, reason, at: new Date().toISOString() },
+  });
 }

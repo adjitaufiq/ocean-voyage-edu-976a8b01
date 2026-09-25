@@ -260,5 +260,22 @@ export async function confirmPendingAction(
     })
     .eq("id", row.id);
 
+  // Observability (write-only, never throws): confirmed Sales Assistant decision.
+  if (result.ok) {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    const { assistantActionDecision } = await import("./admin/decision-classify");
+    const leadId = typeof payload["leadId"] === "string" ? (payload["leadId"] as string) : null;
+    await recordDecisionTrace({
+      legacyType: leadId ? "consultation" : null,
+      legacyId: leadId,
+      module: "sales_assistant",
+      decisionType: assistantActionDecision(row.action_type),
+      decision: { action_type: row.action_type, payload },
+      evidence: { pending_action_id: row.id, payload_hash: row.payload_hash },
+      actorKind: "user",
+      actorId: input.userId,
+    });
+  }
+
   return result;
 }
