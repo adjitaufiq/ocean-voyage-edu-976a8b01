@@ -1700,6 +1700,78 @@ export type Database = {
           },
         ]
       }
+      decision_traces: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          analysis_id: string | null
+          analysis_version: number | null
+          business_entity_id: string | null
+          confidence: number | null
+          created_at: string
+          decision_output: Json
+          decision_type: string
+          engine_version: string | null
+          evidence_source: Json
+          id: string
+          legacy_id: string | null
+          legacy_type: string | null
+          override_info: Json | null
+          source_module: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind?: string
+          analysis_id?: string | null
+          analysis_version?: number | null
+          business_entity_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          decision_output?: Json
+          decision_type: string
+          engine_version?: string | null
+          evidence_source?: Json
+          id?: string
+          legacy_id?: string | null
+          legacy_type?: string | null
+          override_info?: Json | null
+          source_module: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          analysis_id?: string | null
+          analysis_version?: number | null
+          business_entity_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          decision_output?: Json
+          decision_type?: string
+          engine_version?: string | null
+          evidence_source?: Json
+          id?: string
+          legacy_id?: string | null
+          legacy_type?: string | null
+          override_info?: Json | null
+          source_module?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_traces_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_traces_business_entity_id_fkey"
+            columns: ["business_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discovery_tasks: {
         Row: {
           area: string
