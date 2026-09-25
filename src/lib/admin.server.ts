@@ -535,6 +535,20 @@ export async function duplicateProposal(supabase: Client, id: string, userId: st
     .select("id")
     .single();
   if (error) throw new Error(error.message);
+  // Observability (write-only, never throws).
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: source.lead_id ? "consultation" : null,
+      legacyId: source.lead_id ?? null,
+      module: "proposal",
+      decisionType: "proposal_duplicate",
+      decision: { proposal_id: data.id, recommended_package: source.recommended_package },
+      evidence: { source_proposal_id: id },
+      actorKind: "user",
+      actorId: userId,
+    });
+  }
   return { id: data.id as string };
 }
 
@@ -608,6 +622,42 @@ export async function saveProposal(supabase: Client, input: SaveProposalInput, u
     .eq("id", input.id);
 
   if (error) throw new Error(error.message);
+  // Observability (write-only, never throws): proposal edit / package / feature change.
+  try {
+    const { proposalDecisionDiff } = await import("./admin/decision-classify");
+    const diff = proposalDecisionDiff(current, {
+      recommended_package: input.recommended_package,
+      core_features: input.core_features ?? current.core_features,
+      enhancements: input.enhancements ?? current.enhancements,
+    });
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: current.lead_id ? "consultation" : null,
+      legacyId: current.lead_id ?? null,
+      module: "proposal",
+      decisionType: diff.packageChanged
+        ? "proposal_package_change"
+        : diff.featuresChanged
+          ? "proposal_feature_change"
+          : "proposal_edit",
+      decision: { proposal_id: input.id, version: nextVersion, ...diff },
+      evidence: { previous_version: Number(current.version) || 1, note: input.version_note ?? null },
+      actorKind: "user",
+      actorId: userId,
+      override:
+        diff.packageChanged || diff.featuresChanged
+          ? {
+              original: { package: diff.packageFrom },
+              changed: { package: diff.packageTo },
+              actor: userId,
+              reason: input.version_note ?? null,
+              at: new Date().toISOString(),
+            }
+          : null,
+    });
+  } catch (traceError) {
+    console.warn("[decision-trace] proposal edit skipped", (traceError as Error).message);
+  }
   return { ok: true as const, version: nextVersion };
 }
 
