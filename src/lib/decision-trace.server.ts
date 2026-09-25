@@ -39,7 +39,7 @@ export function buildTraceRow(input: DecisionTraceInput, entityId: string | null
     analysis_id: input.analysisId ?? null,
     analysis_version: input.analysisVersion ?? null,
     engine_version: input.engineVersion ?? null,
-    evidence_source: (input.evidence ?? null) as never,
+    evidence_source: (input.evidence ?? []) as never,
     confidence,
     actor_kind: input.actorKind ?? "system",
     actor_id: input.actorId ?? null,
@@ -86,6 +86,20 @@ export async function recordDecisionTraces(inputs: DecisionTraceInput[]): Promis
     for (const [type, ids] of byType) {
       const m = await resolveEntities(db, type, [...new Set(ids)].slice(0, 500));
       for (const [k, v] of m) resolved.set(`${type}:${k}`, v);
+    }
+    // Enrichment only: a chatbot conversation resolves through its lead.
+    const unresolvedConv = inputs
+      .filter((t) => !t.entityId && t.legacyType === "ai_conversation" && t.legacyId && !resolved.has(`ai_conversation:${t.legacyId}`))
+      .map((t) => t.legacyId as string);
+    if (unresolvedConv.length > 0) {
+      const { data: convs } = await db.from("ai_conversations").select("id, lead_id").in("id", [...new Set(unresolvedConv)]);
+      const leadByConv = new Map<string, string>();
+      for (const c of (convs ?? []) as { id: string; lead_id: string | null }[]) if (c.lead_id) leadByConv.set(c.id, c.lead_id);
+      const leadEntities = await resolveEntities(db, "consultation", [...new Set(leadByConv.values())]);
+      for (const [conv, lead] of leadByConv) {
+        const e = leadEntities.get(lead);
+        if (e) resolved.set(`ai_conversation:${conv}`, e);
+      }
     }
     const rows = inputs.map((t) =>
       buildTraceRow(

@@ -62,5 +62,5 @@ export const resolveEntityReviewFn = createServerFn({ method: "POST" })
     const { assertLeadWork } = await import("./admin.server");
     const { resolveReviewItem } = await import("./entity-resolution.server");
     await assertLeadWork(context.supabase, context.userId);
-    return resolveReviewItem(context.supabase, data);
+    return resolveReviewItem(context.supabase, { ...data, actorId: context.userId });
   });
