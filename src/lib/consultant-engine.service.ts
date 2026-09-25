@@ -329,6 +329,29 @@ export async function generateAnalysis(
     .eq("id", options.entityId);
   if (entityErr) throw new Error(`Gagal memperbarui penanda analisis aktif: ${entityErr.message}`);
 
+  // Observability (write-only, never throws).
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      entityId: options.entityId,
+      module: "consultant_engine",
+      decisionType: "consultant_analysis",
+      decision: {
+        problems: analysis.problemHypotheses,
+        confirmed_problems: analysis.confirmedProblems,
+        core_solution: analysis.coreSolution,
+        recommended_package: analysis.recommendedPackage,
+        sales_angle: analysis.salesAngle,
+      },
+      analysisId: inserted.id,
+      analysisVersion: version,
+      engineVersion: ENGINE_VERSION,
+      evidence: { input_hash: inputHash, source_revision: sourceRevision, problem_evidence: analysis.problemEvidence },
+      confidence: analysis.confidenceScore,
+      actorKind: "system",
+    });
+  }
+
   return {
     entityId: options.entityId,
     status: "generated",
