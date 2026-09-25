@@ -210,6 +210,31 @@ async function writePreparation(supabase: Client, row: Record<string, unknown>):
   } as never);
   if (insertError) throw new Error(insertError.message);
 
+  // Observability (write-only, never throws).
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      entityId,
+      legacyType: "prospect_candidate",
+      legacyId: id,
+      module: "sales_preparation",
+      decisionType: "sales_approach",
+      decision: {
+        approach_category: prep.approach.category,
+        approach_reason: approachReason,
+        recommended_solution: recommendation,
+        selected_asset: prep.asset,
+        decision_source: decisionSource,
+      },
+      analysisId: analysis?.id ?? null,
+      analysisVersion: analysis?.version ?? null,
+      engineVersion: analysis?.engineVersion ?? null,
+      evidence: { evidence_count: evidence.length, findings: findingIds, fallback_reason: provenance.fallback_reason },
+      confidence: typeof row["confidence_score"] === "number" ? (row["confidence_score"] as number) : null,
+      actorKind: "system",
+    });
+  }
+
   const stage = String(row["sales_stage"] ?? "qualified");
   if (stage !== "ready_outreach") {
     const { error: stageError } = await supabase

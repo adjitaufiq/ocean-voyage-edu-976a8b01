@@ -337,6 +337,26 @@ export async function saveOrderBriefVersion(
     created_by: input.createdBy,
   });
   if (error) throw new Error(error.message);
+  // Observability (write-only, never throws).
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: input.leadId ? "consultation" : "ai_conversation",
+      legacyId: input.leadId ?? input.conversationId,
+      module: "order_brief",
+      decisionType: "order_brief_version",
+      decision: {
+        version,
+        problems: input.next.problems,
+        features: input.next.features,
+        recommended_package: input.next.recommendation,
+        source: "admin_edit",
+      },
+      evidence: { conversation_id: input.conversationId, base_version: input.base.version },
+      actorKind: "user",
+      actorId: input.createdBy,
+    });
+  }
   return { version };
 }
 

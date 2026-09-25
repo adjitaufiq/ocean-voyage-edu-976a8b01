@@ -472,6 +472,31 @@ async function saveCandidates(
     await ensureBusinessEntities(supabase, "prospect_candidate", insertedRows.map((row) => row.id));
   }
 
+  // Observability (write-only, never throws): candidate intelligence saved.
+  {
+    const { recordDecisionTraces } = await import("./decision-trace.server");
+    await recordDecisionTraces(
+      insertedRows.map((row) => {
+        const src = (rows.find((item) => item["place_id"] === row.place_id) ?? {}) as Record<string, unknown>;
+        return {
+          legacyType: "prospect_candidate" as const,
+          legacyId: row.id,
+          module: "discovery",
+          decisionType: "candidate_discovered",
+          decision: {
+            business_name: src["business_name"] ?? null,
+            category: src["category"] ?? null,
+            city: src["city"] ?? null,
+            campaign_id: campaign.id,
+          },
+          evidence: { provider: provider.name, place_id: row.place_id, task_id: task.id },
+          confidence: typeof src["confidence_score"] === "number" ? (src["confidence_score"] as number) : null,
+          actorKind: "system" as const,
+        };
+      }),
+    );
+  }
+
   for (const row of insertedRows) {
     const index = rows.findIndex((item) => item["place_id"] === row.place_id);
     sources.push({

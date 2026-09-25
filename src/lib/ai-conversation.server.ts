@@ -296,6 +296,28 @@ export async function qualifyConversation(
     requirementVersion = saved?.version ?? null;
   }
 
+  // Observability (write-only, never throws): chatbot qualified lead persisted.
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: leadId ? "consultation" : "ai_conversation",
+      legacyId: leadId ?? conversation?.id ?? null,
+      module: "chatbot",
+      decisionType: "qualified_lead",
+      decision: {
+        qualification,
+        score,
+        recommended_package: input.packageName,
+        problems: input.problems,
+        features: input.features,
+        business_category: input.businessCategory,
+      },
+      evidence: { conversation_id: conversation?.id ?? null, requirement_version: requirementVersion },
+      confidence: score,
+      actorKind: "ai",
+    });
+  }
+
   // Best-effort notification AFTER core persistence. `notifyLeadOnce` waits for
   // real contact data and records delivery, so an early qualification (no
   // contact yet) still gets notified later and retries never duplicate.

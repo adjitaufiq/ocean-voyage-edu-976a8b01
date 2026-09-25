@@ -482,6 +482,26 @@ export async function createProposalForLead(supabase: Client, leadId: string, us
   if (error) throw new Error(error.message);
   const { recordBusinessMilestone } = await import("./acquisition.server");
   await recordBusinessMilestone("proposal_created", leadId, packageName);
+  // Observability (write-only, never throws).
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: "consultation",
+      legacyId: leadId,
+      module: "proposal",
+      decisionType: "proposal_recommendation",
+      decision: {
+        proposal_id: data.id,
+        recommended_package: packageName,
+        core_features: coreFeatures,
+        enhancements,
+        from_consultant_mirror: Boolean(mirror),
+      },
+      evidence: { lead_id: leadId, order_brief_version: finalBrief?.brief.version ?? null },
+      actorKind: "user",
+      actorId: userId,
+    });
+  }
   return { id: data.id as string };
 }
 
@@ -786,6 +806,20 @@ export async function createLeadAiActivity(
     .select(AI_ACTIVITY_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
+  // Observability (write-only, never throws): legacy Sales AI suggestion persisted.
+  {
+    const { recordDecisionTrace } = await import("./decision-trace.server");
+    await recordDecisionTrace({
+      legacyType: "consultation",
+      legacyId: input.leadId,
+      module: "legacy_sales_ai",
+      decisionType: input.action,
+      decision: { label: input.label, content: input.content.slice(0, 4000) },
+      evidence: { activity_id: (data as { id?: string } | null)?.id ?? null, meta: input.meta ?? null },
+      actorKind: "user",
+      actorId: user.id,
+    });
+  }
   return data;
 }
 
