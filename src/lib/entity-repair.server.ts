@@ -222,6 +222,23 @@ export async function pauseRepairJob(client: Client, runId: string) {
   return { status: "paused" as const };
 }
 
+/** Resume a paused job from its stored cursor. */
+export async function resumeRepairJob(client: Client, runId: string) {
+  const { data, error } = await client
+    .from("entity_resolution_runs")
+    .update({ status: "pending", lease_until: null })
+    .eq("id", runId)
+    .eq("status", "paused")
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    if (error.code === "23505") throw new Error("Sudah ada job aktif lain untuk sumber ini.");
+    throw new Error(error.message);
+  }
+  if (!data) throw new Error("Job tidak dalam status jeda.");
+  return { status: "pending" as const };
+}
+
 export async function getRepairStatus(client: Client) {
   const [{ data: runs }, { data: failures }] = await Promise.all([
     client.from("entity_resolution_runs").select("*").order("created_at", { ascending: false }).limit(20),

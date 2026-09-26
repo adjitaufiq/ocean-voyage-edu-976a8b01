@@ -343,6 +343,16 @@ export async function convertInvoiceToClient(supabase: Client, invoiceId: string
       .single();
     if (error) throw new Error(error.message);
     client = data;
+    // Phase 2B: link the new client to a Business Entity. A client converted
+    // from a lead inherits that lead's business; otherwise the hardened
+    // resolver decides and uncertain matches go to the review queue.
+    // Never blocks client creation.
+    try {
+      const { ensureBusinessEntity } = await import("./entity-resolution.server");
+      await ensureBusinessEntity(supabase, "client", client.id);
+    } catch {
+      /* identity linking is non-blocking */
+    }
   }
 
   // Project (one per invoice) — preserves the project history per payment.
