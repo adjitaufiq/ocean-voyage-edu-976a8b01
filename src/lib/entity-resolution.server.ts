@@ -24,6 +24,7 @@ import {
   type MatchResult,
   type ResolverMode,
 } from "@/lib/admin/entity-resolution";
+import { classifyReviewRisk, summarizeSignals, type ReviewRisk } from "@/lib/admin/entity-review";
 
 type Client = SupabaseClient<Database>;
 type LegacyType = Database["public"]["Enums"]["business_legacy_type"];
@@ -999,9 +1000,75 @@ export async function resolveReviewItem(
   return { status: "linked" as const };
 }
 
+/**
+ * Undo a review decision (Phase 2B). Restores the previous active link, clears
+ * a replacement created by that decision, and reopens the queue item.
+ * History rows and traces are never deleted.
+ */
+export async function undoReviewDecision(client: Client, input: { id: string; actorId?: string | null }) {
+  const { data, error } = await client
+    .from("entity_match_history")
+    .select("id, source_type, source_id, status, original_status, decision_previous_entity_id, matched_entity_id")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (error) throw new Error(`Gagal memuat item tinjauan: ${error.message}`);
+  if (!data) throw new Error("Item tinjauan tidak ditemukan.");
+  if (!data.original_status || !["confirmed", "rejected"].includes(data.status)) {
+    throw new Error("Keputusan ini tidak bisa dibatalkan.");
+  }
+  const legacyType = data.source_type as LegacyType;
+  const previous = data.decision_previous_entity_id;
+  const { data: currentLink } = await client
+    .from("business_entity_links")
+    .select("business_entity_id")
+    .eq("legacy_type", legacyType)
+    .eq("legacy_id", data.source_id)
+    .eq("is_active", true)
+    .maybeSingle();
+  const current = currentLink?.business_entity_id ?? null;
+
+  if (previous && previous !== current) {
+    // Re-activate the previous entity first so the link can point back to it.
+    await client
+      .from("business_entities")
+      .update({ replaced_by_entity_id: null, replaced_at: null, replaced_reason: null })
+      .eq("id", previous)
+      .in("replaced_reason", ["entity_review_link"]);
+    await moveActiveLink(client, legacyType, data.source_id, previous);
+  }
+  const { error: updateError } = await client
+    .from("entity_match_history")
+    .update({ status: data.original_status, matched_entity_id: previous ?? data.matched_entity_id, decided_at: null, decided_by: null })
+    .eq("id", input.id);
+  if (updateError) throw new Error(`Gagal membatalkan keputusan: ${updateError.message}`);
+
+  const { recordDecisionTrace } = await import("./decision-trace.server");
+  await recordDecisionTrace({
+    entityId: previous ?? current,
+    legacyType,
+    legacyId: data.source_id,
+    module: "entity_resolution",
+    decisionType: "entity_review_decision",
+    decision: { decision: "undo", undone_status: data.status, restored_status: data.original_status, restored_entity_id: previous },
+    evidence: { match_history_id: input.id, entity_before_undo: current },
+    actorKind: "user",
+    actorId: input.actorId ?? null,
+  });
+  return { status: "reopened" as const };
+}
+
 /* ------------------------- canonical entry helper ------------------------- */
 
-const ENSURE_COLUMNS: Record<LegacyType, { table: "prospect_candidates" | "prospects" | "consultations" | "ai_conversations"; columns: string; toSignals: (row: Record<string, unknown>) => EntitySignals; stage: string } | undefined> = {
+function clientSignals(row: Record<string, unknown>): EntitySignals {
+  const name = (row["company"] as string | null) || (row["name"] as string | null) || "";
+  return base({
+    name: String(name),
+    whatsapp: (row["whatsapp"] as string | null) ?? null,
+    email: (row["email"] as string | null) ?? null,
+  });
+}
+
+export const ENSURE_COLUMNS: Record<LegacyType, { table: "prospect_candidates" | "prospects" | "consultations" | "ai_conversations" | "clients"; columns: string; toSignals: (row: Record<string, unknown>) => EntitySignals; stage: string } | undefined> = {
   prospect_candidate: {
     table: "prospect_candidates",
     columns: "id, business_name, city, province, address, category, industry, website, place_id, phone, contact_data, promoted_prospect_id",
@@ -1026,7 +1093,14 @@ const ENSURE_COLUMNS: Record<LegacyType, { table: "prospect_candidates" | "prosp
     toSignals: conversationSignals,
     stage: "conversation",
   },
-  client: undefined,
+  // Clients: company/name + email + WhatsApp (the table has no phone/website).
+  // A client converted from a lead is linked to that lead's business.
+  client: {
+    table: "clients",
+    columns: "id, lead_id, name, company, email, whatsapp",
+    toSignals: clientSignals,
+    stage: "client",
+  },
 };
 
 /**
