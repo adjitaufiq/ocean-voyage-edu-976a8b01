@@ -2010,9 +2010,13 @@ export type Database = {
           comparison: Json
           confidence_score: number
           created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_previous_entity_id: string | null
           id: string
           matched_entity_id: string | null
           matching_method: string
+          original_status: string | null
           reason: string | null
           source_id: string
           source_type: Database["public"]["Enums"]["business_legacy_type"]
@@ -2023,9 +2027,13 @@ export type Database = {
           comparison?: Json
           confidence_score?: number
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_previous_entity_id?: string | null
           id?: string
           matched_entity_id?: string | null
           matching_method: string
+          original_status?: string | null
           reason?: string | null
           source_id: string
           source_type: Database["public"]["Enums"]["business_legacy_type"]
@@ -2036,9 +2044,13 @@ export type Database = {
           comparison?: Json
           confidence_score?: number
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_previous_entity_id?: string | null
           id?: string
           matched_entity_id?: string | null
           matching_method?: string
+          original_status?: string | null
           reason?: string | null
           source_id?: string
           source_type?: Database["public"]["Enums"]["business_legacy_type"]
@@ -2124,42 +2136,60 @@ export type Database = {
       }
       entity_resolution_runs: {
         Row: {
+          created: number
           created_at: string
           cursor_created_at: string | null
           cursor_id: string | null
           dry_run: boolean
           failed: number
+          finished_at: string | null
           id: string
           last_error: string | null
+          lease_until: string | null
+          matched: number
+          page_size: number
           processed: number
+          review_required: number
           source_type: string
           started_by: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          created?: number
           created_at?: string
           cursor_created_at?: string | null
           cursor_id?: string | null
           dry_run?: boolean
           failed?: number
+          finished_at?: string | null
           id?: string
           last_error?: string | null
+          lease_until?: string | null
+          matched?: number
+          page_size?: number
           processed?: number
+          review_required?: number
           source_type: string
           started_by?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          created?: number
           created_at?: string
           cursor_created_at?: string | null
           cursor_id?: string | null
           dry_run?: boolean
           failed?: number
+          finished_at?: string | null
           id?: string
           last_error?: string | null
+          lease_until?: string | null
+          matched?: number
+          page_size?: number
           processed?: number
+          review_required?: number
           source_type?: string
           started_by?: string | null
           status?: string
