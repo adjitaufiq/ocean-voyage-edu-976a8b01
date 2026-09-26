@@ -5,6 +5,8 @@ import {
   normalizeDomain,
   normalizeName,
   normalizePhone,
+  parseResolverMode,
+  shouldAttach,
   similarity,
   type EntityCandidateRow,
   type EntitySignals,
@@ -72,12 +74,48 @@ describe("matchEntity", () => {
     expect(result.entityId).toBe("e2");
   });
 
-  it("level 3: shared phone auto matches", () => {
+  it("level 3: shared phone needs review in hardened mode", () => {
     const result = matchEntity(
       signals({ name: "A", phone: "0812 3456 7890" }),
       [entity({ id: "e3", name: "B", whatsapp: "+6281234567890" })],
     );
     expect(result.method).toBe("verified_contact");
+    expect(result.status).toBe("review_required");
+    expect(shouldAttach(result)).toBe(false);
+  });
+
+  it("level 3 legacy mode: shared phone still auto matches", () => {
+    const result = matchEntity(
+      signals({ name: "A", phone: "0812 3456 7890" }),
+      [entity({ id: "e3", name: "B", whatsapp: "+6281234567890" })],
+      "legacy",
+    );
+    expect(result.status).toBe("auto_matched");
+    expect(shouldAttach(result, "legacy")).toBe(true);
+  });
+
+  it("suggested matches attach only in legacy mode", () => {
+    const result = matchEntity(
+      signals({ name: "Kartika Sari", city: "Bandung", address: "Jl Dago 1" }),
+      [entity({ id: "e4", name: "Kartika Sari", city: "Bandung", address: "Jl Dago 1" })],
+    );
+    expect(result.status).toBe("suggested");
+    expect(shouldAttach(result)).toBe(false);
+    expect(shouldAttach(result, "legacy")).toBe(true);
+  });
+
+  it("strong identifiers always attach", () => {
+    const result = matchEntity(
+      signals({ name: "A", googlePlaceId: "p1" }),
+      [entity({ id: "e1", name: "Other", googlePlaceId: "p1" })],
+    );
+    expect(shouldAttach(result)).toBe(true);
+  });
+
+  it("parses resolver mode safely", () => {
+    expect(parseResolverMode("legacy")).toBe("legacy");
+    expect(parseResolverMode(null)).toBe("hardened");
+    expect(parseResolverMode("junk")).toBe("hardened");
   });
 
   it("level 4: same name + city suggests", () => {
