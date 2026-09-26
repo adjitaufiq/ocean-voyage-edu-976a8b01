@@ -24,6 +24,7 @@ import {
   type MatchResult,
   type ResolverMode,
 } from "@/lib/admin/entity-resolution";
+import { classifyReviewRisk, summarizeSignals, type ReviewRisk } from "@/lib/admin/entity-review";
 
 type Client = SupabaseClient<Database>;
 type LegacyType = Database["public"]["Enums"]["business_legacy_type"];
@@ -677,32 +678,67 @@ export async function listUnifiedEntities(
 
 export type ReviewRow = {
   id: string;
+  status: string;
+  originalStatus: string | null;
   sourceType: string;
   sourceId: string;
+  sourceName: string | null;
   method: string;
   confidence: number;
   reason: string | null;
   comparison: string;
+  signals: string[];
+  risk: ReviewRisk;
+  /** Business the source record currently belongs to. */
+  currentEntityId: string | null;
   businessA: string | null;
+  /** Possible matching business. */
+  suggestedEntityId: string | null;
   businessB: string | null;
+  decidedAt: string | null;
   createdAt: string;
 };
 
-/** Duplicate review queue: matches too weak to link automatically (incl. suggestions). */
-export async function listMatchReviewQueue(client: Client, limit = 100) {
-  const { data, error } = await client
+export type ReviewFilter = "open" | "suggested" | "review_required" | "decided";
+
+/** Match review queue (Phase 2B): open items, or decided ones for undo. */
+export async function listMatchReviewQueue(client: Client, limit = 100, filter: ReviewFilter = "open") {
+  const statuses =
+    filter === "suggested"
+      ? ["suggested"]
+      : filter === "review_required"
+        ? ["review_required"]
+        : filter === "decided"
+          ? ["confirmed", "rejected"]
+          : ["review_required", "suggested"];
+  let query = client
     .from("entity_match_history")
-    .select("id, source_type, source_id, candidate_entity_id, matched_entity_id, matching_method, confidence_score, status, reason, comparison, created_at")
-    .in("status", ["review_required", "suggested"])
-    .order("created_at", { ascending: false })
+    .select("id, source_type, source_id, candidate_entity_id, matched_entity_id, matching_method, confidence_score, status, original_status, decided_at, reason, comparison, created_at")
+    .in("status", statuses);
+  if (filter === "decided") query = query.not("decided_at", "is", null);
+  const { data, error } = await query
+    .order(filter === "decided" ? "decided_at" : "created_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 300));
   if (error) throw new Error(`Gagal memuat antrean tinjauan: ${error.message}`);
+  const list = data ?? [];
+
+  // Current owner = the active link (not the history snapshot).
+  const currentBySource = new Map<string, string>();
+  const sourceIds = [...new Set(list.map((row) => row.source_id))];
+  if (sourceIds.length) {
+    const { data: linkRows } = await client
+      .from("business_entity_links")
+      .select("legacy_type, legacy_id, business_entity_id")
+      .eq("is_active", true)
+      .in("legacy_id", sourceIds);
+    for (const row of linkRows ?? []) currentBySource.set(`${row.legacy_type}:${row.legacy_id}`, row.business_entity_id);
+  }
 
   const entityIds = Array.from(
     new Set(
-      (data ?? [])
-        .flatMap((row) => [row.candidate_entity_id, row.matched_entity_id])
-        .filter((id): id is string => Boolean(id)),
+      [...list.flatMap((row) => [row.candidate_entity_id, row.matched_entity_id]), ...currentBySource.values()].filter(
+        (id): id is string => Boolean(id),
+      ),
     ),
   );
   const names = new Map<string, string>();
@@ -714,19 +750,70 @@ export async function listMatchReviewQueue(client: Client, limit = 100) {
     for (const row of entityRows ?? []) names.set(row.id, row.canonical_name);
   }
 
-  const rows: ReviewRow[] = (data ?? []).map((row) => ({
-    id: row.id,
-    sourceType: row.source_type,
-    sourceId: row.source_id,
-    method: row.matching_method,
-    confidence: Number(row.confidence_score ?? 0),
-    reason: row.reason,
-    comparison: JSON.stringify(row.comparison ?? {}, null, 2),
-    businessA: row.matched_entity_id ? (names.get(row.matched_entity_id) ?? null) : null,
-    businessB: row.candidate_entity_id ? (names.get(row.candidate_entity_id) ?? null) : null,
-    createdAt: row.created_at,
-  }));
+  // Source record names, one query per source type.
+  const sourceNames = new Map<string, string>();
+  const byType = new Map<LegacyType, string[]>();
+  for (const row of list) {
+    const t = row.source_type as LegacyType;
+    byType.set(t, [...(byType.get(t) ?? []), row.source_id]);
+  }
+  for (const [type, ids] of byType) {
+    const spec = ENSURE_COLUMNS[type];
+    if (!spec) continue;
+    const { data: srcRows } = await client.from(spec.table).select(spec.columns).in("id", ids);
+    for (const raw of (srcRows ?? []) as unknown as Record<string, unknown>[]) {
+      sourceNames.set(`${type}:${String(raw["id"])}`, spec.toSignals(raw).name || "(tanpa nama)");
+    }
+  }
+
+  const rows: ReviewRow[] = list.map((row) => {
+    const key = `${row.source_type}:${row.source_id}`;
+    const currentEntityId = currentBySource.get(key) ?? row.matched_entity_id;
+    const confidence = Number(row.confidence_score ?? 0);
+    return {
+      id: row.id,
+      status: row.status,
+      originalStatus: row.original_status ?? null,
+      sourceType: row.source_type,
+      sourceId: row.source_id,
+      sourceName: sourceNames.get(key) ?? null,
+      method: row.matching_method,
+      confidence,
+      reason: row.reason,
+      comparison: JSON.stringify(row.comparison ?? {}, null, 2),
+      signals: summarizeSignals(row.matching_method, row.comparison),
+      risk: classifyReviewRisk(row.matching_method, confidence),
+      currentEntityId,
+      businessA: currentEntityId ? (names.get(currentEntityId) ?? null) : null,
+      suggestedEntityId: row.candidate_entity_id,
+      businessB: row.candidate_entity_id ? (names.get(row.candidate_entity_id) ?? null) : null,
+      decidedAt: row.decided_at ?? null,
+      createdAt: row.created_at,
+    };
+  });
   return { rows };
+}
+
+/** Read-only audit of the review queue (counts, risk, samples). */
+export async function auditReviewQueue(client: Client) {
+  const out: Record<string, { count: number; byRisk: Record<ReviewRisk, number>; avgConfidence: number; bySource: Record<string, number>; sample: ReviewRow[] }> = {};
+  for (const filter of ["suggested", "review_required"] as const) {
+    const { rows } = await listMatchReviewQueue(client, 300, filter);
+    const byRisk: Record<ReviewRisk, number> = { high: 0, medium: 0, low: 0 };
+    const bySource: Record<string, number> = {};
+    for (const row of rows) {
+      byRisk[row.risk] += 1;
+      bySource[row.sourceType] = (bySource[row.sourceType] ?? 0) + 1;
+    }
+    out[filter] = {
+      count: rows.length,
+      byRisk,
+      avgConfidence: rows.length ? Math.round(rows.reduce((s, r) => s + r.confidence, 0) / rows.length) : 0,
+      bySource,
+      sample: rows.slice(0, 5),
+    };
+  }
+  return out;
 }
 
 /** Mark an entity as replaced when it has no active source left. Never deletes. */
@@ -836,7 +923,14 @@ export async function resolveReviewItem(
     }
     const { error: updateError } = await client
       .from("entity_match_history")
-      .update({ status: "rejected", ...(movedTo ? { matched_entity_id: movedTo } : {}) })
+      .update({
+        status: "rejected",
+        original_status: data.status,
+        decision_previous_entity_id: previousEntityId,
+        decided_by: actorId,
+        decided_at: new Date().toISOString(),
+        ...(movedTo ? { matched_entity_id: movedTo } : {}),
+      })
       .eq("id", input.id);
     if (updateError) throw new Error(`Gagal menyimpan keputusan: ${updateError.message}`);
     await recordDecisionTrace({
@@ -861,7 +955,14 @@ export async function resolveReviewItem(
   await moveActiveLink(client, legacyType, data.source_id, canonicalTarget);
   const { error: updateError } = await client
     .from("entity_match_history")
-    .update({ status: "auto_matched", matched_entity_id: canonicalTarget })
+    .update({
+      status: "confirmed",
+      matched_entity_id: canonicalTarget,
+      original_status: data.status,
+      decision_previous_entity_id: previousEntityId,
+      decided_by: actorId,
+      decided_at: new Date().toISOString(),
+    })
     .eq("id", input.id);
   if (updateError) throw new Error(`Gagal menyimpan keputusan: ${updateError.message}`);
 
@@ -899,9 +1000,75 @@ export async function resolveReviewItem(
   return { status: "linked" as const };
 }
 
+/**
+ * Undo a review decision (Phase 2B). Restores the previous active link, clears
+ * a replacement created by that decision, and reopens the queue item.
+ * History rows and traces are never deleted.
+ */
+export async function undoReviewDecision(client: Client, input: { id: string; actorId?: string | null }) {
+  const { data, error } = await client
+    .from("entity_match_history")
+    .select("id, source_type, source_id, status, original_status, decision_previous_entity_id, matched_entity_id")
+    .eq("id", input.id)
+    .maybeSingle();
+  if (error) throw new Error(`Gagal memuat item tinjauan: ${error.message}`);
+  if (!data) throw new Error("Item tinjauan tidak ditemukan.");
+  if (!data.original_status || !["confirmed", "rejected"].includes(data.status)) {
+    throw new Error("Keputusan ini tidak bisa dibatalkan.");
+  }
+  const legacyType = data.source_type as LegacyType;
+  const previous = data.decision_previous_entity_id;
+  const { data: currentLink } = await client
+    .from("business_entity_links")
+    .select("business_entity_id")
+    .eq("legacy_type", legacyType)
+    .eq("legacy_id", data.source_id)
+    .eq("is_active", true)
+    .maybeSingle();
+  const current = currentLink?.business_entity_id ?? null;
+
+  if (previous && previous !== current) {
+    // Re-activate the previous entity first so the link can point back to it.
+    await client
+      .from("business_entities")
+      .update({ replaced_by_entity_id: null, replaced_at: null, replaced_reason: null })
+      .eq("id", previous)
+      .in("replaced_reason", ["entity_review_link"]);
+    await moveActiveLink(client, legacyType, data.source_id, previous);
+  }
+  const { error: updateError } = await client
+    .from("entity_match_history")
+    .update({ status: data.original_status, matched_entity_id: previous ?? data.matched_entity_id, decided_at: null, decided_by: null })
+    .eq("id", input.id);
+  if (updateError) throw new Error(`Gagal membatalkan keputusan: ${updateError.message}`);
+
+  const { recordDecisionTrace } = await import("./decision-trace.server");
+  await recordDecisionTrace({
+    entityId: previous ?? current,
+    legacyType,
+    legacyId: data.source_id,
+    module: "entity_resolution",
+    decisionType: "entity_review_decision",
+    decision: { decision: "undo", undone_status: data.status, restored_status: data.original_status, restored_entity_id: previous },
+    evidence: { match_history_id: input.id, entity_before_undo: current },
+    actorKind: "user",
+    actorId: input.actorId ?? null,
+  });
+  return { status: "reopened" as const };
+}
+
 /* ------------------------- canonical entry helper ------------------------- */
 
-const ENSURE_COLUMNS: Record<LegacyType, { table: "prospect_candidates" | "prospects" | "consultations" | "ai_conversations"; columns: string; toSignals: (row: Record<string, unknown>) => EntitySignals; stage: string } | undefined> = {
+function clientSignals(row: Record<string, unknown>): EntitySignals {
+  const name = (row["company"] as string | null) || (row["name"] as string | null) || "";
+  return base({
+    name: String(name),
+    whatsapp: (row["whatsapp"] as string | null) ?? null,
+    email: (row["email"] as string | null) ?? null,
+  });
+}
+
+export const ENSURE_COLUMNS: Record<LegacyType, { table: "prospect_candidates" | "prospects" | "consultations" | "ai_conversations" | "clients"; columns: string; toSignals: (row: Record<string, unknown>) => EntitySignals; stage: string } | undefined> = {
   prospect_candidate: {
     table: "prospect_candidates",
     columns: "id, business_name, city, province, address, category, industry, website, place_id, phone, contact_data, promoted_prospect_id",
@@ -926,7 +1093,14 @@ const ENSURE_COLUMNS: Record<LegacyType, { table: "prospect_candidates" | "prosp
     toSignals: conversationSignals,
     stage: "conversation",
   },
-  client: undefined,
+  // Clients: company/name + email + WhatsApp (the table has no phone/website).
+  // A client converted from a lead is linked to that lead's business.
+  client: {
+    table: "clients",
+    columns: "id, lead_id, name, company, email, whatsapp",
+    toSignals: clientSignals,
+    stage: "client",
+  },
 };
 
 /**
@@ -974,6 +1148,18 @@ export async function ensureBusinessEntities(
       try {
         let forced = options.forcedEntityId ?? null;
         const promoted = raw["promoted_prospect_id"] as string | null | undefined;
+        // A client converted from a lead belongs to that lead's business.
+        const leadId = legacyType === "client" ? (raw["lead_id"] as string | null | undefined) : null;
+        if (!forced && leadId) {
+          const { data: link } = await client
+            .from("business_entity_links")
+            .select("business_entity_id")
+            .eq("legacy_type", "consultation")
+            .eq("legacy_id", leadId)
+            .eq("is_active", true)
+            .maybeSingle();
+          forced = link?.business_entity_id ? await resolveCanonicalEntityId(client, link.business_entity_id) : null;
+        }
         if (!forced && promoted) {
           const { data: link } = await client
             .from("business_entity_links")
