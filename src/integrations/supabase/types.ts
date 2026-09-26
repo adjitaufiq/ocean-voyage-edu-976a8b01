@@ -775,6 +775,9 @@ export type Database = {
           normalized_name: string | null
           phone: string | null
           province: string | null
+          replaced_at: string | null
+          replaced_by_entity_id: string | null
+          replaced_reason: string | null
           source_revision: number
           updated_at: string
           website: string | null
@@ -798,6 +801,9 @@ export type Database = {
           normalized_name?: string | null
           phone?: string | null
           province?: string | null
+          replaced_at?: string | null
+          replaced_by_entity_id?: string | null
+          replaced_reason?: string | null
           source_revision?: number
           updated_at?: string
           website?: string | null
@@ -821,6 +827,9 @@ export type Database = {
           normalized_name?: string | null
           phone?: string | null
           province?: string | null
+          replaced_at?: string | null
+          replaced_by_entity_id?: string | null
+          replaced_reason?: string | null
           source_revision?: number
           updated_at?: string
           website?: string | null
@@ -833,6 +842,20 @@ export type Database = {
             columns: ["current_analysis_id"]
             isOneToOne: false
             referencedRelation: "business_consultant_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_entities_replaced_by_entity_id_fkey"
+            columns: ["replaced_by_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_entities_replaced_by_entity_id_fkey"
+            columns: ["replaced_by_entity_id"]
+            isOneToOne: false
+            referencedRelation: "business_entity_overview"
             referencedColumns: ["id"]
           },
         ]
@@ -2051,6 +2074,98 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      entity_resolution_failures: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string
+          id: string
+          last_attempt_at: string
+          resolved_at: string | null
+          run_id: string | null
+          source_id: string
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error: string
+          id?: string
+          last_attempt_at?: string
+          resolved_at?: string | null
+          run_id?: string | null
+          source_id: string
+          source_type: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string
+          id?: string
+          last_attempt_at?: string
+          resolved_at?: string | null
+          run_id?: string | null
+          source_id?: string
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_resolution_failures_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolution_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_resolution_runs: {
+        Row: {
+          created_at: string
+          cursor_created_at: string | null
+          cursor_id: string | null
+          dry_run: boolean
+          failed: number
+          id: string
+          last_error: string | null
+          processed: number
+          source_type: string
+          started_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cursor_created_at?: string | null
+          cursor_id?: string | null
+          dry_run?: boolean
+          failed?: number
+          id?: string
+          last_error?: string | null
+          processed?: number
+          source_type: string
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cursor_created_at?: string | null
+          cursor_id?: string | null
+          dry_run?: boolean
+          failed?: number
+          id?: string
+          last_error?: string | null
+          processed?: number
+          source_type?: string
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       invoices: {
         Row: {
@@ -3973,6 +4088,10 @@ export type Database = {
       can_manage_business: { Args: { _user_id: string }; Returns: boolean }
       can_work_leads: { Args: { _user_id: string }; Returns: boolean }
       country_code: { Args: { _raw: string }; Returns: string }
+      find_or_create_business_entity: {
+        Args: { _payload: Json }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
