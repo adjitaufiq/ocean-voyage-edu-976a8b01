@@ -57,6 +57,17 @@ function EntityDetailPage() {
           ← Kembali ke bisnis terpadu
         </Link>
         <h1 className="text-lg font-semibold tracking-tight">{profile.name}</h1>
+        {detail.data.canonical.redirected ? (
+          <p className="text-xs text-muted-foreground">
+            Bisnis yang Anda buka sudah digabung ke bisnis ini. Riwayat lamanya tetap tersimpan dan
+            ikut ditampilkan.
+          </p>
+        ) : detail.data.canonical.replacedFrom.length ? (
+          <p className="text-xs text-muted-foreground">
+            Termasuk riwayat dari {detail.data.canonical.replacedFrom.length} bisnis yang sudah
+            digabung ke sini.
+          </p>
+        ) : null}
         <p className="text-xs text-muted-foreground">
           {[profile.industry, profile.location].filter(Boolean).join(" • ") || "—"} •{" "}
           {FUNNEL_LABELS[profile.stage]}

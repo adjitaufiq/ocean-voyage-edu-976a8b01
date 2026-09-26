@@ -368,48 +368,19 @@ function EntitiesPage() {
         </div>
       </GlassCard>
 
-      <GlassCard className="space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Antrean tinjauan duplikat ({reviewRows.length})</h2>
-        <p className="text-xs text-muted-foreground">
-          Kemiripan tidak cukup kuat untuk ditautkan otomatis. Tidak ada data yang digabung sampai
-          Anda memutuskan.
-        </p>
-        {reviewRows.map((row) => (
-          <div key={row.id} className="space-y-2 rounded-xl border border-border/40 p-3 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{row.businessA ?? "(tanpa nama)"}</span>
-              <span className="text-muted-foreground">vs</span>
-              <span className="font-medium">{row.businessB ?? "(tanpa nama)"}</span>
-              <span className="rounded-lg border border-border/50 px-2 py-0.5 text-muted-foreground">
-                {SOURCE_LABELS[row.sourceType] ?? row.sourceType}
-              </span>
-              <span className="text-muted-foreground">Keyakinan {row.confidence}%</span>
-            </div>
-            <p className="text-muted-foreground">{row.reason ?? "—"}</p>
-            <pre className="max-h-32 overflow-auto rounded-lg bg-background/40 p-2 text-[10px] text-muted-foreground">
-              {row.comparison}
-            </pre>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => decide(row.id, "link")}
-                className="rounded-lg border border-border/50 px-3 py-1.5"
-              >
-                Bisnis yang sama
-              </button>
-              <button
-                type="button"
-                onClick={() => decide(row.id, "reject")}
-                className="rounded-lg border border-border/50 px-3 py-1.5"
-              >
-                Bisnis berbeda
-              </button>
-            </div>
-          </div>
-        ))}
-        {!reviewRows.length ? (
-          <p className="text-xs text-muted-foreground">Tidak ada yang perlu ditinjau.</p>
-        ) : null}
+      <GlassCard className="flex flex-wrap items-center gap-3 p-4">
+        <div className="mr-auto space-y-1">
+          <h2 className="text-sm font-semibold">Antrean tinjauan duplikat ({reviewRows.length})</h2>
+          <p className="text-xs text-muted-foreground">
+            Tinjau kecocokan, batalkan keputusan, lihat laporan audit, dan kelola perbaikan massal.
+          </p>
+        </div>
+        <Link
+          to="/admin/entities/review"
+          className="rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground"
+        >
+          Buka tinjauan & perbaikan
+        </Link>
       </GlassCard>
     </div>
   );

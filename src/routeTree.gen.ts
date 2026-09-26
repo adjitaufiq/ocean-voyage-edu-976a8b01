@@ -67,6 +67,7 @@ import { Route as AuthenticatedAdminProposalsIdRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminProjectsIdRouteImport } from './routes/_authenticated/admin.projects.$id'
 import { Route as AuthenticatedAdminLeadsIdRouteImport } from './routes/_authenticated/admin.leads.$id'
 import { Route as AuthenticatedAdminInvoicesIdRouteImport } from './routes/_authenticated/admin.invoices.$id'
+import { Route as AuthenticatedAdminEntitiesReviewRouteImport } from './routes/_authenticated/admin.entities.review'
 import { Route as AuthenticatedAdminEntitiesIdRouteImport } from './routes/_authenticated/admin.entities.$id'
 import { Route as AuthenticatedAdminClientsIdRouteImport } from './routes/_authenticated/admin.clients.$id'
 import { Route as AuthenticatedAdminAssistantThreadIdRouteImport } from './routes/_authenticated/admin.assistant.$threadId'
@@ -390,6 +391,12 @@ const AuthenticatedAdminInvoicesIdRoute =
     path: '/invoices/$id',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEntitiesReviewRoute =
+  AuthenticatedAdminEntitiesReviewRouteImport.update({
+    id: '/review',
+    path: '/review',
+    getParentRoute: () => AuthenticatedAdminEntitiesRoute,
+  } as any)
 const AuthenticatedAdminEntitiesIdRoute =
   AuthenticatedAdminEntitiesIdRouteImport.update({
     id: '/$id',
@@ -452,6 +459,7 @@ export interface FileRoutesByFullPath {
   '/admin/assistant/$threadId': typeof AuthenticatedAdminAssistantThreadIdRoute
   '/admin/clients/$id': typeof AuthenticatedAdminClientsIdRoute
   '/admin/entities/$id': typeof AuthenticatedAdminEntitiesIdRoute
+  '/admin/entities/review': typeof AuthenticatedAdminEntitiesReviewRoute
   '/admin/invoices/$id': typeof AuthenticatedAdminInvoicesIdRoute
   '/admin/leads/$id': typeof AuthenticatedAdminLeadsIdRoute
   '/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
@@ -511,6 +519,7 @@ export interface FileRoutesByTo {
   '/admin/assistant/$threadId': typeof AuthenticatedAdminAssistantThreadIdRoute
   '/admin/clients/$id': typeof AuthenticatedAdminClientsIdRoute
   '/admin/entities/$id': typeof AuthenticatedAdminEntitiesIdRoute
+  '/admin/entities/review': typeof AuthenticatedAdminEntitiesReviewRoute
   '/admin/invoices/$id': typeof AuthenticatedAdminInvoicesIdRoute
   '/admin/leads/$id': typeof AuthenticatedAdminLeadsIdRoute
   '/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
@@ -575,6 +584,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/assistant/$threadId': typeof AuthenticatedAdminAssistantThreadIdRoute
   '/_authenticated/admin/clients/$id': typeof AuthenticatedAdminClientsIdRoute
   '/_authenticated/admin/entities/$id': typeof AuthenticatedAdminEntitiesIdRoute
+  '/_authenticated/admin/entities/review': typeof AuthenticatedAdminEntitiesReviewRoute
   '/_authenticated/admin/invoices/$id': typeof AuthenticatedAdminInvoicesIdRoute
   '/_authenticated/admin/leads/$id': typeof AuthenticatedAdminLeadsIdRoute
   '/_authenticated/admin/projects/$id': typeof AuthenticatedAdminProjectsIdRoute
@@ -639,6 +649,7 @@ export interface FileRouteTypes {
     | '/admin/assistant/$threadId'
     | '/admin/clients/$id'
     | '/admin/entities/$id'
+    | '/admin/entities/review'
     | '/admin/invoices/$id'
     | '/admin/leads/$id'
     | '/admin/projects/$id'
@@ -698,6 +709,7 @@ export interface FileRouteTypes {
     | '/admin/assistant/$threadId'
     | '/admin/clients/$id'
     | '/admin/entities/$id'
+    | '/admin/entities/review'
     | '/admin/invoices/$id'
     | '/admin/leads/$id'
     | '/admin/projects/$id'
@@ -761,6 +773,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/assistant/$threadId'
     | '/_authenticated/admin/clients/$id'
     | '/_authenticated/admin/entities/$id'
+    | '/_authenticated/admin/entities/review'
     | '/_authenticated/admin/invoices/$id'
     | '/_authenticated/admin/leads/$id'
     | '/_authenticated/admin/projects/$id'
@@ -1226,6 +1239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminInvoicesIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/entities/review': {
+      id: '/_authenticated/admin/entities/review'
+      path: '/review'
+      fullPath: '/admin/entities/review'
+      preLoaderRoute: typeof AuthenticatedAdminEntitiesReviewRouteImport
+      parentRoute: typeof AuthenticatedAdminEntitiesRoute
+    }
     '/_authenticated/admin/entities/$id': {
       id: '/_authenticated/admin/entities/$id'
       path: '/$id'
@@ -1270,12 +1290,15 @@ const AuthenticatedAdminAssistantRouteWithChildren =
 
 interface AuthenticatedAdminEntitiesRouteChildren {
   AuthenticatedAdminEntitiesIdRoute: typeof AuthenticatedAdminEntitiesIdRoute
+  AuthenticatedAdminEntitiesReviewRoute: typeof AuthenticatedAdminEntitiesReviewRoute
   AuthenticatedAdminEntitiesIndexRoute: typeof AuthenticatedAdminEntitiesIndexRoute
 }
 
 const AuthenticatedAdminEntitiesRouteChildren: AuthenticatedAdminEntitiesRouteChildren =
   {
     AuthenticatedAdminEntitiesIdRoute: AuthenticatedAdminEntitiesIdRoute,
+    AuthenticatedAdminEntitiesReviewRoute:
+      AuthenticatedAdminEntitiesReviewRoute,
     AuthenticatedAdminEntitiesIndexRoute: AuthenticatedAdminEntitiesIndexRoute,
   }
 
