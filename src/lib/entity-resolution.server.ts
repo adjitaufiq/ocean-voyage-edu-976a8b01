@@ -796,18 +796,22 @@ export async function listMatchReviewQueue(client: Client, limit = 100, filter: 
 
 /** Read-only audit of the review queue (counts, risk, samples). */
 export async function auditReviewQueue(client: Client) {
-  const out: Record<string, { count: number; byRisk: Record<ReviewRisk, number>; avgConfidence: number; bySource: Record<string, number>; sample: ReviewRow[] }> = {};
+  const out: Record<string, { count: number; byRisk: Record<ReviewRisk, number>; byConfidence: Record<string, number>; avgConfidence: number; bySource: Record<string, number>; sample: ReviewRow[] }> = {};
   for (const filter of ["suggested", "review_required"] as const) {
     const { rows } = await listMatchReviewQueue(client, 300, filter);
     const byRisk: Record<ReviewRisk, number> = { high: 0, medium: 0, low: 0 };
     const bySource: Record<string, number> = {};
+    const byConfidence: Record<string, number> = { "95+": 0, "80–94": 0, "60–79": 0, "<60": 0 };
     for (const row of rows) {
       byRisk[row.risk] += 1;
+      const band = row.confidence >= 95 ? "95+" : row.confidence >= 80 ? "80–94" : row.confidence >= 60 ? "60–79" : "<60";
+      byConfidence[band] += 1;
       bySource[row.sourceType] = (bySource[row.sourceType] ?? 0) + 1;
     }
     out[filter] = {
       count: rows.length,
       byRisk,
+      byConfidence,
       avgConfidence: rows.length ? Math.round(rows.reduce((s, r) => s + r.confidence, 0) / rows.length) : 0,
       bySource,
       sample: rows.slice(0, 5),
