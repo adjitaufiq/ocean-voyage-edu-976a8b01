@@ -170,6 +170,12 @@ export async function listEntities(
   const page = Math.max(filter.page ?? 1, 1);
   const from = (page - 1) * pageSize;
 
+  const { data: replaced } = await supabase
+    .from("business_entities")
+    .select("id")
+    .not("replaced_by_entity_id", "is", null)
+    .limit(1000);
+  const replacedIds = (replaced ?? []).map((r) => r.id);
   const query = applyFilter(
     supabase
       .from("business_entity_overview")
@@ -183,7 +189,9 @@ export async function listEntities(
     filter,
   );
 
-  const { data, error, count } = await query;
+  const { data, error, count } = await (replacedIds.length
+    ? query.not("id", "in", `(${replacedIds.join(",")})`)
+    : query);
   if (error) throw new Error(error.message);
   return {
     rows: ((data ?? []) as Record<string, unknown>[]).map(toRow),
@@ -196,6 +204,7 @@ export async function listEntities(
 /* ------------------------------ detail page ------------------------------- */
 
 export type EntityDetail = {
+  canonical: { requestedId: string; canonicalId: string; redirected: boolean; replacedFrom: string[] };
   profile: {
     id: string;
     name: string;
@@ -250,8 +259,19 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export async function getEntityDetail(
   supabase: Client,
-  entityId: string,
+  requestedId: string,
 ): Promise<EntityDetail | null> {
+  // Phase 2B: replaced businesses resolve to their canonical business for
+  // normal views; history of replaced entities stays readable (never moved).
+  const { resolveCanonicalEntityId } = await import("./entity-resolution.server");
+  const entityId = await resolveCanonicalEntityId(supabase, requestedId);
+  const { data: replacedRows } = await supabase
+    .from("business_entities")
+    .select("id")
+    .eq("replaced_by_entity_id", entityId)
+    .limit(50);
+  const replacedFrom = (replacedRows ?? []).map((r) => r.id);
+  const historyIds = [entityId, ...replacedFrom];
   const { data: overview, error } = await supabase
     .from("business_entity_overview")
     .select("*")
@@ -320,7 +340,7 @@ export async function getEntityDetail(
   const { data: findingRows } = await supabase
     .from("business_findings")
     .select("kind, statement, validation_status, confidence")
-    .eq("business_entity_id", entityId)
+    .in("business_entity_id", historyIds)
     .limit(50);
 
   const { data: analysisRows } = await supabase
@@ -328,9 +348,9 @@ export async function getEntityDetail(
     .select(
       "version, generated_at, confidence, business_profile, problem_hypotheses, core_solution, recommended_features, recommended_package, consultant_reasoning",
     )
-    .eq("business_entity_id", entityId)
+    .in("business_entity_id", historyIds)
     .eq("status", "completed")
-    .order("version", { ascending: false })
+    .order("generated_at", { ascending: false, nullsFirst: false })
     .limit(1);
 
   const analysis = (analysisRows ?? [])[0] as Record<string, unknown> | undefined;
@@ -395,6 +415,7 @@ export async function getEntityDetail(
   crm.sort((a, b) => b.at.localeCompare(a.at));
 
   return {
+    canonical: { requestedId, canonicalId: entityId, redirected: requestedId !== entityId, replacedFrom },
     profile: {
       id: entityId,
       name: String(row["canonical_name"] ?? ""),
