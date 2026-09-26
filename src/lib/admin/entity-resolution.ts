@@ -168,10 +168,34 @@ export const FUZZY_REVIEW_MIN = 0.72;
 export const IDENTITY_SUGGEST_MIN = 0.9;
 
 /**
+ * Resolver mode (Phase 2A). "hardened" (default): only Google Place ID and
+ * website domain auto-link; shared phone/email and name-based suggestions go
+ * to human review. "legacy": pre-2A behaviour, kept as a switchable fallback.
+ */
+export const RESOLVER_MODES = ["hardened", "legacy"] as const;
+export type ResolverMode = (typeof RESOLVER_MODES)[number];
+export const RESOLVER_MODE_KEY = "entity_resolver_mode";
+export function parseResolverMode(raw: unknown): ResolverMode {
+  return raw === "legacy" ? "legacy" : "hardened";
+}
+
+/** Whether a match result may be attached to its existing entity automatically. */
+export function shouldAttach(result: MatchResult, mode: ResolverMode = "hardened"): boolean {
+  if (!result.entityId) return false;
+  if (result.status === "auto_matched") return true;
+  if (result.status === "suggested") return mode === "legacy";
+  return false;
+}
+
+/**
  * Levels 1-5 in priority order. Returns the first decisive answer.
  * Never returns a merge instruction — only link / suggest / review.
  */
-export function matchEntity(signals: EntitySignals, pool: EntityCandidateRow[]): MatchResult {
+export function matchEntity(
+  signals: EntitySignals,
+  pool: EntityCandidateRow[],
+  mode: ResolverMode = "hardened",
+): MatchResult {
   const placeId = signals.googlePlaceId?.trim() || null;
   if (placeId) {
     const hit = pool.find((row) => row.googlePlaceId && row.googlePlaceId === placeId);
@@ -217,7 +241,8 @@ export function matchEntity(signals: EntitySignals, pool: EntityCandidateRow[]):
       return {
         entityId: hit.id,
         method: "verified_contact",
-        status: "auto_matched",
+        // Shared contacts exist (franchises, agencies, call centres).
+        status: mode === "legacy" ? "auto_matched" : "review_required",
         confidence: 90,
         reason: MATCH_METHOD_LABELS.verified_contact,
         comparison: { phone: phones[0] ?? null, email },
